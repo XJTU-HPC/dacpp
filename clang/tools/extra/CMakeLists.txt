@@ -1,10 +1,9 @@
 set(LLVM_LINK_COMPONENTS support)
-include("/data/powerzhang/llvm/clang/cmake/modules/AddClang.cmake")
-add_clang_executable(loop-convert
-  LoopConvert.cpp
+
+add_clang_executable(vector-convert
+  VectorConvert.cpp
   )
-target_link_libraries(loop-convert
-  PRIVATE
+target_link_libraries(vector-convert
   clangTooling
   clangBasic
   clangASTMatchers
