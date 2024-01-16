@@ -194,6 +194,8 @@ static syntax::NodeKind getOperatorNodeKind(const CXXOperatorCallExpr &E) {
   case OO_PipePipe:
   case OO_ArrowStar:
   case OO_Comma:
+  // DACPP Assoc
+  case OO_LessMinusGreater:
     return syntax::NodeKind::BinaryOperatorExpression;
   case OO_Tilde:
   case OO_Exclaim:

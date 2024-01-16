@@ -15563,6 +15563,7 @@ static bool actOnOMPReductionKindClause(
       case BO_ShlAssign:
       case BO_ShrAssign:
       case BO_Comma:
+      case BO_LMG:
         llvm_unreachable("Unexpected reduction operation");
       }
     }
