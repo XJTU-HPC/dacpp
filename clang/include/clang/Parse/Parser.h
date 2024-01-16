@@ -2753,6 +2753,8 @@ private:
   void ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs);
   void ParseBorlandTypeAttributes(ParsedAttributes &attrs);
   void ParseOpenCLKernelAttributes(ParsedAttributes &attrs);
+  void ParseDACPPShellAttributes(ParsedAttributes &attrs);
+  void ParseDACPPCalcAttributes(ParsedAttributes &attrs);
   void ParseOpenCLQualifiers(ParsedAttributes &Attrs);
   /// Parses opencl_unroll_hint attribute if language is OpenCL v2.0
   /// or higher.
