@@ -71,6 +71,7 @@ prec::Level getBinOpPrecedence(tok::TokenKind Kind, bool GreaterThanIsOperator,
   case tok::star:                 return prec::Multiplicative;
   case tok::periodstar:
   case tok::arrowstar:            return prec::PointerToMember;
+  case tok::lessminusgreater:     return prec::LessMinusGreater;
   }
 }
 

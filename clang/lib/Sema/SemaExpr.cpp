@@ -13637,6 +13637,7 @@ BinaryOperatorKind Sema::ConvertTokenKindToBinaryOpcode(tok::TokenKind Kind) {
   case tok::caretequal:           Opc = BO_XorAssign; break;
   case tok::pipeequal:            Opc = BO_OrAssign; break;
   case tok::comma:                Opc = BO_Comma; break;
+  case tok::lessminusgreater:     Opc = BO_LMG; break;
   }
   return Opc;
 }
@@ -14033,6 +14034,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
       ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy);
     break;
+  case BO_LMG:
   case BO_Comma:
     ResultTy = CheckCommaOperands(*this, LHS, RHS, OpLoc);
     if (getLangOpts().CPlusPlus && !RHS.isInvalid()) {
@@ -14501,6 +14503,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
       // These operators have a fixed result type regardless of operands.
       ResultType = Context.IntTy;
       break;
+    case BO_LMG:
     case BO_Comma:
       ResultType = RHSExpr->getType();
       break;

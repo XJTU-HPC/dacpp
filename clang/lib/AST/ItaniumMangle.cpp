@@ -2368,6 +2368,8 @@ CXXNameMangler::mangleOperatorName(OverloadedOperatorKind OO, unsigned Arity) {
   //              ::= ss        # <=>
   case OO_Spaceship: Out << "ss"; break;
 
+  case OO_LessMinusGreater: Out << "lmg"; break;
+
   case OO_None:
   case NUM_OVERLOADED_OPERATORS:
     llvm_unreachable("Not an overloaded operator");

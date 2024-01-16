@@ -552,6 +552,7 @@ til::SExpr *SExprBuilder::translateBinaryOperator(const BinaryOperator *BO,
   case BO_OrAssign:  return translateBinAssign(til::BOP_BitOr,  BO, Ctx);
 
   case BO_Comma:
+  case BO_LMG:
     // The clang CFG should have already processed both sides.
     return translate(BO->getRHS(), Ctx);
   }
