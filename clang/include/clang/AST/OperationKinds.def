@@ -409,7 +409,8 @@ BINARY_OPERATION(XorAssign, "^=")
 BINARY_OPERATION(OrAssign, "|=")
 // [C99 6.5.17] Comma operator.
 BINARY_OPERATION(Comma, ",")
-
+//DACPP Assoc operator.
+BINARY_OPERATION(LMG, "<->")
 
 //===- Unary Operations ---------------------------------------------------===//
 // Note that additions to this should also update the StmtVisitor class and

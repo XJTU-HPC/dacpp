@@ -3650,6 +3650,7 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
   case BO_XorAssign:
   case BO_OrAssign:
   case BO_Comma:
+  case BO_LMG:
     llvm_unreachable("Found unsupported binary operation for fixed point types.");
   }
 
@@ -4834,6 +4835,7 @@ LValue CodeGenFunction::EmitCompoundAssignmentLValue(
   case BO_LOr:
   case BO_Assign:
   case BO_Comma:
+  case BO_LMG:
     llvm_unreachable("Not valid compound assignment operators");
   }
 

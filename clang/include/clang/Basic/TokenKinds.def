@@ -245,6 +245,8 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 // CL support
 PUNCTUATOR(caretcaret,            "^^")
 
+// DACPP support
+PUNCTUATOR(lessminusgreater,      "<->")
 // C99 6.4.1: Keywords.  These turn into kw_* tokens.
 // Flags allowed:
 //   KEYALL   - This is a keyword in all variants of C and C++, or it
@@ -327,7 +329,6 @@ KEYWORD(_Thread_local               , KEYALL)
 KEYWORD(__func__                    , KEYALL)
 KEYWORD(__objc_yes                  , KEYALL)
 KEYWORD(__objc_no                   , KEYALL)
-
 
 // C++ 2.11p1: Keywords.
 KEYWORD(asm                         , KEYCXX|KEYGNU)
@@ -883,6 +884,10 @@ ANNOTATION(module_end)
 // Annotation for a header_name token that has been looked up and transformed
 // into the name of a header unit.
 ANNOTATION(header_unit)
+
+// DACPP Keywords
+KEYWORD(shell                       , KEYALL)
+KEYWORD(calc                        , KEYALL)
 
 #undef PRAGMA_ANNOTATION
 #undef ANNOTATION

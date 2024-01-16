@@ -3684,3 +3684,18 @@ def EnforceTCBLeaf : InheritableAttr {
   let Documentation = [EnforceTCBLeafDocs];
   bit InheritEvenIfAlreadyPresent = 1;
 }
+
+//DACPP Attributes
+def DACPPShell : InheritableAttr {
+  let Spellings = [Keyword<"shell">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
+}
+
+def DACPPCalc : InheritableAttr {
+  let Spellings = [Keyword<"calc">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
+}

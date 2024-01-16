@@ -81,6 +81,7 @@ public:
       case BO_OrAssign:  DISPATCH(BinOrAssign,  CompoundAssignOperator);
       case BO_XorAssign: DISPATCH(BinXorAssign, CompoundAssignOperator);
       case BO_Comma:     DISPATCH(BinComma,     BinaryOperator);
+      case BO_LMG:       DISPATCH(BinLMG,       BinaryOperator);
       }
     } else if (PTR(UnaryOperator) UnOp = dyn_cast<UnaryOperator>(S)) {
       switch (UnOp->getOpcode()) {
@@ -137,6 +138,7 @@ public:
 
   BINOP_FALLBACK(Assign)
   BINOP_FALLBACK(Comma)
+  BINOP_FALLBACK(LMG)
 #undef BINOP_FALLBACK
 
   // If the implementation doesn't implement compound assignment operator
