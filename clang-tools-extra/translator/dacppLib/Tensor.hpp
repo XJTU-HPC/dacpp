@@ -70,6 +70,9 @@ private:
     }
 
 public:
+    Tensor() {
+        
+    }
     Tensor(ImplType* data, int size, int* shape, int dim) {
         // 参数检查
         // int count = 1;
@@ -115,10 +118,17 @@ public:
     Tensor(std::shared_ptr<ImplType> data, int offset, int dim, int* shape, int* stride) : data_(data), offset_(offset), dim_(dim), shape_(shape), stride_(stride) {}
 
     ~Tensor() {
-        delete[] shape_;
-        delete[] stride_;
+        // delete[] shape_;
+        // delete[] stride_;
     }
 
+    std::shared_ptr<ImplType> getPoint() const {
+        return data_;
+    };
+
+    int getOffset() const {
+        return offset_;
+    }
     // 获得 Tensor 的维度
     int getDim() const {
         return dim_;
@@ -131,6 +141,18 @@ public:
         // if(dimIdx >= dim_) {}
 
         return shape_[dimIdx]; 
+    }
+
+    int getStride(int dimIdx) const {
+        return stride_[dimIdx];
+    }
+
+    int getSize() {
+        int size = 1;
+        for(int dimIdx = 0; dimIdx < getDim(); dimIdx++) {
+            size *= shape_[dimIdx];
+        }
+        return size;
     }
 
     // 获得 Tensor 指定下标数据
@@ -150,9 +172,9 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[]{0};
+            int* indices = new int[1](0);
             ImplType tmp = data_.get()[offset_] + operand.getData(indices);
-            return Tensor(new ImplType[]{tmp}, 1, nullptr, 0);
+            return Tensor(new ImplType[1](tmp), 1, nullptr, 0);
         }
         else if(dim_ == 1) {
 
@@ -176,9 +198,9 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[]{0};
+            int* indices = new int[1](0);
             ImplType tmp = data_.get()[offset_] - operand.getData(indices);
-            return Tensor(new ImplType[]{tmp}, 1, nullptr, 0);
+            return Tensor(new ImplType[1](tmp), 1, nullptr, 0);
         }
         else if(dim_ == 1) {
 
@@ -198,9 +220,9 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[]{0};
+            int* indices = new int[1](0);
             ImplType tmp = data_.get()[offset_] * operand.getData(indices);
-            return Tensor(new ImplType[]{tmp}, 1, nullptr, 0);
+            return Tensor(new ImplType[1](tmp), 1, nullptr, 0);
         }
         else if(dim_ == 1) {
 
@@ -220,9 +242,9 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[]{0};
+            int* indices = new int[1](0);
             ImplType tmp = data_.get()[offset_] / operand.getData(indices);
-            return Tensor(new ImplType[]{tmp}, 1, nullptr, 0);
+            return Tensor(new ImplType[1](tmp), 1, nullptr, 0);
         }
         else if(dim_ == 1) {
 
@@ -242,9 +264,9 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[]{0};
+            int* indices = new int[1](0);
             ImplType tmp = data_.get()[offset_] % operand.getData(indices);
-            return Tensor(new ImplType[]{tmp}, 1, nullptr, 0);
+            return Tensor(new ImplType[1](tmp), 1, nullptr, 0);
         }
         else if(dim_ == 1) {
 
@@ -264,7 +286,7 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[]{0};
+            int* indices = new int[1](0);
             data_.get()[offset_] += operand.getData(indices);
         }
         else if(dim_ == 1) {
@@ -285,7 +307,7 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[]{0};
+            int* indices = new int[1](0);
             data_.get()[offset_] -= operand.getData(indices);
         }
         else if(dim_ == 1) {
@@ -306,7 +328,7 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[]{0};
+            int* indices = new int[1](0);
             data_.get()[offset_] *= operand.getData(indices);
         }
         else if(dim_ == 1) {
@@ -327,7 +349,7 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[]{0};
+            int* indices = new int[1](0);
             data_.get()[offset_] /= operand.getData(indices);
         }
         else if(dim_ == 1) {
@@ -348,7 +370,7 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[]{0};
+            int* indices = new int[1](0);
             data_.get()[offset_] %= operand.getData(indices);
         }
         else if(dim_ == 1) {
@@ -359,6 +381,18 @@ public:
         }
         else {
 
+        }
+    }
+
+    void operator=(const Tensor<ImplType>& operand) {
+        data_ = operand.getPoint();
+        offset_ = operand.getOffset();
+        dim_ = operand.getDim();
+        shape_ = new int[dim_];
+        stride_ = new int[dim_];
+        for(int i = 0; i < dim_; i++) {
+            shape_[i] = operand.getShape(i);
+            stride_[i] = operand.getStride(i);
         }
     }
 

@@ -61,4 +61,73 @@ bool inputOrOutput(std::string dataType) {
   }
 }
 
+// 从抽象语法树中获得函数参数的信息
+void getParamInfo(Expr* curExpr, Param& param) {
+  DeclRefExpr* declRefExpr;
+  if(isa<DeclRefExpr>(curExpr)) {
+    declRefExpr = dyn_cast<DeclRefExpr>(curExpr);
+  }
+  else {
+    declRefExpr = getNode<DeclRefExpr>(curExpr);
+  }
+  int count = 0;
+  for(Stmt::child_iterator it = dyn_cast<VarDecl>(declRefExpr->getDecl())->getInit()->child_begin(); it != dyn_cast<VarDecl>(declRefExpr->getDecl())->getInit()->child_end(); it++) {
+    if(count != 1) {
+      count++;
+      continue;
+    }
+    VarDecl* shapeDecl = dyn_cast<VarDecl>(getNode<DeclRefExpr>(*it)->getDecl());
+    InitListExpr* initListExpr = getNode<InitListExpr>(shapeDecl->getInit());
+    for(Stmt::child_iterator it = initListExpr->child_begin(); it != initListExpr->child_end(); it++) {
+      IntegerLiteral* interger = dyn_cast<IntegerLiteral>(*it);
+      param.setShapes(std::stoi(interger->getValue().toString(10, true)));
+    }
+    param.setDim(param.getNumShapes());
+    count++;
+  }
+}
+
+// 根据数据类型获得其基本类型
+std::string getBasicType(std::string type) {
+  if(type.find("Tensor<int>") != -1) {
+      return "int";
+  }
+  else if(type.find("Tensor<unsigned int>") != -1) {
+      return "unsigned int";
+  }
+  else if(type.find("Tensor<signed int>") != -1) {
+      return "signed int";
+  }
+  else if(type.find("Tensor<short int>") != -1) {
+      return "short int";
+  }
+  else if(type.find("Tensor<unsigned short int>") != -1) {
+      return "unsigned short int";
+  }
+  else if(type.find("Tensor<signed short int>") != -1) {
+      return "signed short int";
+  }
+  if(type.find("Tensor<long int>") != -1) {
+      return "long int";
+  }
+  else if(type.find("Tensor<unsigned long int>") != -1) {
+      return "unsigned long int";
+  }
+  else if(type.find("Tensor<signed long int>") != -1) {
+      return "signed long int";
+  }
+  else if(type.find("Tensor<float>") != -1) {
+      return "float";
+  }
+  else if(type.find("Tensor<double>") != -1) {
+      return "double";
+  }
+  else if(type.find("Tensor<long long>") != -1) {
+      return "long long";
+  }
+  else {
+      return "long double";
+  }
+}
+
 }

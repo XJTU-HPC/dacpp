@@ -32,13 +32,10 @@ public:
     s2s.setRewriter(&Rewrite);
     if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
       // 获得 Shell 信息
-      s2s.setShell(dacExpr);
-      // 获取 DAC 数据关联表达式右值
-      Expr* dacExprRHS = dacExpr->getRHS();
-      // 需要检查数据关联表达式语法
-      FunctionDecl* calcFunc = dyn_cast<FunctionDecl>(dyn_cast<DeclRefExpr>(dacExprRHS)->getDecl());
+      s2s.setShells(dacExpr);
+
       // 获得 calc 信息
-      s2s.setCalc(calcFunc);
+      s2s.setCalcs(dacExpr);
     }
     else if (const FunctionDecl* mainFunc = Result.Nodes.getNodeAs<clang::FunctionDecl>("main")) {
       s2s.setMainFunc(mainFunc);
@@ -78,8 +75,6 @@ class MyFrontendAction : public ASTFrontendAction {
 public:
   MyFrontendAction() {}
   void EndSourceFileAction() override {
-    s2s.setHeaderFile("#include <sycl/sycl.hpp>");
-    s2s.setHeaderFile("using namespace sycl;");
     s2s.rewriteDac();
     s2s.rewriteMain();
     // this will output to screen as what you got.
