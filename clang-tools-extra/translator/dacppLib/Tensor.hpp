@@ -147,7 +147,7 @@ public:
         return stride_[dimIdx];
     }
 
-    int getSize() {
+    int getSize() const {
         int size = 1;
         for(int dimIdx = 0; dimIdx < getDim(); dimIdx++) {
             size *= shape_[dimIdx];
@@ -172,9 +172,12 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[1](0);
+            int* indices = new int[1];
+            indices[0] = 0;
             ImplType tmp = data_.get()[offset_] + operand.getData(indices);
-            return Tensor(new ImplType[1](tmp), 1, nullptr, 0);
+            int* a = new ImplType[1];
+            a[0] = tmp;
+            return Tensor(a, 1, nullptr, 0);
         }
         else if(dim_ == 1) {
 
@@ -198,9 +201,12 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[1](0);
+            int* indices = new int[1];
+            indices[0] = 0;
             ImplType tmp = data_.get()[offset_] - operand.getData(indices);
-            return Tensor(new ImplType[1](tmp), 1, nullptr, 0);
+            int* a = new ImplType[1];
+            a[0] = tmp;
+            return Tensor(a, 1, nullptr, 0);
         }
         else if(dim_ == 1) {
 
@@ -220,9 +226,12 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[1](0);
+            int* indices = new int[1];
+            indices[0] = 0;
             ImplType tmp = data_.get()[offset_] * operand.getData(indices);
-            return Tensor(new ImplType[1](tmp), 1, nullptr, 0);
+            int* a = new ImplType[1];
+            a[0] = tmp;
+            return Tensor(a, 1, nullptr, 0);
         }
         else if(dim_ == 1) {
 
@@ -242,9 +251,12 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[1](0);
+            int* indices = new int[1];
+            indices[0] = 0;
             ImplType tmp = data_.get()[offset_] / operand.getData(indices);
-            return Tensor(new ImplType[1](tmp), 1, nullptr, 0);
+            int* a = new ImplType[1];
+            a[0] = tmp;
+            return Tensor(a, 1, nullptr, 0);
         }
         else if(dim_ == 1) {
 
@@ -264,9 +276,12 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[1](0);
+            int* indices = new int[1];
+            indices[0] = 0;
             ImplType tmp = data_.get()[offset_] % operand.getData(indices);
-            return Tensor(new ImplType[1](tmp), 1, nullptr, 0);
+            int* a = new ImplType[1];
+            a[0] = tmp;
+            return Tensor(a, 1, nullptr, 0);
         }
         else if(dim_ == 1) {
 
@@ -286,7 +301,8 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[1](0);
+            int* indices = new int[1];
+            indices[0] = 0;
             data_.get()[offset_] += operand.getData(indices);
         }
         else if(dim_ == 1) {
@@ -307,7 +323,8 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[1](0);
+            int* indices = new int[1];
+            indices[0] = 0;
             data_.get()[offset_] -= operand.getData(indices);
         }
         else if(dim_ == 1) {
@@ -328,7 +345,8 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[1](0);
+            int* indices = new int[1];
+            indices[0] = 0;
             data_.get()[offset_] *= operand.getData(indices);
         }
         else if(dim_ == 1) {
@@ -349,7 +367,8 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[1](0);
+            int* indices = new int[1];
+            indices[0] = 0;
             data_.get()[offset_] /= operand.getData(indices);
         }
         else if(dim_ == 1) {
@@ -370,7 +389,8 @@ public:
         //     if(shape_[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
-            int* indices = new int[1](0);
+            int* indices = new int[1];
+            indices[0] = 0;
             data_.get()[offset_] %= operand.getData(indices);
         }
         else if(dim_ == 1) {

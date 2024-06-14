@@ -78,12 +78,12 @@ public:
     s2s.rewriteDac();
     s2s.rewriteMain();
     // this will output to screen as what you got.
-    rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID())
-        .write(llvm::outs());
+    // rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID())
+    //     .write(llvm::outs());
     
     // 生成sycl文件
     std::error_code error_code;
-    llvm::raw_fd_ostream outFile("output.cpp", error_code, llvm::sys::fs::F_None);
+    llvm::raw_fd_ostream outFile("/data/zjx/dacpp/clang-tools-extra/translator/output.cpp", error_code, llvm::sys::fs::F_None);
     // this will write the result to outFile
     rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID()).write(outFile);
     outFile.close();

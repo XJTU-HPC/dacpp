@@ -66,10 +66,10 @@ std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams
 
 const char *DATA_RECON_Template = R"~~~(
     // 数据重组
-    {{TYPE}}* r_{{NAME}}=({{TYPE}}*)malloc(sizeof({{TYPE}})*{{SIZE}});
+	{{TYPE}}* r_{{NAME}}=({{TYPE}}*)malloc(sizeof({{TYPE}})*{{SIZE}});
 	std::vector<bool> isIndex_{{NAME}}{{INDEX_INFO}};
 	tool.init({{NAME}},isIndex_{{NAME}});
-    tool.Reconstruct(r_{{NAME}});)~~~";
+	tool.Reconstruct(r_{{NAME}});)~~~";
 
 std::string CodeGen_DataReconstruct(std::string type,std::string name,std::string size,std::string indexInfo){
     return templateString(DATA_RECON_Template,
@@ -96,7 +96,7 @@ std::string CodeGen_DeviceMemAlloc(std::string type,std::string name,std::string
 
 const char *H2D_MEM_MOV_Template = R"~~~(
     // 数据移动
-    q.memcpy(d_{{NAME}},{{NAME}},{{SIZE}}*sizeof({{TYPE}})).wait();
+    q.memcpy(d_{{NAME}},r_{{NAME}},{{SIZE}}*sizeof({{TYPE}})).wait();
     
 )~~~";
 
@@ -218,11 +218,11 @@ std::string CodeGen_Reduction(std::string SplitSize,std::string Name,std::string
 
 const char *D2H_MEM_MOV_1_Template = R"~~~(
     // 归并结果返回
-    q.memcpy({{NAME}}, d_{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();)~~~";
+    q.memcpy(r_{{NAME}}, d_{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();)~~~";
 
 const char *D2H_MEM_MOV_2_Template = R"~~~(
     // 归约结果返回
-    q.memcpy({{NAME}},reduction_{{NAME}}, sizeof({{TYPE}})).wait();)~~~";
+    q.memcpy(r_{{NAME}},reduction_{{NAME}}, sizeof({{TYPE}})).wait();)~~~";
 
 std::string CodeGen_D2HMemMov(std::string Name,std::string Type,std::string Size,bool isReduction){
     if(isReduction){
