@@ -83,7 +83,10 @@ public:
     
     // 生成sycl文件
     std::error_code error_code;
-    llvm::raw_fd_ostream outFile("/data/zjx/dacpp/clang-tools-extra/translator/output.cpp", error_code, llvm::sys::fs::F_None);
+    std::string fileName = getCurrentFile().str();
+    int pos = fileName.find("dacppFile/");
+    fileName.replace(pos, fileName.size() - pos + 1, "syclFile/" + fileName.substr(pos + 10));
+    llvm::raw_fd_ostream outFile(fileName, error_code, llvm::sys::fs::F_None);
     // this will write the result to outFile
     rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID()).write(outFile);
     outFile.close();

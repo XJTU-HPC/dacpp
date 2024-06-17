@@ -15,19 +15,19 @@ private:
     std::shared_ptr<ImplType> data_;
     int offset_;
     int dim_;
-    int* shape_;
-    int* stride_;
+    std::shared_ptr<int> shape_;
+    std::shared_ptr<int> stride_;
 
     void recursiveTake(ImplType* data, int& idx, std::vector<int>& indices, int dimIdx) const {
         if(dimIdx == dim_) {
             int index = offset_;
             for(int i = 0; i < dim_; i++) {
-                index += indices[i] * stride_[i];
+                index += indices[i] * stride_.get()[i];
             }
             data[idx++] = data_.get()[index];
             return;
         }
-        for(int i = 0; i < shape_[dimIdx]; i++) {
+        for(int i = 0; i < shape_.get()[dimIdx]; i++) {
             indices.push_back(i);
             recursiveTake(data, idx, indices, dimIdx + 1);
             indices.pop_back();
@@ -38,12 +38,12 @@ private:
         if(dimIdx == dim_) {
             int index = offset_;
             for(int i = 0; i < dim_; i++) {
-                index += indices[i] * stride_[i];
+                index += indices[i] * stride_.get()[i];
             }
             data_.get()[index] = data[idx++];
             return;
         }
-        for(int i = 0; i < shape_[dimIdx]; i++) {
+        for(int i = 0; i < shape_.get()[dimIdx]; i++) {
             indices.push_back(i);
             recursiveBring(data, idx, indices, dimIdx + 1);
             indices.pop_back();
@@ -54,16 +54,16 @@ private:
         if(dimIdx == dim_) {
             int index = offset_;
             for(int i = 0; i < dim_; i++) {
-                index += indices[i] * stride_[i];
+                index += indices[i] * stride_.get()[i];
             }
             std::cout << data_.get()[index];
             return;
         }
         std::cout << "{";
-        for(int i = 0; i < shape_[dimIdx]; i++) {
+        for(int i = 0; i < shape_.get()[dimIdx]; i++) {
             indices.push_back(i);
             recursivePrint(indices, dimIdx + 1);
-            if(i != shape_[dimIdx] - 1) std::cout << ", ";
+            if(i != shape_.get()[dimIdx] - 1) std::cout << ", ";
             indices.pop_back();
         }
         std::cout << "}";
@@ -71,8 +71,8 @@ private:
 
 public:
     Tensor() {
-        
     }
+
     Tensor(ImplType* data, int size, int* shape, int dim) {
         // 参数检查
         // int count = 1;
@@ -80,17 +80,17 @@ public:
         // if(count != size) {}
 
         data_ = std::shared_ptr<ImplType>(new ImplType[size], std::default_delete<ImplType[]>());
-        for(int i = 0; i < size; i++) {
-            data_.get()[i] = data[i];
+        for(int idx = 0; idx < size; idx++) {
+            data_.get()[idx] = data[idx];
         }
         offset_ = 0;
         dim_ = dim;
-        shape_ = new int[dim_];
-        stride_ = new int[dim_];
-        for(int i = dim_ - 1; i >= 0; i--) {
-            shape_[i] = shape[i];
-            if(i == dim_ - 1) stride_[i] = 1;
-            else stride_[i] = stride_[i + 1] * shape[i + 1];
+        shape_ = std::shared_ptr<ImplType>(new int[dim], std::default_delete<int[]>());
+        stride_ = std::shared_ptr<ImplType>(new int[dim], std::default_delete<int[]>());
+        for(int idx = dim - 1; idx >= 0; idx--) {
+            shape_.get()[idx] = shape[idx];
+            if(idx == dim_ - 1) stride_.get()[idx] = 1;
+            else stride_.get()[idx] = stride_.get()[idx + 1] * shape[idx + 1];
         }
     }
 
@@ -101,37 +101,44 @@ public:
         // if(count != data.size()) {}
 
         data_ = std::shared_ptr<ImplType>(new ImplType[data.size()], std::default_delete<ImplType[]>());
-        for(int i = 0; i < data.size(); i++) {
-            data_.get()[i] = data[i];
+        for(int idx = 0; idx < data.size(); idx++) {
+            data_.get()[idx] = data[idx];
         }
         offset_ = 0;
         dim_ = shape.size();
-        shape_ = new int[dim_];
-        stride_ = new int[dim_];
-        for(int i = dim_ - 1; i >= 0; i--) {
-            shape_[i] = shape[i];
-            if(i == dim_ - 1) stride_[i] = 1;
-            else stride_[i] = stride_[i + 1] * shape[i + 1];
+        shape_ = std::shared_ptr<int>(new int[dim_], std::default_delete<int[]>());
+        stride_ = std::shared_ptr<int>(new int[dim_], std::default_delete<int[]>());
+        for(int idx = dim_ - 1; idx >= 0; idx--) {
+            shape_.get()[idx] = shape[idx];
+            if(idx == dim_ - 1) stride_.get()[idx] = 1;
+            else stride_.get()[idx] = stride_.get()[idx + 1] * shape[idx + 1];
         }
     }
 
-    Tensor(std::shared_ptr<ImplType> data, int offset, int dim, int* shape, int* stride) : data_(data), offset_(offset), dim_(dim), shape_(shape), stride_(stride) {}
+    Tensor(std::shared_ptr<ImplType> data, int offset, int dim, std::shared_ptr<int> shape, std::shared_ptr<int> stride) : data_(data), offset_(offset), dim_(dim), shape_(shape), stride_(stride) {}
 
     ~Tensor() {
-        // delete[] shape_;
-        // delete[] stride_;
     }
 
-    std::shared_ptr<ImplType> getPoint() const {
+    std::shared_ptr<ImplType> getDataPtr() const {
         return data_;
-    };
+    }
 
     int getOffset() const {
         return offset_;
     }
+
     // 获得 Tensor 的维度
     int getDim() const {
         return dim_;
+    }
+
+    std::shared_ptr<int> getShapePtr() const {
+        return shape_;
+    }
+
+    std::shared_ptr<int> getStridePtr() const {
+        return stride_;
     }
 
     // 获得 Tensor 某一维的大小
@@ -140,17 +147,17 @@ public:
         // 参数检查
         // if(dimIdx >= dim_) {}
 
-        return shape_[dimIdx]; 
+        return shape_.get()[dimIdx]; 
     }
 
     int getStride(int dimIdx) const {
-        return stride_[dimIdx];
+        return stride_.get()[dimIdx];
     }
 
     int getSize() const {
         int size = 1;
         for(int dimIdx = 0; dimIdx < getDim(); dimIdx++) {
-            size *= shape_[dimIdx];
+            size *= shape_.get()[dimIdx];
         }
         return size;
     }
@@ -159,8 +166,8 @@ public:
     // indices：所有维度的下标组成的数组
     ImplType getData(int* indices) const {
         int index = offset_;
-        for(int i = 0; i < dim_; i++) {
-            index += indices[i] * stride_[i];
+        for(int idx = 0; idx < dim_; idx++) {
+            index += indices[idx] * stride_.get()[idx];
         }
         return data_.get()[index];
     }
@@ -169,12 +176,13 @@ public:
         // // 参数检查
         // if(dim_ != operand.getDim()) {}
         // for(int i = 0; i < dim_; i++) {
-        //     if(shape_[i] != operand.getShape(i)) {}
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
             int* indices = new int[1];
             indices[0] = 0;
             ImplType tmp = data_.get()[offset_] + operand.getData(indices);
+            delete[] indices;
             int* a = new ImplType[1];
             a[0] = tmp;
             return Tensor(a, 1, nullptr, 0);
@@ -198,12 +206,13 @@ public:
         // // 参数检查
         // if(dim_ != operand.getDim()) {}
         // for(int i = 0; i < dim_; i++) {
-        //     if(shape_[i] != operand.getShape(i)) {}
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
             int* indices = new int[1];
             indices[0] = 0;
             ImplType tmp = data_.get()[offset_] - operand.getData(indices);
+            delete[] indices;
             int* a = new ImplType[1];
             a[0] = tmp;
             return Tensor(a, 1, nullptr, 0);
@@ -223,12 +232,13 @@ public:
         // // 参数检查
         // if(dim_ != operand.getDim()) {}
         // for(int i = 0; i < dim_; i++) {
-        //     if(shape_[i] != operand.getShape(i)) {}
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
             int* indices = new int[1];
             indices[0] = 0;
             ImplType tmp = data_.get()[offset_] * operand.getData(indices);
+            delete[] indices;
             int* a = new ImplType[1];
             a[0] = tmp;
             return Tensor(a, 1, nullptr, 0);
@@ -248,12 +258,13 @@ public:
         // // 参数检查
         // if(dim_ != operand.getDim()) {}
         // for(int i = 0; i < dim_; i++) {
-        //     if(shape_[i] != operand.getShape(i)) {}
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
             int* indices = new int[1];
             indices[0] = 0;
             ImplType tmp = data_.get()[offset_] / operand.getData(indices);
+            delete[] indices;
             int* a = new ImplType[1];
             a[0] = tmp;
             return Tensor(a, 1, nullptr, 0);
@@ -273,12 +284,13 @@ public:
         // // 参数检查
         // if(dim_ != operand.getDim()) {}
         // for(int i = 0; i < dim_; i++) {
-        //     if(shape_[i] != operand.getShape(i)) {}
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
             int* indices = new int[1];
             indices[0] = 0;
             ImplType tmp = data_.get()[offset_] % operand.getData(indices);
+            delete[] indices;
             int* a = new ImplType[1];
             a[0] = tmp;
             return Tensor(a, 1, nullptr, 0);
@@ -298,12 +310,13 @@ public:
         // // 参数检查
         // if(dim_ != operand.getDim()) {}
         // for(int i = 0; i < dim_; i++) {
-        //     if(shape_[i] != operand.getShape(i)) {}
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
             int* indices = new int[1];
             indices[0] = 0;
             data_.get()[offset_] += operand.getData(indices);
+            delete[] indices;
         }
         else if(dim_ == 1) {
 
@@ -320,12 +333,13 @@ public:
         // // 参数检查
         // if(dim_ != operand.getDim()) {}
         // for(int i = 0; i < dim_; i++) {
-        //     if(shape_[i] != operand.getShape(i)) {}
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
             int* indices = new int[1];
             indices[0] = 0;
             data_.get()[offset_] -= operand.getData(indices);
+            delete[] indices;
         }
         else if(dim_ == 1) {
 
@@ -342,12 +356,13 @@ public:
         // // 参数检查
         // if(dim_ != operand.getDim()) {}
         // for(int i = 0; i < dim_; i++) {
-        //     if(shape_[i] != operand.getShape(i)) {}
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
             int* indices = new int[1];
             indices[0] = 0;
             data_.get()[offset_] *= operand.getData(indices);
+            delete[] indices;
         }
         else if(dim_ == 1) {
 
@@ -364,12 +379,13 @@ public:
         // // 参数检查
         // if(dim_ != operand.getDim()) {}
         // for(int i = 0; i < dim_; i++) {
-        //     if(shape_[i] != operand.getShape(i)) {}
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
             int* indices = new int[1];
             indices[0] = 0;
             data_.get()[offset_] /= operand.getData(indices);
+            delete[] indices;
         }
         else if(dim_ == 1) {
 
@@ -386,12 +402,13 @@ public:
         // // 参数检查
         // if(dim_ != operand.getDim()) {}
         // for(int i = 0; i < dim_; i++) {
-        //     if(shape_[i] != operand.getShape(i)) {}
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
         // }
         if(dim_ == 0) {
             int* indices = new int[1];
             indices[0] = 0;
             data_.get()[offset_] %= operand.getData(indices);
+            delete[] indices;
         }
         else if(dim_ == 1) {
 
@@ -405,15 +422,11 @@ public:
     }
 
     void operator=(const Tensor<ImplType>& operand) {
-        data_ = operand.getPoint();
+        data_ = operand.getDataPtr();
         offset_ = operand.getOffset();
         dim_ = operand.getDim();
-        shape_ = new int[dim_];
-        stride_ = new int[dim_];
-        for(int i = 0; i < dim_; i++) {
-            shape_[i] = operand.getShape(i);
-            stride_[i] = operand.getStride(i);
-        }
+        shape_ = operand.getShapePtr();
+        stride_ = operand.getStridePtr();
     }
 
     Tensor<ImplType> operator[](int idx) const {
@@ -422,7 +435,7 @@ public:
 
     Tensor<ImplType> operator[](Slice slc) const {
         if(slc.isAll_) {
-            return slice(0, 0, shape_[0]);
+            return slice(0, 0, shape_.get()[0]);
         }
         else {
             return slice(0, slc.start_, slc.end_, slc.stride_);
@@ -434,20 +447,20 @@ public:
     // idx：索引
     Tensor<ImplType> slice(int dimIdx, int idx) const {
         // 参数检查
-        // if(dimIdx >= dim_ || idx >= shape_[dimIdx]) {}
+        // if(dimIdx >= dim_ || idx >= shape_.get()[dimIdx]) {}
 
-        int offset = offset_ + idx * stride_[dimIdx];
+        int offset = offset_ + idx * stride_.get()[dimIdx];
         int dim = dim_ - 1;
-        int* shape = new int[dim];
-        int* stride = new int[dim];
-        for(int i = 0; i < dim; i++) {
-            if(i < dimIdx) {
-                shape[i] = shape_[i];
-                stride[i] = stride_[i];
+        std::shared_ptr<int> shape(new int[dim], std::default_delete<int[]>());
+        std::shared_ptr<int> stride(new int[dim], std::default_delete<int[]>());
+        for(int idx = 0; idx < dim; idx++) {
+            if(idx < dimIdx) {
+                shape.get()[idx] = shape_.get()[idx];
+                stride.get()[idx] = stride_.get()[idx];
             }
             else {
-                shape[i] = shape_[i + 1];
-                stride[i] = stride_[i + 1];
+                shape.get()[idx] = shape_.get()[idx + 1];
+                stride.get()[idx] = stride_.get()[idx + 1];
             }
         }
         return Tensor<ImplType>(data_, offset, dim, shape, stride);
@@ -460,18 +473,18 @@ public:
     // sliceStride：步长
     Tensor<ImplType> slice(int dimIdx, int start, int end, int sliceStride = 1) const {
         // 参数检查
-        // if(dimIdx >= dim_ || start >= shape_[dimIdx] || end > shape_[dimIdx]) {}
+        // if(dimIdx >= dim_ || start >= shape_.get()[dimIdx] || end > shape_.get()[dimIdx]) {}
 
-        int offset = start * stride_[dimIdx];
+        int offset = start * stride_.get()[dimIdx];
         int dim = dim_;
-        int* shape = new int[dim];
-        int* stride = new int[dim];
+        std::shared_ptr<int> shape(new int[dim], std::default_delete<int[]>());
+        std::shared_ptr<int> stride(new int[dim], std::default_delete<int[]>());
         for(int i = 0; i < dim; i++) {
-            shape[i] = shape_[i];
-            stride[i] = stride_[i];
+            shape.get()[i] = shape_.get()[i];
+            stride.get()[i] = stride_.get()[i];
         }
-        shape[dimIdx] = (end - start - 1) / sliceStride + 1;
-        stride[dimIdx] = stride_[dimIdx] * sliceStride;
+        shape.get()[dimIdx] = (end - start - 1) / sliceStride + 1;
+        stride.get()[dimIdx] = stride_.get()[dimIdx] * sliceStride;
         return Tensor<ImplType>(data_, offset, dim, shape, stride);
     }
 
@@ -503,11 +516,11 @@ public:
     //     std::cout << "偏移" << offset_ << "\n";
     //     std::cout << "维度" << dim_ << "\n";
     //     for(int i = 0; i < dim_; i++) {
-    //         std::cout << shape_[i] << " ";
+    //         std::cout << shape_.get()[i] << " ";
     //     }
     //     std::cout << "\n";
     //     for(int i = 0; i < dim_; i++) {
-    //         std::cout << stride_[i] << " ";
+    //         std::cout << stride_.get()[i] << " ";
     //     }
     //     std::cout << "\n";
     // }
