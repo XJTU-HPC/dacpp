@@ -1,8 +1,9 @@
-#ifndef LIB_H
-#define LIB_H
+#ifndef REWRITE_LIB_H
+#define REWRITE_LIB_H
 
 #include <string>
 #include <vector>
+#include <queue>
 
 #include "clang/AST/AST.h"
 #include "clang/Rewrite/Core/Rewriter.h"
@@ -66,24 +67,31 @@ public:
     int getShape(int idx) { return shapes_[idx]; }
 };
 
+class Expression;
+
 // 计算函数类
 class Calc {
 private:
     std::string name_; // 函数名
     std::vector<Param> params_; // 参数
-    std::string body_; // 函数体
+    std::queue<std::string> body_; // 函数体
+    std::queue<Expression*> exprs_; // 数据关联计算表达式
 
 public:
     Calc() {}
 
-    void setName(std::string name) { name_ = name; }
-    void setParams(Param param) { params_.push_back(param); }
-    void setBody(std::string body) { body_ = body; }
+    void setName(std::string name);
+    std::string getName() const;
 
-    std::string getName() const { return name_; }
-    int getNumParams() const { return params_.size(); }
-    Param getParam(int idx) const { return params_[idx]; }
-    std::string getBody() const { return body_; }
+    void setParams(Param param);
+    int getNumParams() const;
+    Param getParam(int idx) const;
+
+    void setBody(clang::Stmt* body);
+    std::string getBody();
+
+    void setExpression(const clang::BinaryOperator* dacExpr);
+    Expression* getExpression();
 };
 
 // DAC 算子类
@@ -146,6 +154,8 @@ private:
     std::vector<DacOp> ops_; // 算子
     std::string calcName_; // 计算函数名
     std::vector<ShellParam> shellParams_; // 关联结构参数
+    Shell* father_;
+    std::vector<Shell*> sons_;
 
 public:
     Shell() {}
@@ -155,6 +165,8 @@ public:
     void setOps(DacOp op) { ops_.push_back(op); }
     void setCalcName(std::string name) { calcName_ = name; }
     void setShellParams(ShellParam param) { shellParams_.push_back(param); }
+    void setFather(Shell* father) { father_ = father; }
+    void setSons(Shell* son) { sons_.push_back(son); }
     
     std::string getName() const { return name_; }
     int getNumParams() const { return params_.size(); }
@@ -164,8 +176,26 @@ public:
     std::string getCalcName() const { return calcName_; }
     int getNumShellParams() const { return shellParams_.size(); }
     ShellParam getShellParam(int idx) const { return shellParams_[idx]; }
+    Shell* getFather() const { return father_; }
+    int getNumSons() const { return sons_.size(); }
+    Shell* getSon(int idx) const { return sons_[idx]; }
 
     void setOpSplitSize(int idx, int splitsize) { ops_[idx].setSplitSize(splitsize); }
+};
+
+class Expression {
+private:
+    Shell* shell_;
+    Calc* calc_;
+
+public:
+    Expression() : shell_(nullptr), calc_(nullptr) {}
+
+    void setShell(Shell* shell) { shell_ = shell; }
+    Shell* getShell() const { return shell_; }
+
+    void setCalc(Calc* calc) { calc_ = calc; }
+    Calc* getCalc() const { return calc_; }
 };
 
 // 源到源翻译类
@@ -176,8 +206,9 @@ private:
 
     std::vector<HeaderFile> headerFiles_; // 头文件
     std::vector<NameSpace> nameSpaces_; // 命名空间
-    std::vector<Calc> calcs_; // 计算函数
-    std::vector<Shell> shells_; // 关联结构函数
+    std::vector<Expression*> exprs_; // 数据关联计算表达式
+    std::vector<Calc*> calcs_; // 计算函数
+    std::vector<Shell*> shells_; // 关联结构函数
 
     void recursiveRewriteMain(clang::Stmt* curStmt);
 
@@ -188,18 +219,22 @@ public:
     void setMainFunc(const clang::FunctionDecl* mainFunc) { mainFunc_ = mainFunc; }
     
     void setHeaderFiles(std::string name);
-    void setNameSpaces(std::string name);
-    void setCalcs(const clang::BinaryOperator* dacExpr);
-    void setShells(const clang::BinaryOperator* dacExpr);
-
     int getNumHeaderFiles() const { return headerFiles_.size(); }
     HeaderFile getHeaderFile(int idx) const { return headerFiles_[idx]; }
+
+    void setNameSpaces(std::string name);
     int getNumNameSpaces() const { return nameSpaces_.size(); }
     NameSpace getNameSpace(int idx) const { return nameSpaces_[idx]; }
+
+    static void setCalc(const clang::BinaryOperator* dacExpr, Calc* calc, std::vector<std::vector<int>> shapes);
+    void setCalcs(Calc* calc);
     int getNumCalcs() const { return calcs_.size(); }
-    Calc getCalc(int idx) const { return calcs_[idx]; }
+    Calc* getCalc(int idx) const { return calcs_[idx]; }
+
+    static void setShell(const clang::BinaryOperator* dacExpr, Shell* shell, std::vector<std::vector<int>> shapes);
+    void setShells(Shell* shell);
     int getNumShells() const { return shells_.size(); }
-    Shell getShell(int idx) const { return shells_[idx]; }
+    Shell* getShell(int idx) const { return shells_[idx]; }
 
     // 将头文件与命名空间加入到源文件中
     // 将数据与计算关联起来生成新的函数加入到源文件中

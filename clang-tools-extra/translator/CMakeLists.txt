@@ -7,6 +7,8 @@ add_clang_executable(translator
   sub_template.cpp
   DataReconstructor.cpp
   dacInfo.cpp
+  ASTLib.cpp
+  test/test.cpp
   )
 target_link_libraries(translator
   PRIVATE

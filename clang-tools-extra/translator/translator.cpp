@@ -13,6 +13,8 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 
 #include "rewriteLib.h"
+#include "ASTLib.h"
+#include "ASTLib2.hpp"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -32,10 +34,16 @@ public:
     s2s.setRewriter(&Rewrite);
     if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
       // 获得 Shell 信息
-      s2s.setShells(dacExpr);
+      dacpp::Shell* shell = new dacpp::Shell();
+      std::vector<std::vector<int>> shapes;
+      dacpp::getParamInfo(dacExpr, shapes);
+      s2s.setShell(dacExpr, shell, shapes);
+      s2s.setShells(shell);
 
       // 获得 calc 信息
-      s2s.setCalcs(dacExpr);
+      dacpp::Calc* calc = new dacpp::Calc();
+      s2s.setCalc(dacExpr, calc, shapes);
+      s2s.setCalcs(calc);
     }
     else if (const FunctionDecl* mainFunc = Result.Nodes.getNodeAs<clang::FunctionDecl>("main")) {
       s2s.setMainFunc(mainFunc);
@@ -54,7 +62,11 @@ class MyASTConsumer : public ASTConsumer {
 public:
   MyASTConsumer(Rewriter &R) : HandleForDac(R) {
     // 可以通过 addMatcher 添加用户构造的匹配器到 MatchFinder中
-    Matcher.addMatcher(binaryOperator(hasOperatorName("<->")).bind("dac_expr"), &HandleForDac);
+    // Matcher.addMatcher(binaryOperator(hasOperatorName("<->")).bind("dac_expr"), &HandleForDac);
+    Matcher.addMatcher(binaryOperator(
+                                      hasOperatorName("<->"), 
+                                      hasParent(exprWithCleanups(hasParent(compoundStmt(hasParent(functionDecl(hasName("main")))))))
+                                    ).bind("dac_expr"), &HandleForDac);
     Matcher.addMatcher(functionDecl(hasName("main")).bind("main"), &HandleForDac);
   }
 

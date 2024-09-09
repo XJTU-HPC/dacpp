@@ -488,6 +488,14 @@ public:
         return Tensor<ImplType>(data_, offset, dim, shape, stride);
     }
 
+    ImplType getElement(std::vector<int> indices) {
+        Tensor<ImplType> temp = slice(0, indices[0]);
+        for(int i = 1; i < indices.size(); i++) {
+            temp = temp.slice(0, indices[i]);
+        }
+        return temp[0];
+    }
+
     // 获取 Tensor 中的数据，用基本类型数组保存
     // data：基本类型数组
     void tensor2Array(ImplType* data) const {
