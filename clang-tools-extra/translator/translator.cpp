@@ -12,9 +12,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "rewriteLib.h"
-#include "ASTLib.h"
-#include "ASTLib2.hpp"
+#include "parser/rewriteLib.h"
+#include "parser/ASTLib.h"
+#include "parser/ASTLib2.hpp"
 
 using namespace clang;
 using namespace clang::ast_matchers;

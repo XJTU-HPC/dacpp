@@ -7,9 +7,9 @@
 #include "rewriteLib.h"
 #include "ASTLib.h"
 #include "ASTLib2.hpp"
-#include "dacInfo.h"
-#include "sub_template.h"
-#include "test/test.h"
+#include "../rewriter/dacInfo.h"
+#include "../rewriter/sub_template.h"
+#include "../test/test.h"
 
 using namespace clang;
 

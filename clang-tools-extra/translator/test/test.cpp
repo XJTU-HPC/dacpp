@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "../rewriteLib.h"
+#include "../parser/rewriteLib.h"
 
 // 测试 Shell
 void shellTest(dacpp::Shell* shell) {
