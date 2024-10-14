@@ -1,4 +1,5 @@
 #include <string>
+#include <iostream>
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -96,8 +97,8 @@ public:
     // 生成sycl文件
     std::error_code error_code;
     std::string fileName = getCurrentFile().str();
-    int pos = fileName.find("dacppFile/");
-    fileName.replace(pos, fileName.size() - pos + 1, "syclFile/" + fileName.substr(pos + 10));
+    int pos = fileName.find("dacpp/");
+    fileName.replace(pos, fileName.size() - pos + 1, "sycl/" + fileName.substr(pos + 10));
     llvm::raw_fd_ostream outFile(fileName, error_code, llvm::sys::fs::F_None);
     // this will write the result to outFile
     rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID()).write(outFile);

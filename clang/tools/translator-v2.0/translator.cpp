@@ -12,17 +12,22 @@
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "parser/rewriteLib.h"
-#include "parser/ASTLib.h"
-#include "parser/ASTLib2.hpp"
+#include "parser/Split.h"
+#include "parser/Param.h"
+#include "parser/DacppStructure.h"
+#include "parser/ASTParse.h"
+#include "test/test.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
 using namespace clang::driver;
 using namespace clang::tooling;
 
-dacpp::Source2Source s2s;
+dacppTranslator::DacppFile dacppFile; // DACPP 文件
 
+/*
+  ASTMatcher 匹配 DACPP 文件中符合要求的节点
+*/
 class DacHandler : public MatchFinder::MatchCallback {
 private:
   Rewriter &Rewrite;
@@ -31,23 +36,26 @@ public:
   DacHandler(Rewriter &Rewrite) : Rewrite(Rewrite) {}
 
   virtual void run(const MatchFinder::MatchResult &Result) {
-    s2s.setRewriter(&Rewrite);
+  
+    //s2s.setRewriter(&Rewrite);
+    
+    /*
+      匹配数据关联计算表达式
+    */
     if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
-      // 获得 Shell 信息
-      dacpp::Shell* shell = new dacpp::Shell();
-      std::vector<std::vector<int>> shapes;
-      dacpp::getParamInfo(dacExpr, shapes);
-      s2s.setShell(dacExpr, shell, shapes);
-      s2s.setShells(shell);
+      /*
+        解析 DACPP 文件中的数据管理计算表达式
+      */
+      dacppFile.setExpression(dacExpr);
+    }
 
-      // 获得 calc 信息
-      dacpp::Calc* calc = new dacpp::Calc();
-      s2s.setCalc(dacExpr, calc, shapes);
-      s2s.setCalcs(calc);
-    }
+    /*
+      匹配主函数
+    */
     else if (const FunctionDecl* mainFunc = Result.Nodes.getNodeAs<clang::FunctionDecl>("main")) {
-      s2s.setMainFunc(mainFunc);
+      dacppFile.setMainFuncLoc(mainFunc);
     }
+  
   }
 
 };
@@ -87,6 +95,8 @@ class MyFrontendAction : public ASTFrontendAction {
 public:
   MyFrontendAction() {}
   void EndSourceFileAction() override {
+    dacppTranslator::printDacppFileInfo(dacppFile);
+    /*
     s2s.rewriteDac();
     s2s.rewriteMain();
     // this will output to screen as what you got.
@@ -102,6 +112,7 @@ public:
     // this will write the result to outFile
     rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID()).write(outFile);
     outFile.close();
+    */
   }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -120,7 +131,7 @@ static llvm::cl::OptionCategory translator("translator options");
 int main(int argc, const char **argv) {
   // 所有命令行 Clang 工具通用的选项解析器
   CommonOptionsParser op(argc, argv, translator);
-  
+
   // 运行一个前端动作的工具
   ClangTool tool(op.getCompilations(), op.getSourcePathList());
 
