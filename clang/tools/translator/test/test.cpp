@@ -1,63 +1,79 @@
 #include <iostream>
+#include <string>
+#include <typeinfo>
 
-#include "../parser/rewriteLib.h"
+#include "../parser/Param.h"
+#include "../parser/DacppStructure.h"
+#include "test.h"
 
-// 测试 Shell
-void shellTest(dacpp::Shell* shell) {
-    std::cout << "*****This is shellTest.*****" << "\n";
-    for(int i = 0; i < shell->getNumOps(); i++) {
-        std::cout << shell->getOp(i).getType() << "\n";
-        std::cout << shell->getOp(i).getName() << "\n";
-        std::cout << shell->getOp(i).getSplitSize() << "\n";
+void dacppTranslator::printParamInfo(dacppTranslator::Param* param) {
+    std::cout << "读写属性" << param->getRw() << std::endl;
+    std::cout << "包装类型" << param->getType() << std::endl;
+    std::cout << "基本类型" << param->getBasicType() << std::endl;
+    std::cout << "参数名" << param->getName() << std::endl;
+    std::cout << "参数形状：";
+    for(int i = 0; i < param->getDim(); i++) {
+        std::cout << param->getShape(i) << " ";
     }
-    for(int i = 0; i < shell->getNumParams(); i++) {
-        std::cout << shell->getParam(i).getType() << "\n";
-        std::cout << shell->getParam(i).getName() << "\n";
-        std::cout << shell->getParam(i).getBasicType() << "\n";
-        std::cout << shell->getParam(i).getDim() << "\n";
-        for(int j = 0; j < shell->getParam(i).getNumShapes(); j++) {
-            std::cout << shell->getParam(i).getShape(j) << " ";
-        }
-        std::cout << "\n";
-    }
-    for(int i = 0; i < shell->getNumShellParams(); i++) {
-        std::cout << shell->getShellParam(i).getRw() << "\n";
-        std::cout << shell->getShellParam(i).getType() << "\n";
-        std::cout << shell->getShellParam(i).getName() << "\n";
-        std::cout << shell->getShellParam(i).getBasicType() << "\n";
-        std::cout << shell->getShellParam(i).getDim() << "\n";
-        for(int j = 0; j < shell->getShellParam(i).getNumShapes(); j++) {
-            std::cout << shell->getShellParam(i).getShape(j) << " ";
-        }
-        std::cout << "\n";
-        for(int j = 0; j < shell->getShellParam(i).getNumOps(); j++) {
-            std::cout << shell->getShellParam(i).getOp(j).getType() << "\n";
-            std::cout << shell->getShellParam(i).getOp(j).getName() << "\n";
-            std::cout << shell->getShellParam(i).getOp(j).getSplitSize() << "\n";
-        }
-        std::cout << "\n";
-    }
-    std::cout << "*****This is shellTest.*****" << "\n";
+    std::cout << std::endl;
 }
 
-// 测试 calc
-void calcTest(dacpp::Calc* calc) {
-    std::cout << "*****This is calcTest.*****" << "\n";
+void dacppTranslator::printShellParamInfo(dacppTranslator::ShellParam* shellParam) {
+    std::cout << "读写属性" << shellParam->getRw() << std::endl;
+    std::cout << "包装类型" << shellParam->getType() << std::endl;
+    std::cout << "基本类型" << shellParam->getBasicType() << std::endl;
+    std::cout << "参数名" << shellParam->getName() << std::endl;
+    std::cout << "参数形状：";
+    for(int i = 0; i < shellParam->getDim(); i++) {
+        std::cout << shellParam->getShape(i) << " ";
+    }
+    std::cout << "划分列表：\n";
+    for(int i = 0; i < shellParam->getNumSplit(); i++) {
+        std::cout << shellParam->getSplit(i)->getId() << std::endl;
+        std::cout << shellParam->getSplit(i)->getDimIdx() << std::endl;
+    }
+    std::cout << std::endl;
+}
+
+void dacppTranslator::printShellInfo(dacppTranslator::Shell* shell) {
+    std::cout << shell->getName() << std::endl;
+    for(int i = 0; i < shell->getNumParams(); i++) {
+        printParamInfo(shell->getParam(i));
+    }
+    for(int i = 0; i < shell->getNumShellParams(); i++) {
+        printShellParamInfo(shell->getShellParam(i));
+    }
+}
+
+void dacppTranslator::printCalcInfo(dacppTranslator::Calc* calc) {
+    std::cout << calc->getName() << std::endl;
     for(int i = 0; i < calc->getNumParams(); i++) {
-        std::cout << "Param:\n";
-        std::cout << "类型" << calc->getParam(i).getType() << "\n";
-        std::cout << "变量名" << calc->getParam(i).getName() << "\n";
-        std::cout << "基本数据类型" << calc->getParam(i).getBasicType() << "\n";
-        std::cout << "维度" << calc->getParam(i).getDim() << "\n";
-        for(int j = 0; j < calc->getParam(i).getNumShapes(); j++) {
-            std::cout << calc->getParam(i).getShape(j) << " ";
-        }
-        std::cout << "\n";
+        printParamInfo(calc->getParam(i));
     }
-    while(1) {
-        std::string temp = calc->getBody();
-        if(temp == "None") { break; }
-        std::cout << temp << "\n";
+}
+
+void dacppTranslator::printDacppFileInfo(dacppTranslator::DacppFile* dacppFile) {
+    std::cout << "头文件：" << std::endl;
+    for(int i = 0; i < dacppFile->getNumHeaderFile(); i++) {
+        std::cout << dacppFile->getHeaderFile(i)->getName() << std::endl;
     }
-    std::cout << "*****This is calcTest.*****" << "\n";
+    std::cout << std::endl;
+
+    std::cout << "命名空间：" << std::endl;
+    for(int i = 0; i < dacppFile->getNumNameSpace(); i++) {
+        std::cout << dacppFile->getNameSpace(i)->getName() << std::endl;
+    }
+    std::cout << std::endl;
+
+    std::cout << "数据管理计算表达式：" << std::endl;
+    for(int i = 0; i < dacppFile->getNumExpression(); i++) {
+        std::cout << "Shell：" << std::endl;        
+        printShellInfo(dacppFile->getExpression(i)->getShell());
+        std::cout << std::endl;
+        std::cout << "Calc：" << std::endl;
+        printCalcInfo(dacppFile->getExpression(i)->getCalc());
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
 }

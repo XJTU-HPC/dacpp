@@ -1,9 +1,16 @@
-#include <iostream>
+#include "../parser/Param.h"
+#include "../parser/DacppStructure.h"
 
-#include "../parser/rewriteLib.h"
+namespace dacppTranslator {
 
-// 测试 Shell
-void shellTest(dacpp::Shell* shell);
+void printParamInfo(dacppTranslator::Param* param);
 
-// 测试 calc
-void calcTest(dacpp::Calc* calc);
+void printShellParamInfo(dacppTranslator::ShellParam* shellParam);
+
+void printShellInfo(dacppTranslator::Shell* shell);
+
+void printCalcInfo(dacppTranslator::Calc* calc);
+
+void printDacppFileInfo(dacppTranslator::DacppFile* dacppFile);
+
+}

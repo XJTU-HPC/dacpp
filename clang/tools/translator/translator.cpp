@@ -1,5 +1,4 @@
 #include <string>
-#include <iostream>
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -13,43 +12,48 @@
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "parser/rewriteLib.h"
-#include "parser/ASTLib.h"
-#include "parser/ASTLib2.hpp"
+#include "parser/Split.h"
+#include "parser/Param.h"
+#include "parser/DacppStructure.h"
+#include "rewriter/Rewriter.h"
+#include "test/test.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
 using namespace clang::driver;
 using namespace clang::tooling;
 
-dacpp::Source2Source s2s;
 
+ dacppTranslator::DacppFile* dacppFile = new dacppTranslator::DacppFile();
+
+/*
+  ASTMatcher 匹配 DACPP 文件中符合要求的节点
+*/
 class DacHandler : public MatchFinder::MatchCallback {
-private:
-  Rewriter &Rewrite;
   
 public:
-  DacHandler(Rewriter &Rewrite) : Rewrite(Rewrite) {}
+    DacHandler() {}
 
-  virtual void run(const MatchFinder::MatchResult &Result) {
-    s2s.setRewriter(&Rewrite);
-    if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
-      // 获得 Shell 信息
-      dacpp::Shell* shell = new dacpp::Shell();
-      std::vector<std::vector<int>> shapes;
-      dacpp::getParamInfo(dacExpr, shapes);
-      s2s.setShell(dacExpr, shell, shapes);
-      s2s.setShells(shell);
+    virtual void run(const MatchFinder::MatchResult &Result) {
+    
+        /*
+            匹配数据关联计算表达式
+        */
+        if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
+            /*
+            解析 DACPP 文件中的数据管理计算表达式
+            */
+            dacppFile->setExpression(dacExpr);
+        }
 
-      // 获得 calc 信息
-      dacpp::Calc* calc = new dacpp::Calc();
-      s2s.setCalc(dacExpr, calc, shapes);
-      s2s.setCalcs(calc);
+        /*
+            匹配主函数
+        */
+        else if (const FunctionDecl* mainFunc = Result.Nodes.getNodeAs<clang::FunctionDecl>("main")) {
+            dacppFile->setMainFuncLoc(mainFunc);
+        }
+  
     }
-    else if (const FunctionDecl* mainFunc = Result.Nodes.getNodeAs<clang::FunctionDecl>("main")) {
-      s2s.setMainFunc(mainFunc);
-    }
-  }
 
 };
 
@@ -60,71 +64,85 @@ public:
 // HandleTranslationUnit()：在整个文件都解析完后调用
 // ASTConsumer 是一个用来在AST上写一些通用动作的接口
 class MyASTConsumer : public ASTConsumer {
-public:
-  MyASTConsumer(Rewriter &R) : HandleForDac(R) {
-    // 可以通过 addMatcher 添加用户构造的匹配器到 MatchFinder中
-    // Matcher.addMatcher(binaryOperator(hasOperatorName("<->")).bind("dac_expr"), &HandleForDac);
-    Matcher.addMatcher(binaryOperator(
-                                      hasOperatorName("<->"), 
-                                      hasParent(exprWithCleanups(hasParent(compoundStmt(hasParent(functionDecl(hasName("main")))))))
-                                    ).bind("dac_expr"), &HandleForDac);
-    Matcher.addMatcher(functionDecl(hasName("main")).bind("main"), &HandleForDac);
-  }
-
-  void HandleTranslationUnit(ASTContext &Context) override {
-    // Run the matchers when we have the whole TU parsed.
-    Matcher.matchAST(Context);
-  }
 
 private:
-  DacHandler HandleForDac;
-  MatchFinder Matcher;
+    DacHandler HandleForDac;
+    MatchFinder Matcher;
+
+public:
+    MyASTConsumer() {
+        // 可以通过 addMatcher 添加用户构造的匹配器到 MatchFinder中
+        // Matcher.addMatcher(binaryOperator(hasOperatorName("<->")).bind("dac_expr"), &HandleForDac);
+        Matcher.addMatcher(binaryOperator(
+                                        hasOperatorName("<->"), 
+                                        hasParent(exprWithCleanups(hasParent(compoundStmt(hasParent(functionDecl(hasName("main")))))))
+                                        ).bind("dac_expr"), &HandleForDac);
+        Matcher.addMatcher(functionDecl(hasName("main")).bind("main"), &HandleForDac);
+    }
+
+    void HandleTranslationUnit(ASTContext &Context) override {
+        // Run the matchers when we have the whole TU parsed.
+        Matcher.matchAST(Context);
+    }
+
 };
 
 // ASTFrontendAction 是为使用基于 AST consumer 的前端动作的抽象基类
 // FrontendAction 是允许用户特定动作作为编译的一部分执行的接口
 // 需要实现 CreateASTConsumer 方法，该方法对于每个翻译单元返回一个 ASTConsumer
 class MyFrontendAction : public ASTFrontendAction {
-public:
-  MyFrontendAction() {}
-  void EndSourceFileAction() override {
-    s2s.rewriteDac();
-    s2s.rewriteMain();
-    // this will output to screen as what you got.
-    // rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID())
-    //     .write(llvm::outs());
-    
-    // 生成sycl文件
-    std::error_code error_code;
-    std::string fileName = getCurrentFile().str();
-    int pos = fileName.find("dacpp/");
-    fileName.replace(pos, fileName.size() - pos + 1, "sycl/" + fileName.substr(pos + 10));
-    llvm::raw_fd_ostream outFile(fileName, error_code, llvm::sys::fs::F_None);
-    // this will write the result to outFile
-    rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID()).write(outFile);
-    outFile.close();
-  }
-
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef file) override {
-    rewriter_.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
-    return std::make_unique<MyASTConsumer>(rewriter_);
-  }
 
 private:
-  Rewriter rewriter_;
+    Rewriter* clangRewriter;
+
+public:
+    MyFrontendAction() {
+        clangRewriter = new Rewriter();
+    }
+
+    std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI, StringRef file) override {
+        clangRewriter->setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
+        return std::make_unique<MyASTConsumer>();
+    }
+
+    void EndSourceFileAction() override {
+        dacppTranslator::Rewriter* rewriter = new dacppTranslator::Rewriter();
+
+        rewriter->setRewriter(clangRewriter);
+
+        rewriter->setDacppFile(dacppFile);
+
+        rewriter->rewriteDac();
+
+        // this will output to screen as what you got.
+        clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID())
+            .write(llvm::outs());
+        
+        /*
+        // 生成 SYCL 文件
+        std::error_code error_code;
+        std::string fileName = getCurrentFile().str();
+        int pos = fileName.find("dacpp/");
+        fileName.replace(pos, fileName.size() - pos + 1, "sycl/" + fileName.substr(pos + 10));
+        llvm::raw_fd_ostream outFile(fileName, error_code, llvm::sys::fs::F_None);
+        // this will write the result to outFile
+        rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID()).write(outFile);
+        outFile.close();
+        */
+  }
+
 };
 
 // 命令行选项的帮助信息
 static llvm::cl::OptionCategory translator("translator options");
 
 int main(int argc, const char **argv) {
-  // 所有命令行 Clang 工具通用的选项解析器
-  CommonOptionsParser op(argc, argv, translator);
-  
-  // 运行一个前端动作的工具
-  ClangTool tool(op.getCompilations(), op.getSourcePathList());
+    // 所有命令行 Clang 工具通用的选项解析器
+    CommonOptionsParser op(argc, argv, translator);
 
-  // 在命令行指定的所有文件上运行一个动作
-  return tool.run(newFrontendActionFactory<MyFrontendAction>().get());
+    // 运行一个前端动作的工具
+    ClangTool tool(op.getCompilations(), op.getSourcePathList());
+
+    // 在命令行指定的所有文件上运行一个动作
+    return tool.run(newFrontendActionFactory<MyFrontendAction>().get());
 }

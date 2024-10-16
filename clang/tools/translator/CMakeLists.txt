@@ -1,12 +1,14 @@
 set(LLVM_LINK_COMPONENTS support)
 
 add_clang_executable(translator
-  dacppLib/exception.cpp  
-  parser/rewriteLib.cpp
-  parser/ASTLib.cpp
-  rewriter/sub_template.cpp
+  dacppLib/exception.cpp
+  parser/Split.cpp
+  parser/Param.cpp
+  parser/ASTParse.cpp
+  parser/DacppStructure.cpp
+  rewriter/Rewriter.cpp
   rewriter/dacInfo.cpp
-  syclLib/DataReconstructor.cpp
+  rewriter/sub_template.cpp
   test/test.cpp
   translator.cpp
   )
