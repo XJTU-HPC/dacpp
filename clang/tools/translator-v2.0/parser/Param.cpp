@@ -67,11 +67,11 @@ int dacppTranslator::Param::getDim() {
 dacppTranslator::ShellParam::ShellParam() {
 }
 
-void dacppTranslator::ShellParam::setSplit(Split split) {
+void dacppTranslator::ShellParam::setSplit(Split* split) {
     splits.push_back(split);
 }
 
-dacppTranslator::Split dacppTranslator::ShellParam::getSplit(int idx) {
+dacppTranslator::Split* dacppTranslator::ShellParam::getSplit(int idx) {
     return splits[idx];
 }
 

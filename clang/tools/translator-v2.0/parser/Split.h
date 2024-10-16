@@ -15,7 +15,9 @@ private:
     int dimIdx; // 划分作用维度
 
 public:
+    std::string type;
     Split();
+    virtual ~Split() {}
     Split(std::string id, int dimIdx);
 
     void setId(std::string id);

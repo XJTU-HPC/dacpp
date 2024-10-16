@@ -1,5 +1,21 @@
-void dacpp::Source2Source::rewriteDac() {
+#include <iostream>
+#include <sstream>
+
+#include "clang/Rewrite/Core/Rewriter.h"
+
+#include "Rewriter.h"
+
+void dacppTranslator::Rewriter::setRewriter(clang::Rewriter* rewriter) {
+    this->rewriter = rewriter;
+}
+
+void dacppTranslator::Rewriter::setDacppFile(DacppFile* dacppFile) {
+    this->dacppFile = dacppFile;
+}
+
+void dacppTranslator::Rewriter::rewriteDac() {
     std::stringstream sstream;
+
     std::string dacShellParams = "";
     std::string dataRecon = "";
     std::string deviceMemAlloc = "";
@@ -9,52 +25,52 @@ void dacpp::Source2Source::rewriteDac() {
     std::string D2HMemMove = "";
     std::string memFree = "";
 
-    // 头文件
-    setHeaderFiles("<sycl/sycl.hpp>");
-    setHeaderFiles("\"../DataReconstructor.cpp\"");
-    for(int i = 0; i < getNumHeaderFiles(); i++) {
-        sstream << getHeaderFile(i).getStr() << "\n";
+    // 添加头文件
+    for(int i = 0; i < dacppFile->getNumHeaderFile(); i++) {
+        sstream << "#include " << dacppFile->getHeaderFile(i)->getName() << "\n";
     }
     sstream << "\n";
-
-    // 命名空间
-    setNameSpaces("dacpp");
-    setNameSpaces("sycl");
-    for(int i = 0; i < getNumNameSpaces(); i++) {
-        sstream << getNameSpace(i).getStr() << "\n";
+    
+    // 添加命名空间
+    for(int i = 0; i < dacppFile->getNumNameSpace(); i++) {
+        sstream << "using namespace " << dacppFile->getNameSpace(i)->getName() << ";\n";
     }
     sstream << "\n";
+    
+    // 添加数据关联表达式对应的划分结构和计算结构
+    for(int i = 0; i < dacppFile->getNumExpression(); i++) {
+        Expression* expr = dacppFile->getExpression(i);
 
-    // 计算函数
-    for(int i = 0; i < getNumCalcs(); i++) {
-        Calc* calc = getCalc(i);
+        // 计算结构
+        Calc* calc = expr->getCalc();
         sstream << "void " << calc->getName() << "(";
         for(int j = 0; j < calc->getNumParams(); j++) {
-            sstream << calc->getParam(j).getBasicType() << "* " << calc->getParam(j).getName();
+            sstream << calc->getParam(j)->getBasicType() << "* " << calc->getParam(j)->getName();
             if(j != calc->getNumParams() - 1) sstream << ", ";
         }
         sstream << ") {\n";
-        recursiveFunc(calc, sstream);
+        // recursiveFunc(calc, sstream);
         sstream << "}\n";
-    }
-
-    // 数据关联函数
-    for(int i = 0; i < getNumShells(); i++) {
-        Shell* shell = getShell(i);
+        
+        // 划分结构
+        Shell* shell = expr->getShell();
         sstream << "void " << shell->getName() << "(";
         for(int j = 0; j < shell->getNumParams(); j++) {
-            sstream << shell->getParam(j).getType() << " " << shell->getParam(j).getName();
-            dacShellParams += shell->getParam(j).getType() + " " + shell->getParam(j).getName();
+            sstream << shell->getParam(j)->getType() << " " << shell->getParam(j)->getName();
+            dacShellParams += shell->getParam(j)->getType() + " " + shell->getParam(j)->getName();
             if(j != shell->getNumParams() - 1) { 
                 sstream << ", ";
                 dacShellParams += ", ";
             }
         }
         sstream << ") {\n";
-        // 设备选择
-        sstream << "    auto selector = gpu_selector_v;\n   queue q(selector);\n\n  DataReconstructor<int> tool;\n";
+        
+        // 创建任务队列并绑定设备
+        sstream << "auto selector = gpu_selector_v;\nqueue q(selector);\n\n";
         
         // 数据重组
+        sstream << "DataReconstructor<int> tool\n";
+
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam shellParam = shell->getShellParam(j);
             std::string indexInfo = "{"; 
@@ -141,11 +157,10 @@ void dacpp::Source2Source::rewriteDac() {
         sstream << "\n}\n";
         memFree += "\n\n";
     }
-
     std::string strResult = sstream.str() + "\n";
     std::string strRes = CodeGen_DAC2SYCL(getShell(0)->getName(),dacShellParams,
     dataRecon, deviceMemAlloc, H2DMemMove, kernelExecute, reduction, D2HMemMove, memFree);
-    rewriter_->InsertText(mainFunc_->getBeginLoc(), strResult);
+    rewriter->InsertText(dacppFile->getMainFuncLoc()->getBeginLoc(), strResult);
 }
 
 void dacpp::Source2Source::recursiveRewriteMain(Stmt* curStmt) {
@@ -169,4 +184,8 @@ void dacpp::Source2Source::recursiveRewriteMain(Stmt* curStmt) {
 void dacpp::Source2Source::rewriteMain() {
     Stmt* mainFuncBody = mainFunc_->getBody();
     recursiveRewriteMain(mainFuncBody);
+}
+
+void dacppTranslator::Rewriter::rewriteMain() {
+
 }

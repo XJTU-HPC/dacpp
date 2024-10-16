@@ -47,13 +47,13 @@ public:
 class ShellParam : public Param {
 
 private:
-    std::vector<Split> splits; // 划分组
+    std::vector<Split*> splits; // 划分组
 
 public:
     ShellParam();
     
-    void setSplit(Split split);
-    Split getSplit(int idx);
+    void setSplit(Split* split);
+    Split* getSplit(int idx);
     int getNumSplit();
 
 };

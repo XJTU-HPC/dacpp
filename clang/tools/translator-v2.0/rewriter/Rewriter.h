@@ -1,6 +1,9 @@
 #ifndef TRANSLATOR_REWRITER_REWRITER_H
 #define TRANSLATOR_REWRITER_REWRITER_H
 
+#include "clang/AST/AST.h"
+#include "clang/Rewrite/Core/Rewriter.h"
+
 #include "../parser/DacppStructure.h"
 
 namespace dacppTranslator {
@@ -8,11 +11,17 @@ namespace dacppTranslator {
 class Rewriter {
 
 private:
-    DacppFile dacppFile;
+    clang::Rewriter* rewriter;
+    DacppFile* dacppFile;
 
 public:
-    void setDacppFile(DacppFile dacppFile);
+    void setRewriter(clang::Rewriter* rewriter);
 
+    void setDacppFile(DacppFile* dacppFile);
+
+    void rewriteDac();
+
+    void rewriteMain();
 };
 
 }

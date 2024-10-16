@@ -61,9 +61,9 @@ class Shell {
 
 private:
     std::string name; // 函数名
-    std::vector<Param> params; // 参数列表
-    std::vector<Split> splits; // 划分列表
-    std::vector<ShellParam> shellParams; // 划分结构参数
+    std::vector<Param*> params; // 参数列表
+    std::vector<Split*> splits; // 划分列表
+    std::vector<ShellParam*> shellParams; // 划分结构参数
     Expression* expr; // 所属的数据管理计算表达式
     FunctionDecl* shellLoc; // AST 中 Shell 节点的位置
 
@@ -73,16 +73,16 @@ public:
     void setName(std::string name);
     std::string getName();
 
-    void setParam(Param param);
-    Param getParam(int idx);
+    void setParam(Param* param);
+    Param* getParam(int idx);
     int getNumParams();
 
-    void setSplit(Split split);
-    Split getSplit(int idx);
+    void setSplit(Split* split);
+    Split* getSplit(int idx);
     int getNumSplits();
 
-    void setShellParam(ShellParam param);
-    ShellParam getShellParam(int idx);
+    void setShellParam(ShellParam* param);
+    ShellParam* getShellParam(int idx);
     int getNumShellParams();
 
     void setExpr(Expression* expr);
@@ -102,7 +102,7 @@ class Calc {
 
 private:
     std::string name; // 函数名
-    std::vector<Param> params; // 参数
+    std::vector<Param*> params; // 参数
     std::vector<std::string> body; // 函数体
     std::vector<Expression*> exprs; // 数据关联计算表达式
     Expression* expr; // 所属的数据管理计算表达式
@@ -114,8 +114,8 @@ public:
     void setName(std::string name);
     std::string getName();
 
-    void setParam(Param param);
-    Param getParam(int idx);
+    void setParam(Param* param);
+    Param* getParam(int idx);
     int getNumParams();
 
     void setBody(Stmt* body);
@@ -162,8 +162,8 @@ public:
 class DacppFile {
 
 private:
-    std::vector<HeaderFile> headerFiles;
-    std::vector<NameSpace> nameSpaces;
+    std::vector<HeaderFile*> headerFiles;
+    std::vector<NameSpace*> nameSpaces;
     std::vector<Expression*> exprs;
     const FunctionDecl* mainFuncLoc;
 
@@ -171,11 +171,11 @@ public:
     DacppFile();
     
     void setHeaderFile(std::string headerfile);
-    HeaderFile getHeaderFile(int idx);
+    HeaderFile* getHeaderFile(int idx);
     int getNumHeaderFile();
 
     void setNameSpace(std::string nameSpace);
-    NameSpace getNameSpace(int idx);
+    NameSpace* getNameSpace(int idx);
     int getNumNameSpace();
 
     void setExpression(const BinaryOperator* dacExpr);

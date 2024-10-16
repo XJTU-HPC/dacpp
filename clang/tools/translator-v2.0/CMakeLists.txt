@@ -6,6 +6,7 @@ add_clang_executable(translator-v2.0
   parser/Param.cpp
   parser/ASTParse.cpp
   parser/DacppStructure.cpp
+  rewriter/Rewriter.cpp
   test/test.cpp
   translator.cpp
   )
