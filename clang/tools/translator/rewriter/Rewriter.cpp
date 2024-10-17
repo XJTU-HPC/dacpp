@@ -51,7 +51,9 @@ void dacppTranslator::Rewriter::rewriteDac() {
             if(j != calc->getNumParams() - 1) sstream << ", ";
         }
         sstream << ") {\n";
-        // recursiveFunc(calc, sstream);
+        for(int i = 0; i < calc->getNumBody(); i++) {
+            sstream << calc->getBody(i) << "\n";
+        }
         sstream << "}\n";
         
         // 划分结构

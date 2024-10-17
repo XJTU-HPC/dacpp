@@ -19,7 +19,7 @@ namespace dacppTranslator {
 class HeaderFile {
 
 private:
-    std::string name;
+    std::string name; // 文件名
 
 public:
     HeaderFile();
@@ -36,7 +36,7 @@ public:
 class NameSpace {
 
 private:
-    std::string name;
+    std::string name; // 命名空间名
 
 public:
     NameSpace();
@@ -104,6 +104,10 @@ private:
     std::string name; // 函数名
     std::vector<Param*> params; // 参数
     std::vector<std::string> body; // 函数体
+    /*
+        计算函数中可能也包含数据关联计算表达式
+        存在数据关联表达式的嵌套这种情况需要以树的形式将其保存起来
+    */
     std::vector<Expression*> exprs; // 数据关联计算表达式
     Expression* expr; // 所属的数据管理计算表达式
     FunctionDecl* calcLoc; // AST 中 Calc 节点的位置
@@ -142,8 +146,8 @@ public:
 class Expression {
 
 private:
-    Shell* shell;
-    Calc* calc;
+    Shell* shell; // 数据关联表达式对应的shell
+    Calc* calc; // 数据关联计算表达式对应的calc
 
 public:
     Expression();
@@ -162,10 +166,10 @@ public:
 class DacppFile {
 
 private:
-    std::vector<HeaderFile*> headerFiles;
-    std::vector<NameSpace*> nameSpaces;
-    std::vector<Expression*> exprs;
-    const FunctionDecl* mainFuncLoc;
+    std::vector<HeaderFile*> headerFiles; // 头文件
+    std::vector<NameSpace*> nameSpaces; // 命名空间
+    std::vector<Expression*> exprs; // 数据关联计算表达式
+    const FunctionDecl* mainFuncLoc; // 主函数位置
 
 public:
     DacppFile();

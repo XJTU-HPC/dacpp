@@ -114,6 +114,7 @@ FunctionDecl* dacppTranslator::Shell::getShellLoc() {
     return shellLoc;
 }
 
+// 解析Shell
 void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr) {
     // 获取 DAC 数据关联表达式左值
     Expr* dacExprLHS = dacExpr->getLHS();
@@ -124,6 +125,11 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr) {
     setShellLoc(shellFunc);
     
     // 获取实参的形状
+    // 这里的实参目前指的是 DACPP:Tensor
+    // TODO 
+    // 实参形状这里直接在定义实参的位置找到了实参的初始化列表，在翻译的时候将实参形状硬编码到了函数中，如果多次调用同一函数，如果实参不同，会生成多个SYCL函数
+    // Tensor的初始化用到了两个std::vector，如果在生成之后对其进行了push_back，则不能得到正确的形状，会出现bug
+    // 如果Tensor初始化列表中的vector是从文件中读取的，也无法获得正确形状，这种情况需要在SYCL文件中把形状修改为软编码，比如Tensor.getShape(idx)
     std::vector<std::vector<int>> shapes(shellFunc->getNumParams());
     for(unsigned int paramsCount = 0; paramsCount < shellFunc->getNumParams(); paramsCount++) {
         Expr* curExpr = shellCall->getArg(paramsCount);
@@ -209,6 +215,11 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr) {
                 for(unsigned int i = 0; i < astExprs.size(); i++) {
                     if(getNode<DeclRefExpr>(astExprs[i])) {
                         VarDecl* vd = dyn_cast<VarDecl>(getNode<DeclRefExpr>(astExprs[i])->getDecl());
+
+                        // TODO：
+                        // 新增规则分区之后，所有算子均继承自父类Split，规则分区中的属性例如划分长度，划分步长还未通过分析抽象语法树获得
+                        // 需要将例如splitSize、splitStride、splitNumber等属性通过分析得到
+
                         if(vd->getType().getAsString().compare("dacpp::RegularSplit") == 0) {
                             RegularSplit* sp = new RegularSplit();
                             sp->type = "dacpp::RegularSplit";
@@ -291,7 +302,25 @@ int dacppTranslator::Calc::getNumParams() {
 }
 
 void dacppTranslator::Calc::setBody(Stmt* body) {
-
+    for(Stmt::child_iterator it = body->child_begin(); it != body->child_end(); it++) {
+        if(isa<ExprWithCleanups>(*it) && getNode<BinaryOperator>(*it)) {
+            this->body.push_back("Expression");
+            continue;
+        }
+        std::string temp = stmt2String(*it);
+        for(int i = 0; i < getNumParams(); i++) {
+            if(temp.find(getParam(i)->getName() + ".getShape") != -1) {
+                int pos = temp.find(getParam(i)->getName() + ".getShape");
+                int dim = (int)temp[pos + getParam(i)->getName().size() + 10] - (int)'0';
+                temp.replace(pos, getParam(i)->getName().size() + 12, std::to_string(getParam(i)->getShape(dim)));
+            }
+            if(temp.find(getParam(i)->getName()) != -1 && getParam(i)->getDim() == 0) {
+                int pos = temp.find(getParam(i)->getName());
+                temp.replace(pos, getParam(i)->getName().size(), getParam(i)->getName() + "[0]");
+            }
+        }
+        this->body.push_back(temp);
+    }
 }
 
 std::string dacppTranslator::Calc::getBody(int idx) {
@@ -372,7 +401,7 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
         }
         setParam(param);
     }
-    // setBody(calcFunc->getBody());
+    setBody(calcFunc->getBody());
 }
 
 /*

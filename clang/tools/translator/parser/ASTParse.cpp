@@ -8,7 +8,7 @@
 
 using namespace clang;
 
-// 将 clang 节点对应的代码转换成 std::string
+// 将clang节点对应的代码转换成std::string
 std::string dacppTranslator::stmt2String(Stmt *stmt) {
     clang::LangOptions lo;
     std::string out_str;
@@ -19,7 +19,7 @@ std::string dacppTranslator::stmt2String(Stmt *stmt) {
 
 
 
-// 获得划分信息
+// 获得划分信息，将划分相关的变量名和节点保存到name和splits中
 void dacppTranslator::getSplitExpr(Expr* curExpr, std::string& name, std::vector<Expr*>& splits) {
     if(!curExpr) { return; }
     CXXOperatorCallExpr* splitExpr = nullptr;
