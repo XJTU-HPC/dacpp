@@ -1,17 +1,39 @@
 set(LLVM_LINK_COMPONENTS support)
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dacppLib/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/parser/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/rewriter/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/test)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dpcppLib/include)
+
+set(DACPPLIB_SOURCES
+  dacppLib/lib/exception.cpp
+)
+set(PARSER_SOURCES
+  parser/lib/ASTParse.cpp
+  parser/lib/DacppStructure.cpp
+  parser/lib/Param.cpp
+  parser/lib/Split.cpp
+)
+set(REWRITER_SOURCES
+  rewriter/lib/dacInfo.cpp
+  rewriter/lib/sub_template.cpp
+  rewriter/lib/Rewriter.cpp
+)
+
+add_library(DacppLib ${DACPPLIB_SOURCES})
+add_library(ParserLib ${PARSER_SOURCES})
+add_library(RewriterLib ${REWRITER_SOURCES})
+add_library(TestLib test/test.cpp)
+
 add_clang_executable(translator
-  dacppLib/exception.cpp
-  parser/Split.cpp
-  parser/Param.cpp
-  parser/ASTParse.cpp
-  parser/DacppStructure.cpp
-  rewriter/Rewriter.cpp
-  rewriter/dacInfo.cpp
-  rewriter/sub_template.cpp
-  test/test.cpp
   translator.cpp
-  )
+)
+
+set_target_properties(translator PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator
+)
+
 target_link_libraries(translator
   PRIVATE
   clangAST
@@ -20,4 +42,10 @@ target_link_libraries(translator
   clangFrontend
   clangSerialization
   clangTooling
-  )
+  DacppLib
+  ParserLib
+  RewriterLib
+  TestLib
+)
+
+add_subdirectory(tests)

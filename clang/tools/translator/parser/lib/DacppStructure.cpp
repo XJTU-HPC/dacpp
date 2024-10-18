@@ -5,7 +5,7 @@
 #include "Param.h"
 #include "DacppStructure.h"
 #include "ASTParse.h"
-#include "../test/test.h"
+#include "test.h"
 
 using namespace clang;
 

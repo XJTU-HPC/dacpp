@@ -4,6 +4,8 @@
 #include<vector>
 #include"dacInfo.h"
 
+Dac_Op::Dac_Op(){}
+
 /*
 	通过 算子名称，算子划分数，算子作用的维度 创建算子。
 */
@@ -24,6 +26,14 @@ void Dac_Op::setDimId(int id){
 void Dac_Op::setSplitLength(int len){
 	this->split_length = len;
 }
+
+/*
+	设置 算子划分的划分数。
+*/
+void Dac_Op::SetSplitSize(int split_size) {
+	this->split_size = split_size;
+}
+
 /*
 	设置 算子对应索引的计算表达式。
 */
@@ -44,6 +54,11 @@ Dac_Ops::Dac_Ops(){
 void Dac_Ops::push_back(Dac_Op x){
 	this->DacOps.push_back(x);
 	this->size++;
+}
+
+void Dac_Ops::pop_back() {
+	this->DacOps.pop_back();
+	this->size--;
 }
 Dac_Op& Dac_Ops::operator[](int i){
 	return this->DacOps[i];
@@ -114,7 +129,6 @@ bool DacData::checkIndex(int dimId){
 }
 
 
-
 Args::Args(){
 	this->size=0;
 }
@@ -124,4 +138,16 @@ void Args::push_back(DacData x){
 }
 DacData& Args::operator[](int i){
 	return this->args[i];
+}
+
+RegularSlice::RegularSlice(std::string name, int size, int stride) {
+	this->name = name;
+	this->stride = stride;
+	this->size = size;
+}
+
+Index::Index(std::string name) {
+	this->name = name;
+	this->stride = 1;
+	this->size = 1;
 }

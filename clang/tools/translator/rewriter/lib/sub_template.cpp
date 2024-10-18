@@ -32,7 +32,6 @@ void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) {
     auto selector = gpu_selector_v;
     queue q(selector);
 
-	DataReconstructor<int> tool;
     // 数据重组
     {{DATA_RECON}}
     // 设备内存分配
@@ -66,18 +65,20 @@ std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams
 
 const char *DATA_RECON_Template = R"~~~(
     // 数据重组
-	{{TYPE}}* r_{{NAME}}=({{TYPE}}*)malloc(sizeof({{TYPE}})*{{SIZE}});
-	std::vector<bool> isIndex_{{NAME}}{{INDEX_INFO}};
-	tool.init({{NAME}},isIndex_{{NAME}});
-	tool.Reconstruct(r_{{NAME}});)~~~";
+	DataReconstructor<{{TYPE}}> {{NAME}}_tool;
+    {{TYPE}}* r_{{NAME}}=({{TYPE}}*)malloc(sizeof({{TYPE}})*{{SIZE}});
+	Dac_Ops {{NAME}}_ops;
+	{{OPS_INIT}}
+	{{NAME}}_tool.init({{NAME}},{{NAME}}_ops);
+    {{NAME}}_tool.Reconstruct(r_{{NAME}});)~~~";
 
-std::string CodeGen_DataReconstruct(std::string type,std::string name,std::string size,std::string indexInfo){
+std::string CodeGen_DataReconstruct(std::string type,std::string name,std::string size,std::string opsInit){
     return templateString(DATA_RECON_Template,
 	{
 		{"{{TYPE}}",       type},
 		{"{{NAME}}",       name},
 		{"{{SIZE}}",       size},
-		{"{{INDEX_INFO}}", indexInfo}
+		{"{{OPS_INIT}}", opsInit}
 	});
 }
 
@@ -173,10 +174,10 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 		// 	IndexComb+= args[i].ops[j].name+"*";
 		// }
 		for(int j=0;j<args[i].ops.size;j++){
-			IndexComb+= args[i].ops[j].name;
-			for(int k=j+1;k<args[i].ops.size;k++){
-				IndexComb+="*"+std::to_string(args[i].getDimlength(args[i].ops[k].dimId));
-			}
+			IndexComb+= args[i].ops[j].name + "*" + std::to_string(args[i].ops[j].split_length);
+			// for(int k=j+1;k<args[i].ops.size;k++){
+			// 	IndexComb+="*"+std::to_string(args[i].getDimlength(args[i].ops[k].dimId));
+			// }
 			if(j==args[i].ops.size-1) IndexComb+=")*";
 			else IndexComb+="+";
 		}
@@ -263,15 +264,12 @@ std::string CodeGen_MemFree(std::string Name){
 // 	std::string IndexInit = CodeGen_IndexInit(ops);
 
 // 	i.setSplitLength(1);
-// 	ops.push_back(i);
-// 	j.setSplitLength(1);
-// 	ops.push_back(j);
-
 // 	Dac_Ops vecA_ops;
 // 	vecA_ops.push_back(i);
 // 	DacData d_vecA = DacData("d_vecA",1,vecA_ops);
 // 	d_vecA.setDimLength(0,3);
 
+// 	j.setSplitLength(1);
 // 	Dac_Ops vecB_ops;
 // 	vecB_ops.push_back(j);
 // 	DacData d_vecB = DacData("d_vecB",1,vecB_ops);
