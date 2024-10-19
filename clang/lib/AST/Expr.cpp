@@ -1980,7 +1980,8 @@ OverloadedOperatorKind BinaryOperator::getOverloadedOperator(Opcode Opc) {
     OO_LessLessEqual, OO_GreaterGreaterEqual,
     OO_AmpEqual, OO_CaretEqual,
     OO_PipeEqual,
-    OO_Comma
+    OO_Comma,
+    OO_LessMinusGreater
   };
   return OverOps[Opc];
 }
