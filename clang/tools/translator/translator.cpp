@@ -12,10 +12,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "parser/Split.h"
-#include "parser/Param.h"
-#include "parser/DacppStructure.h"
-#include "rewriter/Rewriter.h"
+#include "Split.h"
+#include "Param.h"
+#include "DacppStructure.h"
+#include "Rewriter.h"
 #include "test/test.h"
 
 using namespace clang;

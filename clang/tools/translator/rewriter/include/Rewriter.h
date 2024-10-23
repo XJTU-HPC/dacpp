@@ -4,7 +4,7 @@
 #include "clang/AST/AST.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 
-#include "../parser/DacppStructure.h"
+#include "DacppStructure.h"
 
 namespace dacppTranslator {
 
