@@ -1,5 +1,5 @@
-#include "../parser/Param.h"
-#include "../parser/DacppStructure.h"
+#include "Param.h"
+#include "DacppStructure.h"
 
 namespace dacppTranslator {
 

@@ -2,8 +2,8 @@
 #include <string>
 #include <typeinfo>
 
-#include "../parser/Param.h"
-#include "../parser/DacppStructure.h"
+#include "Param.h"
+#include "DacppStructure.h"
 #include "test.h"
 
 void dacppTranslator::printParamInfo(dacppTranslator::Param* param) {

@@ -17,6 +17,9 @@ class Dac_Op{
 		int dimId;                // 算子作用的维度
 		std::string expression;   // 算子对应索引的计算表达式
 
+		int stride;               // 步长
+		int size;                 // 作用维度上的每份长度
+
 		Dac_Op();
 		/*
 			通过 算子名称，算子划分数，算子作用的维度 创建算子。
@@ -30,6 +33,11 @@ class Dac_Op{
 			设置 算子划分的每份长度。
 		*/
 		void setSplitLength(int len);
+
+		/*
+			设置 算子的划分份数。
+		*/
+		void SetSplitSize(int split_size);
 		/*
 			设置 算子对应索引的计算表达式。
 		*/
@@ -50,6 +58,8 @@ class Dac_Ops{
 
 		Dac_Ops();
 		void push_back(Dac_Op x);
+		void pop_back();
+		void clear();
 		Dac_Op& operator[](int i);
 };
 /*
@@ -61,10 +71,9 @@ class DacData{
 		Dac_Ops ops;                      // 被用于该数据的算子组
 		int dim;                          // 数据维数
 		std::vector<int> DimLength;       // 维上的长度
-		std::vector<bool> isIndex;        // 该维度是否被降维
-		int split_size;                   // 数据的划分数
-		int split_length;                 // 数据划分的每份长度
-		// int data[3][3];                   // 存放真实数据，假设类型为int用于测试数据重组
+		// std::vector<bool> isIndex;        // 该维度是否被降维
+		// int split_size;                   // 数据的划分数
+		// int split_length;                 // 数据划分的每份长度
 
 		DacData();
 		/*
@@ -82,11 +91,11 @@ class DacData{
 		/*
 			设置 数据在某维度上被降维。
 		*/
-		void setIndex(int dimId);
-		/*
-			检查 数据在某维度上是否被降维。
-		*/
-		bool checkIndex(int dimId);
+		// void setIndex(int dimId);
+		// /*
+		// 	检查 数据在某维度上是否被降维。
+		// */
+		// bool checkIndex(int dimId);
 };
 /*
 	Dac 参数类，表示嵌入计算时传入的参数。
@@ -102,4 +111,31 @@ class Args{
 		DacData& operator[](int i);
 };
 
+/*
+	RegularSlice 规则分区算子类。
+*/
+class RegularSlice : public Dac_Op {
+	public:
+
+		RegularSlice();
+
+		/*
+			通过 算子名称，步长，作用维度上的每份长度 创建规则分区算子。
+		*/
+		RegularSlice(std::string name, int size, int stride);
+};
+
+/*
+	Index 降维算子类。
+*/
+class Index : public Dac_Op {
+	public:
+
+		Index();
+
+		/*
+			通过 算子名称，步长，作用维度上的每份长度 创建规则分区算子。
+		*/
+		Index(std::string name);
+};
 #endif

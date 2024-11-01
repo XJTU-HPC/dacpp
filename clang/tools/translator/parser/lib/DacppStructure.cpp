@@ -5,7 +5,7 @@
 #include "Param.h"
 #include "DacppStructure.h"
 #include "ASTParse.h"
-#include "../test/test.h"
+#include "test.h"
 
 using namespace clang;
 
@@ -216,26 +216,27 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr) {
                     if(getNode<DeclRefExpr>(astExprs[i])) {
                         VarDecl* vd = dyn_cast<VarDecl>(getNode<DeclRefExpr>(astExprs[i])->getDecl());
 
-                        // TODO：
-                        // 新增规则分区之后，所有算子均继承自父类Split，规则分区中的属性例如划分长度，划分步长还未通过分析抽象语法树获得
-                        // 需要将例如splitSize、splitStride、splitNumber等属性通过分析得到
-
                         if(vd->getType().getAsString().compare("dacpp::RegularSplit") == 0) {
                             RegularSplit* sp = new RegularSplit();
                             sp->type = "dacpp::RegularSplit";
                             sp->setId(getNode<StringLiteral>(vd->getInit())->getString().str());
                             sp->setDimIdx(i);
-                            CXXConstructExpr* cXXConstCastExpr = getNode<CXXConstructExpr>(vd->getInit());
+                            CXXConstructExpr* CCE = getNode<CXXConstructExpr>(vd->getInit());
                             int count = 0;
-                            for(Stmt::child_iterator it = cXXConstCastExpr->child_begin(); it != cXXConstCastExpr->child_end(); it++) {
+                            for (CXXConstructExpr::arg_iterator I = CCE->arg_begin(),
+                                                                E = CCE->arg_end();
+                                I != E; ++I) {
                                 if(count == 1) {
-                                    sp->setSplitSize(std::stoi((dyn_cast<IntegerLiteral>(*it))->getValue().toString(10, true)));
+                                    /* TODO: 计算常量表达式的值。  */
+                                    sp->setSplitSize(std::stoi((dyn_cast<IntegerLiteral>(*I))->getValue().toString(10, true)));
                                 } else if(count == 2) {
-                                    sp->setSplitStride(std::stoi((dyn_cast<IntegerLiteral>(*it))->getValue().toString(10, true)));
+                                    /* TODO: 计算常量表达式的值。  */
+                                    sp->setSplitStride(std::stoi((dyn_cast<IntegerLiteral>(*I))->getValue().toString(10, true)));
                                 }
                                 count++;
                             }
-                            sp->setSplitNumber(shellParam->getShape(i));
+                            /* TODO: 处理除不尽的情况。  */
+                            sp->setSplitNumber((shellParam->getShape(i) - sp->getSplitSize() + 1) / sp->getSplitStride());
                             shellParam->setSplit(sp);
                         } else if(vd->getType().getAsString().compare("dacpp::Index") == 0) {
                             IndexSplit* sp = new IndexSplit();
