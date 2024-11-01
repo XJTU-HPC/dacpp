@@ -18,9 +18,18 @@ void replaceTextInString(std::string& text, const std::string &find, const std::
 */
 std::string templateString(std::string templ, std::vector<std::pair<std::string, std::string>> replacements);
 
-std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams,std::string dataRecon,std::string deviceMemAlloc,std::string H2DMemMove,std::string kernelExecute,std::string reduction,std::string D2HMemMove,std::string memFree);
+std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams,std::string opInit,std::string dataRecon,
+	std::string deviceMemAlloc,std::string H2DMemMove,std::string kernelExecute,std::string reduction,std::string D2HMemMove,std::string memFree);
 
-std::string CodeGen_DataReconstruct(std::string type,std::string name,std::string size,std::string indexInfo);
+std::string CodeGen_RegularSliceInit(std::string opName,std::string size,std::string stride,std::string splitSize);
+
+std::string CodeGen_IndexInit(std::string opName,std::string splitSize);
+
+std::string CodeGen_OpPushBack(std::string name, std::string opName, std::string dimId, std::string splitLength);
+
+std::string CodeGen_DataOpsInit(std::string name,std::string opPushBack);
+
+std::string CodeGen_DataReconstruct(std::string type,std::string name,std::string size,std::string dataOpsInit);
 
 std::string CodeGen_DeviceMemAlloc(std::string type,std::string name,std::string size);
 

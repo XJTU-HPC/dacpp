@@ -31,7 +31,8 @@ void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) {
     // 设备选择
     auto selector = gpu_selector_v;
     queue q(selector);
-
+    // 算子初始化
+    {{OP_INIT}}
     // 数据重组
     {{DATA_RECON}}
     // 设备内存分配
@@ -48,11 +49,13 @@ void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) {
     {{MEM_FREE}}
 })~~~";
 
-std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams,std::string dataRecon,std::string deviceMemAlloc,std::string H2DMemMove,std::string kernelExecute,std::string reduction,std::string D2HMemMove,std::string memFree){
+std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams,std::string opInit,std::string dataRecon,
+	std::string deviceMemAlloc,std::string H2DMemMove,std::string kernelExecute,std::string reduction,std::string D2HMemMove,std::string memFree){
     return templateString(DAC2SYCL_Template,
 	{
 		{"{{DAC_SHELL_NAME}}",    dacShellName},
 		{"{{DAC_SHELL_PARAMS}}",  dacShellParams},
+		{"{{OP_INIT}}",           opInit},
         {"{{DATA_RECON}}",        dataRecon},
 		{"{{DEVICE_MEM_ALLOC}}",  deviceMemAlloc},
         {"{{H2D_MEM_MOV}}",       H2DMemMove},
@@ -63,22 +66,77 @@ std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams
 	});
 }
 
+const char *OP_REGULAR_SLICE_INIT_Template = R"~~~(
+    // 规则分区算子初始化
+    RegularSlice {{OP_NAME}} = RegularSlice("{{OP_NAME}}", {{SIZE}}, {{STRIDE}});
+    {{OP_NAME}}.SetSplitSize({{SPLIT_SIZE}});)~~~";
+
+std::string CodeGen_RegularSliceInit(std::string opName,std::string size,std::string stride,std::string splitSize){
+    return templateString(OP_REGULAR_SLICE_INIT_Template,
+	{
+		{"{{OP_NAME}}",    opName},
+		{"{{SIZE}}",       size},
+		{"{{STRIDE}}",     stride},
+		{"{{SPLIT_SIZE}}", splitSize}
+	});
+}
+
+const char *OP_INDEX_INIT_Template = R"~~~(
+    // 降维算子初始化
+    Index {{OP_NAME}} = Index("{{OP_NAME}}");
+    {{OP_NAME}}.SetSplitSize({{SPLIT_SIZE}});)~~~";
+
+std::string CodeGen_IndexInit(std::string opName,std::string splitSize){
+    return templateString(OP_INDEX_INIT_Template,
+	{
+		{"{{OP_NAME}}",    opName},
+		{"{{SPLIT_SIZE}}", splitSize}
+	});
+}
+
+const char *OP_PUSH_BACK_Template = R"~~~(
+    {{OP_NAME}}.setDimId({{DIM_ID}});
+    {{OP_NAME}}.setSplitLength({{SPLIT_LENGTH}});
+    {{NAME}}_ops.push_back({{OP_NAME}});)~~~";
+
+std::string CodeGen_OpPushBack(std::string name, std::string opName, std::string dimId, std::string splitLength){
+    return templateString(OP_PUSH_BACK_Template,
+	{
+		{"{{OP_NAME}}",    opName},
+		{"{{NAME}}",       name},
+		{"{{DIM_ID}}",     dimId},
+		{"{{SPLIT_LENGTH}}", splitLength}
+	});
+}
+
+const char *DATA_OPS_INIT_Template = R"~~~(
+    // 数据算子组初始化
+    Dac_Ops {{NAME}}_ops;
+    {{OP_PUSH_BACK}})~~~";
+
+std::string CodeGen_DataOpsInit(std::string name,std::string opPushBack){
+    return templateString(DATA_OPS_INIT_Template,
+	{
+		{"{{NAME}}",       name},
+		{"{{OP_PUSH_BACK}}",    opPushBack},
+	});
+}
+
 const char *DATA_RECON_Template = R"~~~(
     // 数据重组
-	DataReconstructor<{{TYPE}}> {{NAME}}_tool;
+    DataReconstructor<{{TYPE}}> {{NAME}}_tool;
     {{TYPE}}* r_{{NAME}}=({{TYPE}}*)malloc(sizeof({{TYPE}})*{{SIZE}});
-	Dac_Ops {{NAME}}_ops;
-	{{OPS_INIT}}
-	{{NAME}}_tool.init({{NAME}},{{NAME}}_ops);
+    {{DATA_OPS_INIT}}
+    {{NAME}}_tool.init({{NAME}},{{NAME}}_ops);
     {{NAME}}_tool.Reconstruct(r_{{NAME}});)~~~";
 
-std::string CodeGen_DataReconstruct(std::string type,std::string name,std::string size,std::string opsInit){
+std::string CodeGen_DataReconstruct(std::string type,std::string name,std::string size,std::string dataOpsInit){
     return templateString(DATA_RECON_Template,
 	{
 		{"{{TYPE}}",       type},
 		{"{{NAME}}",       name},
 		{"{{SIZE}}",       size},
-		{"{{OPS_INIT}}", opsInit}
+		{"{{DATA_OPS_INIT}}", dataOpsInit}
 	});
 }
 
@@ -97,9 +155,7 @@ std::string CodeGen_DeviceMemAlloc(std::string type,std::string name,std::string
 
 const char *H2D_MEM_MOV_Template = R"~~~(
     // 数据移动
-    q.memcpy(d_{{NAME}},r_{{NAME}},{{SIZE}}*sizeof({{TYPE}})).wait();
-    
-)~~~";
+    q.memcpy(d_{{NAME}},r_{{NAME}},{{SIZE}}*sizeof({{TYPE}})).wait();)~~~";
 
 std::string CodeGen_H2DMemMov(std::string type,std::string name,std::string size){
     return templateString(H2D_MEM_MOV_Template,
@@ -178,10 +234,12 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 			// for(int k=j+1;k<args[i].ops.size;k++){
 			// 	IndexComb+="*"+std::to_string(args[i].getDimlength(args[i].ops[k].dimId));
 			// }
-			if(j==args[i].ops.size-1) IndexComb+=")*";
+			// 
+			if(j==args[i].ops.size-1) IndexComb+=")";
 			else IndexComb+="+";
 		}
-		DacCalcArgs+=args[i].name + "+" + IndexComb + std::to_string(args[i].split_length);
+		// DacCalcArgs+=args[i].name + "+" + IndexComb + std::to_string(args[i].split_length);
+		DacCalcArgs+=args[i].name + "+" + IndexComb;
 		if(i==len-1){
 			DacCalcArgs+=");";
 		}
@@ -199,10 +257,9 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 const char *REDUCTION_Template = R"~~~(
     // 归约
     {{TYPE}} *reduction_{{NAME}} = malloc_device<{{TYPE}}>(1,q);
-    sycl::range<3> global(1, 1, 1);
     q.submit([&](handler &h) {
-    	h.parallel_for(range<1>({{SPLIT_SIZE}}),reduction(reduction_{{NAME}}, {{REDUCTION_RULE}}),[=](id<1> i,auto &reduction_{{NAME}}) {
-            	reduction_{{NAME}}{{+}}=d_{{NAME}}[i];
+    	h.parallel_for(range<1>({{SPLIT_SIZE}}),reduction(reduction_{{NAME}}, {{REDUCTION_RULE}}),[=](id<1> i,auto &reducer) {
+            	reducer.combine(d_{{NAME}}[i]);
      	});
  }).wait();
 )~~~";
