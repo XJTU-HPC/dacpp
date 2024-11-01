@@ -235,9 +235,9 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 			// 	IndexComb+="*"+std::to_string(args[i].getDimlength(args[i].ops[k].dimId));
 			// }
 			// 
-			if(j==args[i].ops.size-1) IndexComb+=")";
-			else IndexComb+="+";
+			if(j!=args[i].ops.size-1) IndexComb+="+";
 		}
+		IndexComb+=")";
 		// DacCalcArgs+=args[i].name + "+" + IndexComb + std::to_string(args[i].split_length);
 		DacCalcArgs+=args[i].name + "+" + IndexComb;
 		if(i==len-1){

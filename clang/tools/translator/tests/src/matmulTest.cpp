@@ -21,14 +21,14 @@ int main(){
 	i.setSplitLength(1);
 	vecA_ops.push_back(i);
 	DacData d_vecA = DacData("d_vecA",1,vecA_ops);
-	d_vecA.setDimLength(0,3);
+	// d_vecA.setDimLength(0,3);
 
 	Dac_Ops vecB_ops;
 	j.setDimId(0);
 	j.setSplitLength(1);
 	vecB_ops.push_back(j);
 	DacData d_vecB = DacData("d_vecB",1,vecB_ops);
-	d_vecB.setDimLength(0,3);
+	// d_vecB.setDimLength(0,3);
 
 	Dac_Ops dotProduct_ops;
 	i.setSplitLength(3);
@@ -37,8 +37,8 @@ int main(){
 	dotProduct_ops.push_back(i);
 	dotProduct_ops.push_back(j);
 	DacData d_dotProduct = DacData("d_dotProduct",2,dotProduct_ops);
-	d_dotProduct.setDimLength(0,3);
-	d_dotProduct.setDimLength(1,3);
+	// d_dotProduct.setDimLength(0,3);
+	// d_dotProduct.setDimLength(1,3);
 
 	Args args = Args();
 	args.push_back(d_vecA);

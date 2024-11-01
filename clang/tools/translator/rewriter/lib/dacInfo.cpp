@@ -60,6 +60,12 @@ void Dac_Ops::pop_back() {
 	this->DacOps.pop_back();
 	this->size--;
 }
+
+void Dac_Ops::clear(){
+	while(this->size>0) {
+		this->pop_back();
+	}
+}
 Dac_Op& Dac_Ops::operator[](int i){
 	return this->DacOps[i];
 }
@@ -71,34 +77,25 @@ DacData::DacData(){
 /*
 	通过 数据名称，数据维数，作用于各个维度的算子 创建数据。
 */
-DacData::DacData(std::string Name,int dim,Dac_Ops ops){
+DacData::DacData(std::string Name, int dim, Dac_Ops ops){
 	this->name = Name;
 	this->dim=dim;
 
 	// 初始化维上长度为0，且该维度不被降维
-	for(int i=0;i<this->dim;i++) this->DimLength.push_back(0);
-	for(int i=0;i<this->dim;i++) this->isIndex.push_back(false);
+	// for(int i=0;i<this->dim;i++) this->DimLength.push_back(0);
+	// for(int i=0;i<this->dim;i++) this->isIndex.push_back(false);
 
 	this->ops = ops;
-	int len = ops.size;
-	this->split_size = 1;
-	for(int i=0;i<len;i++){
-		this->split_size*=ops[i].split_size;
-	}
-	this->split_length = ops[0].split_size*ops[0].split_length/this->split_size;
+	// int len = ops.size;
+	// this->split_size = 1;
+	// for(int i=0;i<len;i++){
+	// 	this->split_size*=ops[i].split_size;
+	// }
+	// this->split_length = ops[0].split_size*ops[0].split_length/this->split_size;
 
-	for(int i=0;i<this->ops.size;i++)
-	{
-		this->setIndex(ops[i].dimId);
-	}
-
-	// 以下默认构造3*3数据,仅用于测试数据重组
-	// for(int i=0;i<3;i++)
+	// for(int i=0;i<this->ops.size;i++)
 	// {
-	// 	for(int j=0;j<3;j++)
-	// 	{
-	// 		this->data[i][j]=i*3+j+1;
-	// 	}
+	// 	this->setIndex(ops[i].dimId);
 	// }
 }
 /*
@@ -117,16 +114,16 @@ int DacData::getDimlength(int dimId){
 /*
 	设置 数据在某维度上被降维。
 */
-void DacData::setIndex(int dimId){
-	if(dimId<this->isIndex.size()) this->isIndex[dimId]=true;
-}
-/*
-	检查 数据在某维度上是否被降维。
-*/
-bool DacData::checkIndex(int dimId){
-	if(dimId<this->isIndex.size()) return this->isIndex[dimId];
-	else return false;
-}
+// void DacData::setIndex(int dimId){
+// 	if(dimId<this->isIndex.size()) this->isIndex[dimId]=true;
+// }
+// /*
+// 	检查 数据在某维度上是否被降维。
+// */
+// bool DacData::checkIndex(int dimId){
+// 	if(dimId<this->isIndex.size()) return this->isIndex[dimId];
+// 	else return false;
+// }
 
 
 Args::Args(){

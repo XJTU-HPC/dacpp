@@ -59,6 +59,7 @@ class Dac_Ops{
 		Dac_Ops();
 		void push_back(Dac_Op x);
 		void pop_back();
+		void clear();
 		Dac_Op& operator[](int i);
 };
 /*
@@ -70,10 +71,9 @@ class DacData{
 		Dac_Ops ops;                      // 被用于该数据的算子组
 		int dim;                          // 数据维数
 		std::vector<int> DimLength;       // 维上的长度
-		std::vector<bool> isIndex;        // 该维度是否被降维
-		int split_size;                   // 数据的划分数
-		int split_length;                 // 数据划分的每份长度
-		// int data[3][3];                   // 存放真实数据，假设类型为int用于测试数据重组
+		// std::vector<bool> isIndex;        // 该维度是否被降维
+		// int split_size;                   // 数据的划分数
+		// int split_length;                 // 数据划分的每份长度
 
 		DacData();
 		/*
@@ -91,11 +91,11 @@ class DacData{
 		/*
 			设置 数据在某维度上被降维。
 		*/
-		void setIndex(int dimId);
-		/*
-			检查 数据在某维度上是否被降维。
-		*/
-		bool checkIndex(int dimId);
+		// void setIndex(int dimId);
+		// /*
+		// 	检查 数据在某维度上是否被降维。
+		// */
+		// bool checkIndex(int dimId);
 };
 /*
 	Dac 参数类，表示嵌入计算时传入的参数。
