@@ -7,10 +7,10 @@ add_clang_executable(translator
   parser/ASTParse.cpp
   parser/DacppStructure.cpp
   rewriter/Rewriter.cpp
-  rewriter/dacInfo.cpp
-  rewriter/sub_template.cpp
   test/test.cpp
   translator.cpp
+  dac2sycl/dacppLib/lib/dacInfo.cpp
+  dac2sycl/dacppLib/lib/sub_template.cpp
   )
 target_link_libraries(translator
   PRIVATE

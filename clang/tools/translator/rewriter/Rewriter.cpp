@@ -4,8 +4,8 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 
 #include "Rewriter.h"
-#include "dacInfo.h"
-#include "sub_template.h"
+#include "/data/zjx/dacpp/clang/tools/translator/dac2sycl/dacppLib/include/dacInfo.h"
+#include "/data/zjx/dacpp/clang/tools/translator/dac2sycl/dacppLib/include/sub_template.h"
 
 void dacppTranslator::Rewriter::setRewriter(clang::Rewriter* rewriter) {
     this->rewriter = rewriter;
@@ -107,8 +107,17 @@ void dacppTranslator::Rewriter::rewriteDac() {
         // 索引初始化
         Dac_Ops ops;
         for(int count = 0; count < shell->getNumSplits(); count++) {
-            Dac_Op op = Dac_Op(shell->getSplit(count)->getId(), shell->getSplit(count)->getDimIdx(), 0);
-            ops.push_back(op);
+            if(shell->getSplit(count)->type == "dacpp::Index") {
+                dacppTranslator::IndexSplit* i = static_cast<dacppTranslator::IndexSplit*>(shell->getSplit(count));
+                Index tmp = Index(i->getId());
+                tmp.SetSplitSize(i->getSplitNumber());
+                ops.push_back(tmp);
+            } else if(shell->getSplit(count)->type == "dacpp::Index") {
+                dacppTranslator::RegularSplit* r = static_cast<dacppTranslator::RegularSplit*>(shell->getSplit(count));
+                RegularSlice tmp = RegularSlice(r->getId(), r->getSplitSize(), r->getSplitStride());
+                tmp.SetSplitSize(r->getSplitNumber());
+                ops.push_back(tmp);
+            }
         }
 	    std::string IndexInit = CodeGen_IndexInit(ops);
 
