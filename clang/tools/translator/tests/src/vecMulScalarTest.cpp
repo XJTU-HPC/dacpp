@@ -22,18 +22,18 @@ int main(){
 	i.setSplitLength(1);
 	vecA_ops.push_back(i);
 	DacData d_vecA = DacData("d_vecA",1,vecA_ops);
-	debug(0);
+	// debug(0);
 	Dac_Ops alpha_ops;
-	debug(1);
+	// debug(1);
 	DacData d_alpha = DacData("d_alpha",1,alpha_ops);
 	
 	Args args = Args();
 	args.push_back(d_vecA);
 	args.push_back(d_alpha);
 	std::string CalcEmbed = CodeGen_CalcEmbed("mul",args);
-	debug(2);
+	// debug(2);
 	std::string KernelExecute = CodeGen_KernelExecute("3",IndexInit,CalcEmbed);
-	debug(3);
+	// debug(3);
 	std::cout<<KernelExecute;
 	return 0;
 }

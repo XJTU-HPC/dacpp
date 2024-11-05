@@ -1,0 +1,33 @@
+# cmake 最低版本要求
+cmake_minimum_required(VERSION 3.0)
+
+# 项目信息
+project(SyclTest)
+
+set(CMAKE_CXX_STANDARD 17)
+
+# 设置使用的编译器为 icpx
+set(CMAKE_C_COMPILER "/data/qinian/share/intel/oneapi/compiler/2024.0/bin/icpx")
+set(CMAKE_CXX_COMPILER "/data/qinian/share/intel/oneapi/compiler/2024.0/bin/icpx")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsycl -fsycl-targets=nvptx64-nvidia-cuda")
+
+# 添加 SYCL 头文件路径
+set(SYCL_PATH "/data/qinian/share/intel/oneapi/compiler/latest/include")
+set(OpenCL_LIBRARY "/data/qinian/share/intel/oneapi/compiler/latest/lib/libOpenCL.so")
+
+include_directories(${SYCL_PATH})
+
+# 添加源文件
+add_executable(syclBlockMatMul0 blockMatMul0.sycl.cpp)
+add_executable(syclBlockMatMul1 blockMatMul1.sycl.cpp)
+
+set_target_properties(syclBlockMatMul0 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+set_target_properties(syclBlockMatMul1 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+
+# 链接库到可执行文件
+target_link_libraries(syclBlockMatMul1 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(syclBlockMatMul0 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
