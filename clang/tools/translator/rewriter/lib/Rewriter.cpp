@@ -70,10 +70,16 @@ void dacppTranslator::Rewriter::rewriteDac() {
         sstream << ") {\n";
         
         // 创建任务队列并绑定设备
-        sstream << "auto selector = gpu_selector_v;\nqueue q(selector);\n\n";
+        sstream << "    auto selector = gpu_selector_v;\n   queue q(selector);\n\n";
+
+        // 算子组
+        for(int j = 0; j < shell->getNumSplits(); j++) {
+            sstream << shell->getSplit(j)->type << " " << shell->getSplit(j)->getId() << " " << shell->getSplit(j)->type << "(\""
+                    << shell->getSplit(j)->type << "\","  << ");\n";
+        }
         
         // 数据重组
-        sstream << "DataReconstructor<int> tool;\n";
+        sstream << "    DataReconstructor<int> tool;\n";
 
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam* shellParam = shell->getShellParam(j);
@@ -121,7 +127,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
         }
 	    std::string IndexInit = CodeGen_IndexInit(ops);
 
-        
+        /*        
         // 嵌入计算
         Args args = Args();
         
@@ -175,7 +181,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
         }
         sstream << "\n}\n";
         memFree += "\n\n";
-        
+        */
     }
     
     std::string strResult = sstream.str() + "\n";
