@@ -254,23 +254,51 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 	});
 }
 
+
 const char *REDUCTION_Template = R"~~~(
     // 归约
     {{TYPE}} *reduction_{{NAME}} = malloc_device<{{TYPE}}>(1,q);
+    //使用内核函数进行归约
     q.submit([&](handler &h) {
-    	h.parallel_for(range<1>({{SPLIT_SIZE}}),reduction(reduction_{{NAME}}, {{REDUCTION_RULE}}),[=](id<1> i,auto &reducer) {
+    	h.parallel_for(range<1>({{SPLIT_SIZE}}),reduction(reduction_{{NAME}}, {{REDUCTION_RULE}},property::reduction::initialize_to_identity()),[=](id<1> i,auto &reducer) {
             	reducer.combine(d_{{NAME}}[i]);
      	});
  }).wait();
 )~~~";
 
-std::string CodeGen_Reduction(std::string SplitSize,std::string Name,std::string Type,std::string ReductionRule){
+std::string CodeGen_Reduction(std::string SplitSize,std::string Name,std::string Type,std::string ReductionRule) {
     return templateString(REDUCTION_Template,
 	{
-		{"{{SPLIT_SIZE}}",      SplitSize},
-		{"{{TYPE}}",            Type},
-		{"{{NAME}}",            Name},
-		{"{{ReductionRule}}",   ReductionRule}
+		{"{{SPLIT_SIZE}}",       SplitSize},
+		{"{{TYPE}}",             Type},
+		{"{{NAME}}",             Name},
+		{"{{ReductionRule}}",    ReductionRule}
+	});
+}
+
+const char *REDUCTION_Template_Span = R"~~~(
+    // 归约
+    {{TYPE}} *reduction_{{NAME}} = malloc_device<{{TYPE}}>({{ARRAY_SIZE}},q); //存归约结果 归约结果存在长度为ARRAY_SIZE的数组中
+    q.submit([&](handler &h) {
+    	h.parallel_for(
+        range<1>({{SPLIT_SIZE}} * {{ARRAY_SIZE}}),
+        reduction(reduction_{{NAME}}, 
+        {{REDUCTION_RULE}},
+        property::reduction::initialize_to_identity()),
+        [=](id<1> i,auto &reducer) {
+            	reducer[i % {{SPLIT_SIZE}}].combine(d_{{NAME}}[i]);
+     	});
+ }).wait();
+)~~~";
+
+std::string CodeGen_Reduction_Span(std::string ARRAY_SIZE,std::string SplitSize,std::string Name,std::string Type,std::string ReductionRule) {
+    return templateString(REDUCTION_Template_Span,
+	{
+        {"{{ARRAY_SIZE}}",       ARRAY_SIZE},   
+		{"{{SPLIT_SIZE}}",       SplitSize},
+		{"{{TYPE}}",             Type},
+		{"{{NAME}}",             Name},
+		{"{{ReductionRule}}",    ReductionRule}
 	});
 }
 
