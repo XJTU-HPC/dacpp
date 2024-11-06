@@ -70,20 +70,28 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
 
     // debug(1);
 
-    // DataReconstructor<int> matC_tool;
-    int* r_matC=(int*)malloc(sizeof(int)*32);
-    // Dac_Ops matC_ops;
-    // si.setDimId(0);
-    // si.setSplitLength(16);
-    // matC_ops.push_back(si);
-    // sj.setDimId(1);
-    // sj.setSplitLength(8);
-    // matC_ops.push_back(sj);
+    DataReconstructor<int> matC_tool;
+    int* r_matC=(int*)malloc(sizeof(int)*16);
+    Dac_Ops matC_ops;
+    si.setDimId(0);
+    si.setSplitLength(8);
+    matC_ops.push_back(si);
+    sj.setDimId(1);
+    sj.setSplitLength(4);
+    matC_ops.push_back(sj);
     // sk.setDimId(2);
     // sk.setSplitLength(4);
     // matC_ops.push_back(sk);
-    // matC_tool.init(matC,matC_ops);
-    // matC_tool.Reconstruct(r_matC);
+    matC_tool.init(matC,matC_ops);
+    matC_tool.Reconstruct(r_matC);
+
+    std::cout <<  "matC重组结果:\n";
+    for(int i=0;i<4;i++){
+        for(int j=0;j<4;j++){
+            std::cout<<r_matC[i*4+j*1]<<" ";
+        }
+        std::cout<<std::endl;
+    }
 
     // debug(2);
 
@@ -139,7 +147,10 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
         std::cout << res[i] << " ";
         if(i%4==3) std::cout<<"\n";
     }
-    // debug(5);
+    debug(5);
+    matC = matC_tool.UpdateData(res);
+    std::cout <<  "归约后计算结果(归并):\n";
+    matC.print();
 }
 int main() {
     std::vector<int> dataA{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
