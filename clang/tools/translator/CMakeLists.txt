@@ -5,6 +5,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/parser/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/rewriter/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/test)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dpcppLib/include)
+include_directories(/usr/include)
 
 set(DACPPLIB_SOURCES
   dacppLib/lib/exception.cpp

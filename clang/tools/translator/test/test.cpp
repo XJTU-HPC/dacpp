@@ -50,6 +50,9 @@ void dacppTranslator::printCalcInfo(dacppTranslator::Calc* calc) {
     for(int i = 0; i < calc->getNumParams(); i++) {
         printParamInfo(calc->getParam(i));
     }
+    for(int i = 0; i < calc->getNumBody(); i++) {
+        std::cout << calc->getBody(i) << "\n";
+    }
 }
 
 void dacppTranslator::printDacppFileInfo(dacppTranslator::DacppFile* dacppFile) {

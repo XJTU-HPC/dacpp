@@ -121,8 +121,10 @@ void dacppTranslator::Rewriter::rewriteDac() {
         }
 	    std::string IndexInit = CodeGen_IndexInit(ops);
 
+        
         // 嵌入计算
         Args args = Args();
+        
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam* shellParam = shell->getShellParam(j);
             Dac_Ops ops;
@@ -137,12 +139,16 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 op.setSplitLength(length);
                 ops.push_back(op);
             }
+            
             DacData temp = DacData("d_" + shellParam->getName(), shellParam->getDim(), ops);
+            
             for(int dimIdx = 0; dimIdx < shellParam->getDim(); dimIdx++) {
                 temp.setDimLength(dimIdx, shellParam->getShape(dimIdx));
             }
+            
             args.push_back(temp);
         }
+        
         std::string CalcEmbed = CodeGen_CalcEmbed(shell->getExpr()->getCalc()->getName(), args);
 
         // 内核执行
@@ -169,10 +175,13 @@ void dacppTranslator::Rewriter::rewriteDac() {
         }
         sstream << "\n}\n";
         memFree += "\n\n";
+        
     }
+    
     std::string strResult = sstream.str() + "\n";
     //std::string strRes = CodeGen_DAC2SYCL(shell->getName(), dacShellParams,
     //dataRecon, deviceMemAlloc, H2DMemMove, kernelExecute, reduction, D2HMemMove, memFree);
+    
     rewriter->InsertText(dacppFile->getMainFuncLoc()->getBeginLoc(), strResult);
 }
 /*

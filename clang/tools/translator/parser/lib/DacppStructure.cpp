@@ -5,7 +5,8 @@
 #include "Param.h"
 #include "DacppStructure.h"
 #include "ASTParse.h"
-#include "test.h"
+#include "/data/zjx/dacpp/clang/tools/translator/test/test.h"
+
 
 using namespace clang;
 
@@ -333,7 +334,7 @@ int dacppTranslator::Calc::getNumBody() {
 }
 
 void dacppTranslator::Calc::setExpression(const BinaryOperator* dacExpr) {
-
+    
 }
 
 dacppTranslator::Expression* dacppTranslator::Calc::getExpression(int idx) {

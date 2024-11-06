@@ -1,5 +1,4 @@
 #include <string>
-
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -111,6 +110,7 @@ public:
         rewriter->setRewriter(clangRewriter);
 
         rewriter->setDacppFile(dacppFile);
+        dacppTranslator::printDacppFileInfo(dacppFile);
 
         rewriter->rewriteDac();
 
