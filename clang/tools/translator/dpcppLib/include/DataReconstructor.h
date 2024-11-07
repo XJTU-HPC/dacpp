@@ -46,7 +46,8 @@ class DataReconstructor{
         void init(dacpp::Tensor<ImplType> myTensor, Dac_Ops ops){
             this->myTensor=myTensor;
             this->ops=ops;
-            GetPos(ops, 0);     
+            GetPos(ops, 0);
+            std::sort(this->posNumberList.begin(),this->posNumberList.end(),[](PosNumber a,PosNumber b){return (a.number==b.number)?a.pos<b.pos:a.number<b.number;});
         }
 
         void GetPos(Dac_Ops ops, int now) {
@@ -107,7 +108,7 @@ class DataReconstructor{
         /*
             将特定位置元素写入res长向量。
         */
-        void WriteData(ImplType* res, std::vector<int> pos) {
+        void WriteRes(ImplType* res, std::vector<int> pos) {
             res[this->cnt++]=this->myTensor.getElement(pos);
             // std::cout<<this->myTensor.getDim()<<" "<<pos.size()<<std::endl;
             // std::cout<<pos[0]<<" "<<pos[1]<<std::endl;
@@ -118,10 +119,28 @@ class DataReconstructor{
         */
         void Reconstruct(ImplType* res){
             this->cnt=0;
-            std::sort(this->posNumberList.begin(),this->posNumberList.end(),[](PosNumber a,PosNumber b){return (a.number==b.number)?a.pos<b.pos:a.number<b.number;});
-            std::cout<<this->posNumberList.size()<<std::endl;
+            // std::sort(this->posNumberList.begin(),this->posNumberList.end(),[](PosNumber a,PosNumber b){return (a.number==b.number)?a.pos<b.pos:a.number<b.number;});
+            // std::cout<<this->posNumberList.size()<<std::endl;
+            for (int i=0; i<this->posNumberList.size(); i++) {
+                this->WriteRes(res,this->posNumberList[i].pos);
+            }
+        }
+
+        /*
+            将更新结果写入 myTensor
+        */
+        void WriteData(ImplType* res, std::vector<int> pos) {
+            myTensor.reviseValue(res[this->cnt++],pos);
+        }
+
+        /*
+            用重组结果更新原数据
+        */
+        dacpp::Tensor<ImplType> UpdateData(ImplType* res){
+            this->cnt=0;
             for (int i=0; i<this->posNumberList.size(); i++) {
                 this->WriteData(res,this->posNumberList[i].pos);
             }
+            return this->myTensor;
         }
 };
