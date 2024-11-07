@@ -15,6 +15,12 @@ private:
     DacppFile* dacppFile;
 
 public:
+
+    /**
+     * 生成数据重排的代码
+     */
+    std::string generateDataRearrangement(ShellParam* shellParam);
+
     void setRewriter(clang::Rewriter* rewriter);
 
     void setDacppFile(DacppFile* dacppFile);
