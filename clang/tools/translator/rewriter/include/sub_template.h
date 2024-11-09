@@ -43,7 +43,7 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args);
 
 std::string CodeGen_Reduction(std::string SplitSize,std::string Name,std::string Type,std::string ReductionRule);
 
-std::string CodeGen_Reduction_Span(std::string ARRAY_SIZE,std::string SplitSize,std::string Name,std::string Type,std::string ReductionRule);
+std::string CodeGen_Reduction_Span(std::string ARRAY_SIZE,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule);
 
 std::string CodeGen_D2HMemMov(std::string Name,std::string Type,std::string Size,bool isReduction);
 

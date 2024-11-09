@@ -115,6 +115,7 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
             const auto si=item_id/2/2%2;
             const auto sj=item_id/2%2;
             const auto sk=item_id%2;
+
             // 嵌入计算
             block_mat_mul(d_matA+(si*8+sk*4),d_matB+(sk*8+sj*4),d_matC+(si*16+sj*8+sk*4));
         });
@@ -132,7 +133,7 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     q.submit([&](handler &h) {
     	h.parallel_for(
         range<1>(8 * 4),
-        reduction(span<int,16>(reduction_matC,4), 
+        reduction(span<int,16>(reduction_matC,16), 
         sycl::plus<>(),
         property::reduction::initialize_to_identity()),
         [=](id<1> i,auto &reducer) {
