@@ -15,7 +15,6 @@
 #include "Param.h"
 #include "DacppStructure.h"
 #include "Rewriter.h"
-#include "test/test.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -110,25 +109,23 @@ public:
         rewriter->setRewriter(clangRewriter);
 
         rewriter->setDacppFile(dacppFile);
-        dacppTranslator::printDacppFileInfo(dacppFile);
 
         rewriter->rewriteDac();
 
-        // this will output to screen as what you got.
+        /*
+        this will output to screen as what you got.
         clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID())
             .write(llvm::outs());
+        */
         
-        /*
         // 生成 SYCL 文件
         std::error_code error_code;
-        std::string fileName = getCurrentFile().str();
-        int pos = fileName.find("dacpp/");
-        fileName.replace(pos, fileName.size() - pos + 1, "sycl/" + fileName.substr(pos + 10));
-        llvm::raw_fd_ostream outFile(fileName, error_code, llvm::sys::fs::F_None);
+        std::string file = getCurrentFile().str();
+        file.replace(file.find(".cpp"), 4, "_sycl.cpp");
+        llvm::raw_fd_ostream outFile(file, error_code, llvm::sys::fs::F_None);
         // this will write the result to outFile
-        rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID()).write(outFile);
+        clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID()).write(outFile);
         outFile.close();
-        */
   }
 
 };
