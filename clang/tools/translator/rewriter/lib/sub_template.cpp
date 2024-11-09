@@ -282,20 +282,21 @@ const char *REDUCTION_Template_Span = R"~~~(
     q.submit([&](handler &h) {
     	h.parallel_for(
         range<1>({{SPLIT_SIZE}} * {{ARRAY_SIZE}}),
-        reduction(reduction_{{NAME}}, 
+        reduction(span<{{TYPE}},{{ARRAY_SIZE}}>(reduction_{{NAME}},{{ARRAY_SIZE}}), 
         {{REDUCTION_RULE}},
         property::reduction::initialize_to_identity()),
         [=](id<1> i,auto &reducer) {
-            	reducer[i % {{SPLIT_SIZE}}].combine(d_{{NAME}}[i]);
+            	reducer[i % {{SPLIT_LENGTH}} + i/({{SPLIT_LENGTH}}*{{SPLIT_SIZE}})*{{SPLIT_LENGTH}}].combine(d_{{NAME}}[i]);
      	});
  }).wait();
 )~~~";
 
-std::string CodeGen_Reduction_Span(std::string ARRAY_SIZE,std::string SplitSize,std::string Name,std::string Type,std::string ReductionRule) {
+std::string CodeGen_Reduction_Span(std::string ARRAY_SIZE,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule) {
     return templateString(REDUCTION_Template_Span,
 	{
         {"{{ARRAY_SIZE}}",       ARRAY_SIZE},   
 		{"{{SPLIT_SIZE}}",       SplitSize},
+		{"{{SPLIT_LENGTH}}",     SplitLength},
 		{"{{TYPE}}",             Type},
 		{"{{NAME}}",             Name},
 		{"{{ReductionRule}}",    ReductionRule}
@@ -308,14 +309,15 @@ const char *D2H_MEM_MOV_1_Template = R"~~~(
 
 const char *D2H_MEM_MOV_2_Template = R"~~~(
     // 归约结果返回
-    q.memcpy(r_{{NAME}},reduction_{{NAME}}, sizeof({{TYPE}})).wait();)~~~";
+    q.memcpy(r_{{NAME}},reduction_{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();)~~~";
 
 std::string CodeGen_D2HMemMov(std::string Name,std::string Type,std::string Size,bool isReduction){
     if(isReduction){
 		return templateString(D2H_MEM_MOV_2_Template,
 		{
 			{"{{TYPE}}",            Type},
-			{"{{NAME}}",            Name}
+			{"{{NAME}}",            Name},
+			{"{{SIZE}}",            Size}
 		});
 	}
 	else{
