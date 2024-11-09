@@ -5,7 +5,6 @@
 #include "Param.h"
 #include "DacppStructure.h"
 #include "ASTParse.h"
-#include "/data/zjx/dacpp/clang/tools/translator/test/test.h"
 
 
 using namespace clang;
@@ -237,7 +236,13 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr) {
                                 count++;
                             }
                             /* TODO: 处理除不尽的情况。  */
-                            sp->setSplitNumber((shellParam->getShape(i) - sp->getSplitSize() + 1) / sp->getSplitStride());
+                            sp->setSplitNumber((shellParam->getShape(i) - sp->getSplitSize()) / sp->getSplitStride() + 1);
+                            for(int m = 0; m < getNumSplits(); m++) {
+                                if(getSplit(m)->getId().compare(sp->getId()) == 0) {
+                                    RegularSplit* isp = static_cast<RegularSplit*>(getSplit(m));
+                                    isp->setSplitNumber(sp->getSplitNumber());
+                                }
+                            }
                             shellParam->setSplit(sp);
                         } else if(vd->getType().getAsString().compare("dacpp::Index") == 0) {
                             IndexSplit* sp = new IndexSplit();
@@ -245,11 +250,17 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr) {
                             sp->setId(getNode<StringLiteral>(vd->getInit())->getString().str());
                             sp->setDimIdx(i);
                             sp->setSplitNumber(shellParam->getShape(i));
+                            for(int m = 0; m < getNumSplits(); m++) {
+                                if(getSplit(m)->getId().compare(sp->getId()) == 0) {
+                                    IndexSplit* isp = static_cast<IndexSplit*>(getSplit(m));
+                                    isp->setSplitNumber(sp->getSplitNumber());
+                                }
+                            }
                             shellParam->setSplit(sp);
                         } 
                     } else {
                         Split* sp = new Split();
-                        sp->type = "zjx";
+                        sp->type = "dacpp::Split";
                         sp->setId("void");
                         sp->setDimIdx(i);
                         shellParam->setSplit(sp);
@@ -260,17 +271,17 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr) {
         }
         // 设置 Shell 划分列表
         else if(curVarDecl->getType().getAsString().compare("dacpp::Index") == 0) {
-            IndexSplit* sp = new IndexSplit();                 
-            sp->setId("i");
-            sp->setSplitNumber(10);
+            IndexSplit* sp = new IndexSplit();                
+            sp->setId(curVarDecl->getNameAsString());
+            sp->type = "IndexSplit";
             setSplit(sp);
         }
         else if(curVarDecl->getType().getAsString().compare("dacpp::RegularSplit") == 0) {
             RegularSplit* sp = new RegularSplit();                 
-            sp->setId("i");
-            sp->setSplitNumber(10);
+            sp->setId(curVarDecl->getNameAsString());
             sp->setSplitSize(2);
             sp->setSplitStride(2);
+            sp->type = "RegularSplit";
             setSplit(sp);
         }
     }
