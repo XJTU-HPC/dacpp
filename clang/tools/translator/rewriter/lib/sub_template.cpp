@@ -291,10 +291,10 @@ const char *REDUCTION_Template_Span = R"~~~(
  }).wait();
 )~~~";
 
-std::string CodeGen_Reduction_Span(std::string ARRAY_SIZE,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule) {
+std::string CodeGen_Reduction_Span(std::string ArraySize,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule) {
     return templateString(REDUCTION_Template_Span,
 	{
-        {"{{ARRAY_SIZE}}",       ARRAY_SIZE},   
+        {"{{ARRAY_SIZE}}",       ArraySize},   
 		{"{{SPLIT_SIZE}}",       SplitSize},
 		{"{{SPLIT_LENGTH}}",     SplitLength},
 		{"{{TYPE}}",             Type},
@@ -309,7 +309,8 @@ const char *D2H_MEM_MOV_1_Template = R"~~~(
 
 const char *D2H_MEM_MOV_2_Template = R"~~~(
     // 归约结果返回
-    q.memcpy(r_{{NAME}},reduction_{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();)~~~";
+    q.memcpy(r_{{NAME}},reduction_{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();
+	{{NAME}} = {{NAME}}_tool.UpdateData(reduction_{{NAME}});)~~~";
 
 std::string CodeGen_D2HMemMov(std::string Name,std::string Type,std::string Size,bool isReduction){
     if(isReduction){
