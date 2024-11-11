@@ -71,7 +71,7 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     // debug(1);
 
     DataReconstructor<int> matC_tool;
-    int* r_matC=(int*)malloc(sizeof(int)*16);
+    int* r_matC=(int*)malloc(sizeof(int)*16*2);
     Dac_Ops matC_ops;
     si.setDimId(0);
     si.setSplitLength(8);
@@ -115,6 +115,9 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
             const auto si=item_id/2/2%2;
             const auto sj=item_id/2%2;
             const auto sk=item_id%2;
+
+
+
             // 嵌入计算
             block_mat_mul(d_matA+(si*8+sk*4),d_matB+(sk*8+sj*4),d_matC+(si*16+sj*8+sk*4));
         });
@@ -132,7 +135,7 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     q.submit([&](handler &h) {
     	h.parallel_for(
         range<1>(8 * 4),
-        reduction(span<int,16>(reduction_matC,4), 
+        reduction(span<int,16>(reduction_matC,16), 
         sycl::plus<>(),
         property::reduction::initialize_to_identity()),
         [=](id<1> i,auto &reducer) {
@@ -140,15 +143,15 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
      	});
     }).wait();
 
-    int *res = malloc_shared<int>(16,q);
-    q.memcpy(res,reduction_matC, 16*sizeof(int)).wait();
+    // int *res = malloc_shared<int>(16,q);
+    q.memcpy(r_matC,reduction_matC, 16*sizeof(int)).wait();
     std::cout <<  "归约后计算结果(未归并):\n";
     for(int i=0;i<16;i++) {
-        std::cout << res[i] << " ";
+        std::cout << r_matC[i] << " ";
         if(i%4==3) std::cout<<"\n";
     }
-    debug(5);
-    matC = matC_tool.UpdateData(res);
+    // debug(5);
+    matC = matC_tool.UpdateData(r_matC);
     std::cout <<  "归约后计算结果(归并):\n";
     matC.print();
 }
