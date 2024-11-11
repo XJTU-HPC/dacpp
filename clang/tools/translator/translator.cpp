@@ -118,17 +118,16 @@ public:
         clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID())
             .write(llvm::outs());
         
-        /*
+        
         // 生成 SYCL 文件
         std::error_code error_code;
-        std::string fileName = getCurrentFile().str();
-        int pos = fileName.find("dacpp/");
-        fileName.replace(pos, fileName.size() - pos + 1, "sycl/" + fileName.substr(pos + 10));
+        // std::string fileName = getCurrentFile().str();
+        std::string fileName = "/data/powerzhang/dacpp/build/bin/Demo.cpp";
         llvm::raw_fd_ostream outFile(fileName, error_code, llvm::sys::fs::F_None);
         // this will write the result to outFile
-        rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID()).write(outFile);
+        clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID()).write(outFile);
         outFile.close();
-        */
+        
   }
 
 };
