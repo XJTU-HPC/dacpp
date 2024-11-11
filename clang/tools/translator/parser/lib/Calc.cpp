@@ -1,4 +1,5 @@
 #include <string>
+#include <iostream>
 
 #include "clang/AST/AST.h"
 
@@ -38,6 +39,9 @@ void dacppTranslator::Calc::setBody(Stmt* body) {
     for(Stmt::child_iterator it = body->child_begin(); it != body->child_end(); it++) {
         if(isa<ExprWithCleanups>(*it) && getNode<BinaryOperator>(*it)) {
             this->body.push_back("Expression");
+            BinaryOperator* dacExpr = getNode<BinaryOperator>(*it);
+            dacExpr->dump();
+            setExpr(dacExpr);
             continue;
         }
         std::string temp = stmt2String(*it);
@@ -65,7 +69,18 @@ int dacppTranslator::Calc::getNumBody() {
 }
 
 void dacppTranslator::Calc::setExpr(const BinaryOperator* dacExpr) {
-    
+    Shell* shell = new Shell();
+    Calc* calc = new Calc();
+    Expression* expr = new Expression();
+    expr->setDacExpr(dacExpr);
+    expr->setShell(shell);
+    expr->setCalc(calc);
+    shell->setFather(expr);
+    calc->setFather(expr);
+    shell->parseShell(dacExpr);
+    calc->parseCalc(dacExpr);
+    std::cout << "parseShell complete" << "\n";
+    exprs.push_back(expr);
 }
 
 dacppTranslator::Expression* dacppTranslator::Calc::getExpr(int idx) {

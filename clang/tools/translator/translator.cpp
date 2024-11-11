@@ -15,6 +15,7 @@
 #include "Param.h"
 #include "DacppStructure.h"
 #include "Rewriter.h"
+#include "test.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -105,11 +106,8 @@ public:
 
     void EndSourceFileAction() override {
         dacppTranslator::Rewriter* rewriter = new dacppTranslator::Rewriter();
-
         rewriter->setRewriter(clangRewriter);
-
         rewriter->setDacppFile(dacppFile);
-
         rewriter->rewriteDac();
 
         /*

@@ -71,11 +71,11 @@ dacppTranslator::Calc* dacppTranslator::Expression::getCalc() {
 }
 
 void dacppTranslator::Expression::setDacExpr(const clang::BinaryOperator* dacExpr) {
-
+    this->dacExpr = dacExpr;
 }
 
 const clang::BinaryOperator* dacppTranslator::Expression::getDacExpr() {
-
+    return dacExpr;
 }
 
 void dacppTranslator::Expression::setFatherFunc(FunctionDecl* fatherFunc) {
@@ -92,7 +92,7 @@ FunctionDecl* dacppTranslator::Expression::getFatherFunc() {
  */
 dacppTranslator::DacppFile::DacppFile() {
     setHeaderFile("<sycl/sycl.hpp>");
-    setHeaderFile("\"../DataReconstructor.cpp\"");
+    setHeaderFile("\"DataReconstructor.cpp\"");
     setNameSpace("sycl");
 }
 

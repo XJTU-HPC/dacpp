@@ -6,10 +6,10 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 
 #include "Rewriter.h"
-#include "../../parser/include/Split.h"
-#include "../../parser/include/Param.h"
-#include "../include/dacInfo.h"
-#include "../include/sub_template.h"
+#include "Split.h"
+#include "Param.h"
+#include "dacInfo.h"
+#include "sub_template.h"
 
 
 void dacppTranslator::Rewriter::setRewriter(clang::Rewriter* rewriter) {
@@ -118,7 +118,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
         }
         code += ") {\n";
         for(int count = 0; count < calc->getNumBody(); count++) {
-            code += "    " + calc->getBody(i) + "\n";
+            code += "    " + calc->getBody(count) + "\n";
         }
         code += "}\n";
 
