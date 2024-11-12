@@ -57,7 +57,7 @@ public:
     void setShellLoc(FunctionDecl* expr);
     FunctionDecl* getShellLoc();
 
-    void parseShell(const BinaryOperator* dacExpr);
+    void parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes);
 };
 
 

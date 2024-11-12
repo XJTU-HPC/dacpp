@@ -50,7 +50,7 @@ public:
     std::string getBody(int idx);
     int getNumBody();
 
-    void setExpr(const BinaryOperator* dacExpr);
+    void setExpr(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes);
     Expression* getExpr(int idx);
     int getNumExprs();
 

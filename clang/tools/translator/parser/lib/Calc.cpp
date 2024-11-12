@@ -3,6 +3,7 @@
 
 #include "clang/AST/AST.h"
 
+#include "Param.h"
 #include "Shell.h"
 #include "Calc.h"
 #include "ASTParse.h"
@@ -41,7 +42,14 @@ void dacppTranslator::Calc::setBody(Stmt* body) {
             this->body.push_back("Expression");
             BinaryOperator* dacExpr = getNode<BinaryOperator>(*it);
             dacExpr->dump();
-            setExpr(dacExpr);
+            std::vector<std::vector<int>> shapes(getNumParams(), std::vector<int>());
+            for (int paramCount = 0; paramCount < getNumParams(); paramCount++) {
+                Param* param = getParam(paramCount);
+                for(int dimCount = 0; dimCount < param->getDim(); dimCount++) {
+                    shapes[paramCount].push_back(param->getShape(dimCount));
+                }
+            }
+            setExpr(dacExpr, shapes);
             continue;
         }
         std::string temp = stmt2String(*it);
@@ -68,7 +76,7 @@ int dacppTranslator::Calc::getNumBody() {
     return body.size();
 }
 
-void dacppTranslator::Calc::setExpr(const BinaryOperator* dacExpr) {
+void dacppTranslator::Calc::setExpr(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes) {
     Shell* shell = new Shell();
     Calc* calc = new Calc();
     Expression* expr = new Expression();
@@ -77,7 +85,7 @@ void dacppTranslator::Calc::setExpr(const BinaryOperator* dacExpr) {
     expr->setCalc(calc);
     shell->setFather(expr);
     calc->setFather(expr);
-    shell->parseShell(dacExpr);
+    shell->parseShell(dacExpr, shapes);
     calc->parseCalc(dacExpr);
     std::cout << "parseShell complete" << "\n";
     exprs.push_back(expr);
