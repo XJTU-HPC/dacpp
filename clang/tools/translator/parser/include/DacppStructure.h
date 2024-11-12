@@ -1,6 +1,7 @@
 #ifndef TRANSLATOR_PARSER_DACPPSTRUCTURE_H
 #define TRANSLATOR_PARSER_DACPPSTRUCTURE_H
 
+
 #include <string>
 #include <vector>
 
@@ -8,18 +9,22 @@
 
 #include "Split.h"
 #include "Param.h"
+#include "Shell.h"
+#include "Calc.h"
+
 
 using namespace clang;
 
+
 namespace dacppTranslator {
 
-/*
-    头文件
-*/
-class HeaderFile {
 
+/**
+ * 存储头文件信息
+ */
+class HeaderFile {
 private:
-    std::string name; // 文件名
+    std::string name; // 头文件名
 
 public:
     HeaderFile();
@@ -27,14 +32,13 @@ public:
 
     void setName(std::string name);
     std::string getName();
-
 };
 
-/*
-    命名空间
-*/
-class NameSpace {
 
+/**
+ * 存储命名空间信息
+ */
+class NameSpace {
 private:
     std::string name; // 命名空间名
 
@@ -44,110 +48,18 @@ public:
 
     void setName(std::string name);
     std::string getName();
-
 };
 
-/*
-    数据关联计算表达式
-*/
-class Expression;
 
-/*
-    划分结构
-*/
-class Shell {
-
-// rewriter_->ReplaceText(shellFunc->getSourceRange(), "");
-
-private:
-    std::string name; // 函数名
-    std::vector<Param*> params; // 参数列表
-    std::vector<Split*> splits; // 划分列表
-    std::vector<ShellParam*> shellParams; // 划分结构参数
-    Expression* expr; // 所属的数据管理计算表达式
-    FunctionDecl* shellLoc; // AST 中 Shell 节点的位置
-
-public:
-    Shell();
-
-    void setName(std::string name);
-    std::string getName();
-
-    void setParam(Param* param);
-    Param* getParam(int idx);
-    int getNumParams();
-
-    void setSplit(Split* split);
-    Split* getSplit(int idx);
-    int getNumSplits();
-
-    void setShellParam(ShellParam* param);
-    ShellParam* getShellParam(int idx);
-    int getNumShellParams();
-
-    void setExpr(Expression* expr);
-    Expression* getExpr();
-
-    void setShellLoc(FunctionDecl* expr);
-    FunctionDecl* getShellLoc();
-
-    void parseShell(const BinaryOperator* dacExpr);
-
-};
-
-/*
-    计算
-*/
-class Calc {
-
-private:
-    std::string name; // 函数名
-    std::vector<Param*> params; // 参数
-    std::vector<std::string> body; // 函数体
-    /*
-        计算函数中可能也包含数据关联计算表达式
-        存在数据关联表达式的嵌套这种情况需要以树的形式将其保存起来
-    */
-    std::vector<Expression*> exprs; // 数据关联计算表达式
-    Expression* expr; // 所属的数据管理计算表达式
-    FunctionDecl* calcLoc; // AST 中 Calc 节点的位置
-
-public:
-    Calc();
-
-    void setName(std::string name);
-    std::string getName();
-
-    void setParam(Param* param);
-    Param* getParam(int idx);
-    int getNumParams();
-
-    void setBody(Stmt* body);
-    std::string getBody(int idx);
-    int getNumBody();
-
-    void setExpression(const BinaryOperator* dacExpr);
-    Expression* getExpression(int idx);
-    int getNumExpressions();
-
-    void setExpr(Expression* expr);
-    Expression* getExpr();
-
-    void setCalcLoc(FunctionDecl* calcLoc);
-    FunctionDecl* getCalcLoc();
-
-    void parseCalc(const BinaryOperator* dacExpr);
-
-};
-
-/*
-    数据关联计算表达式
-*/
+/**
+ * 存储数据关联计算表达式信息
+ */
 class Expression {
-
 private:
     Shell* shell; // 数据关联表达式对应的shell
     Calc* calc; // 数据关联计算表达式对应的calc
+    const clang::BinaryOperator* dacExpr; // AST中数据关联计算表达式节点的位置
+    FunctionDecl* fatherFunc; // AST中数据关联计算表达式所属函数节点的位置
 
 public:
     Expression();
@@ -158,18 +70,23 @@ public:
     void setCalc(Calc* calc);
     Calc* getCalc();
 
+    void setDacExpr(const clang::BinaryOperator* dacExpr);
+    const clang::BinaryOperator* getDacExpr();
+
+    void setFatherFunc(FunctionDecl* fatherFunc);
+    FunctionDecl* getFatherFunc();
 };
 
-/*
-    DACPP 文件
-*/
-class DacppFile {
 
+/**
+ * 存储DACPP文件信息
+ */
+class DacppFile {
 private:
     std::vector<HeaderFile*> headerFiles; // 头文件
     std::vector<NameSpace*> nameSpaces; // 命名空间
     std::vector<Expression*> exprs; // 数据关联计算表达式
-    const FunctionDecl* mainFuncLoc; // 主函数位置
+    const FunctionDecl* mainFuncLoc; // AST中主函数节点位置
 
 public:
     DacppFile();
@@ -188,8 +105,8 @@ public:
 
     void setMainFuncLoc(const FunctionDecl* mainFuncLoc);
     const FunctionDecl* getMainFuncLoc();
-
 };
+
 
 }
 
