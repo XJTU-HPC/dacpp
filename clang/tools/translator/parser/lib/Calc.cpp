@@ -41,7 +41,6 @@ void dacppTranslator::Calc::setBody(Stmt* body) {
         if(isa<ExprWithCleanups>(*it) && getNode<BinaryOperator>(*it)) {
             this->body.push_back("Expression");
             BinaryOperator* dacExpr = getNode<BinaryOperator>(*it);
-            dacExpr->dump();
             std::vector<std::vector<int>> shapes(getNumParams(), std::vector<int>());
             for (int paramCount = 0; paramCount < getNumParams(); paramCount++) {
                 Param* param = getParam(paramCount);
@@ -87,7 +86,6 @@ void dacppTranslator::Calc::setExpr(const BinaryOperator* dacExpr, std::vector<s
     calc->setFather(expr);
     shell->parseShell(dacExpr, shapes);
     calc->parseCalc(dacExpr);
-    std::cout << "parseShell complete" << "\n";
     exprs.push_back(expr);
 }
 

@@ -138,10 +138,19 @@ void dacppTranslator::DacppFile::setExpression(const BinaryOperator* dacExpr) {
             declRefExpr = dyn_cast<DeclRefExpr>(curExpr);
         }
         else {
-            declRefExpr = getNode<DeclRefExpr>(curExpr);
+            // 带切片的Tensor
+            while(getNode<CXXOperatorCallExpr>(curExpr)) {
+                curExpr = getNode<CXXOperatorCallExpr>(curExpr);
+            }
+            int count = 0;
+            for(Stmt::child_iterator it = curExpr->child_begin(); it != curExpr->child_end(); it++, count++) {
+                if(count != 1) {
+                    continue;
+                }
+                declRefExpr = getNode<DeclRefExpr>(*it);
+            }
         }
         int count = 0;
-    
         for(Stmt::child_iterator it = dyn_cast<VarDecl>(declRefExpr->getDecl())->getInit()->child_begin(); it != dyn_cast<VarDecl>(declRefExpr->getDecl())->getInit()->child_end(); it++) {
             if(count != 1) {
                 count++;

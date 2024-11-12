@@ -56,11 +56,11 @@ void dacppTranslator::Rewriter::rewriteDac() {
                         continue;
                     }
                     setOut.insert(split->getId());
-                    if(split->type == "dacpp::RegularSplit") {
+                    if(split->type == "RegularSplit") {
                         RegularSplit* sp = static_cast<RegularSplit*>(split);
                         countOut *= sp->getSplitNumber();
                     }
-                    else if(split->type == "dacpp::IndexSplit") {
+                    else if(split->type == "IndexSplit") {
                         IndexSplit* sp = static_cast<IndexSplit*>(split);
                         countOut *= sp->getSplitNumber();
                     }
@@ -76,7 +76,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
                         RegularSplit* sp = static_cast<RegularSplit*>(split);
                         countIn *= sp->getSplitNumber();
                     }
-                    else if(split->type == "dacpp::IndexSplit") {
+                    else if(split->type == "IndexSplit") {
                         IndexSplit* sp = static_cast<IndexSplit*>(split);
                         countIn *= sp->getSplitNumber();
                     }
@@ -89,15 +89,15 @@ void dacppTranslator::Rewriter::rewriteDac() {
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam* shellParam = shell->getShellParam(j);
             mem[j] = 1;
-            int dim = shellParam->getDim();
+            int dim = shellParam->getNumSplit();
             for(int k = 0; k < dim; k++) {
                 Split* split = shellParam->getSplit(k);
                 // 降维划分
-                if(split->type.compare("dacpp::IndexSplit") == 0) {
+                if(split->type.compare("IndexSplit") == 0) {
                     mem[j] *= shellParam->getShape(k);
                 }
                 // 规则分区划分
-                else if(split->type.compare("dacpp::RegularSplit") == 0) {
+                else if(split->type.compare("RegularSplit") == 0) {
                     dacppTranslator::RegularSplit* regulerSplit = static_cast<dacppTranslator::RegularSplit*>(split);
                     mem[j] *= (shellParam->getShape(k) - regulerSplit->getSplitSize() + regulerSplit->getSplitStride()) / regulerSplit->getSplitStride() * regulerSplit->getSplitSize();
                 }
@@ -159,7 +159,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
                     opPushBack += CodeGen_OpPushBack(shellParam->getName(), sp->getId(), std::to_string(sp->getDimIdx()), std::to_string(len / shellParam->getShape(count) * sp->getSplitSize()));
                     len = len / shellParam->getShape(count) * sp->getSplitSize();
                 }
-                else if(split->type == "dacpp::IndexSplit") {
+                else if(split->type == "IndexSplit") {
                     IndexSplit* sp = static_cast<IndexSplit*>(split);
                     opPushBack += CodeGen_OpPushBack(shellParam->getName(), sp->getId(), std::to_string(sp->getDimIdx()), std::to_string(len / shellParam->getShape(count)));
                     len /= shellParam->getShape(count);

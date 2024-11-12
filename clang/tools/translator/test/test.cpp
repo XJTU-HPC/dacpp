@@ -51,7 +51,15 @@ void dacppTranslator::printCalcInfo(dacppTranslator::Calc* calc) {
         printParamInfo(calc->getParam(i));
     }
     for(int i = 0; i < calc->getNumBody(); i++) {
-        std::cout << calc->getBody(i) << "\n";
+        if(calc->getBody(i).compare("Expression") != 0) {
+            std::cout << calc->getBody(i) << "\n";
+            continue;
+        }
+        std::cout << "子数据关联计算表达式：" << std::endl;
+        for(int j = 0; j < calc->getNumExprs(); j++) {
+            printShellInfo(calc->getExpr(j)->getShell());
+            printCalcInfo(calc->getExpr(j)->getCalc());
+        }
     }
 }
 
@@ -68,7 +76,7 @@ void dacppTranslator::printDacppFileInfo(dacppTranslator::DacppFile* dacppFile) 
     }
     std::cout << std::endl;
 
-    std::cout << "数据管理计算表达式：" << std::endl;
+    std::cout << "数据关联计算表达式：" << std::endl;
     for(int i = 0; i < dacppFile->getNumExpression(); i++) {
         std::cout << "Shell：" << std::endl;        
         printShellInfo(dacppFile->getExpression(i)->getShell());
@@ -78,5 +86,4 @@ void dacppTranslator::printDacppFileInfo(dacppTranslator::DacppFile* dacppFile) 
         std::cout << std::endl;
     }
     std::cout << std::endl;
-
 }
