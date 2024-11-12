@@ -38,6 +38,7 @@ public:
             匹配数据关联计算表达式
         */
         if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
+            dacExpr->dump();
             /*
             解析 DACPP 文件中的数据管理计算表达式
             */
@@ -71,10 +72,7 @@ public:
     MyASTConsumer() {
         // 可以通过 addMatcher 添加用户构造的匹配器到 MatchFinder中
         // Matcher.addMatcher(binaryOperator(hasOperatorName("<->")).bind("dac_expr"), &HandleForDac);
-        Matcher.addMatcher(binaryOperator(
-                                        hasOperatorName("<->"), 
-                                        hasParent(exprWithCleanups(hasParent(compoundStmt(hasParent(functionDecl(hasName("main")))))))
-                                        ).bind("dac_expr"), &HandleForDac);
+        Matcher.addMatcher(binaryOperator(hasOperatorName("<->")).bind("dac_expr"), &HandleForDac);
         Matcher.addMatcher(functionDecl(hasName("main")).bind("main"), &HandleForDac);
     }
 
