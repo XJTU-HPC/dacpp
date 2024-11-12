@@ -15,6 +15,8 @@
 #include "Param.h"
 #include "DacppStructure.h"
 #include "Rewriter.h"
+#include "test.h"
+#include "ASTParse.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -33,21 +35,33 @@ public:
     DacHandler() {}
 
     virtual void run(const MatchFinder::MatchResult &Result) {
-    
-        /*
-            匹配数据关联计算表达式
-        */
+        // 匹配数据关联计算表达式
         if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
             dacExpr->dump();
             /*
-            解析 DACPP 文件中的数据管理计算表达式
+                对匹配到的数据关联计算表达式进行过滤，只解析顶级数据关联计算表达式
+                解析数据关联计算表达式时需要知道数据的维度，将其硬编码到生成的SYCL文件中
+                而子数据关联计算表达式在编译期无法从得到该信息
+                顶级数据关联计算表达式在编译期可以找到数据的定义位置，从其构造函数中得到数据的维度信息
             */
+           // 获取 DAC 数据关联表达式左值
+            Expr* dacExprLHS = dacExpr->getLHS();
+            CallExpr* shellCall = dacppTranslator::getNode<CallExpr>(dacExprLHS);
+            Expr* curExpr = shellCall->getArg(0);
+            DeclRefExpr* declRefExpr;
+            if(isa<DeclRefExpr>(curExpr)) {
+                declRefExpr = dyn_cast<DeclRefExpr>(curExpr);
+            }
+            else {
+                declRefExpr = dacppTranslator::getNode<DeclRefExpr>(curExpr);
+            }
+            if(isa<ParmVarDecl>(declRefExpr->getDecl())) {
+                return;
+            }
+            // 解析 DACPP 文件中的顶级数据关联计算表达式
             dacppFile->setExpression(dacExpr);
         }
-
-        /*
-            匹配主函数
-        */
+        // 匹配主函数
         else if (const FunctionDecl* mainFunc = Result.Nodes.getNodeAs<clang::FunctionDecl>("main")) {
             dacppFile->setMainFuncLoc(mainFunc);
         }
@@ -103,11 +117,8 @@ public:
 
     void EndSourceFileAction() override {
         dacppTranslator::Rewriter* rewriter = new dacppTranslator::Rewriter();
-
         rewriter->setRewriter(clangRewriter);
-
         rewriter->setDacppFile(dacppFile);
-
         rewriter->rewriteDac();
 
         /*
