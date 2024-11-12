@@ -141,7 +141,7 @@ void dacppTranslator::DacppFile::setExpression(const BinaryOperator* dacExpr) {
             declRefExpr = getNode<DeclRefExpr>(curExpr);
         }
         int count = 0;
-    
+        declRefExpr->getDecl()->dump();
         for(Stmt::child_iterator it = dyn_cast<VarDecl>(declRefExpr->getDecl())->getInit()->child_begin(); it != dyn_cast<VarDecl>(declRefExpr->getDecl())->getInit()->child_end(); it++) {
             if(count != 1) {
                 count++;
