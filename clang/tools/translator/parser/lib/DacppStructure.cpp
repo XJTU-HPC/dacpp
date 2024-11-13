@@ -1,8 +1,5 @@
 #include <string>
 
-#include "clang/AST/AST.h"
-
-#include "Param.h"
 #include "DacppStructure.h"
 #include "ASTParse.h"
 
