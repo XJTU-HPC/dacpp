@@ -136,8 +136,9 @@ void dacppTranslator::DacppFile::setExpression(const BinaryOperator* dacExpr) {
         DeclRefExpr* declRefExpr;
         if(isa<DeclRefExpr>(curExpr)) {
             declRefExpr = dyn_cast<DeclRefExpr>(curExpr);
-        }
-        else {
+        } else if(isa<ImplicitCastExpr>(curExpr)) {
+            declRefExpr = getNode<DeclRefExpr>(curExpr);
+        } else {
             // 带切片的Tensor
             while(getNode<CXXOperatorCallExpr>(curExpr)) {
                 curExpr = getNode<CXXOperatorCallExpr>(curExpr);
