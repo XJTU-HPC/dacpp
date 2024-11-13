@@ -1,17 +1,17 @@
 #include "sub_template.h"
-#include "Buffer_memory_management.h"
+#include "buffer_template.h"
 int main(){
 	std::cout<<"************************************dac2sycl blockMatMul CodeGen test************************************\n\n";
 	
     // 设备内存分配
-    std::string deviceMemAlloc = BUFFER_MEMORY_MANAGEMENT::CodeGen_DeviceMemAlloc("int","matA", "16");
-    deviceMemAlloc += BUFFER_MEMORY_MANAGEMENT::CodeGen_DeviceMemAlloc("int","matB", "16");
-    deviceMemAlloc += BUFFER_MEMORY_MANAGEMENT::CodeGen_DeviceMemAlloc("int","matC", "16*2");
+    std::string deviceMemAlloc = BUFFER_TEMPLATE::CodeGen_DeviceMemAlloc("int","matA", "16");
+    deviceMemAlloc += BUFFER_TEMPLATE::CodeGen_DeviceMemAlloc("int","matB", "16");
+    deviceMemAlloc += BUFFER_TEMPLATE::CodeGen_DeviceMemAlloc("int","matC", "16*2");
     //std::cout<<deviceMemAlloc<<std::endl;
     
     // // 主机数据移动至设备
-    std::string H2DMemMove = BUFFER_MEMORY_MANAGEMENT::CodeGen_H2DMemMov("int","matA", "16");
-    H2DMemMove += BUFFER_MEMORY_MANAGEMENT::CodeGen_H2DMemMov("int","matB","16");
+    std::string H2DMemMove = BUFFER_TEMPLATE::CodeGen_H2DMemMov("int","matA", "16");
+    H2DMemMove += BUFFER_TEMPLATE::CodeGen_H2DMemMov("int","matB","16");
 	//std::cout<<H2DMemMove;
 
     // // 索引初始化 得到在工作项中的索引值 需要算子的步长stride与size
@@ -65,10 +65,10 @@ int main(){
 	args.push_back(d_matC);
 
 	std::string CalcEmbed = CodeGen_CalcEmbed("block_mat_mul",args);
-	std::string KernelExecute = BUFFER_MEMORY_MANAGEMENT::CodeGen_KernelExecute("8",IndexInit,CalcEmbed);
+	std::string KernelExecute = BUFFER_TEMPLATE::CodeGen_KernelExecute("8",IndexInit,CalcEmbed);
 	// std::cout<<KernelExecute;
-	std::string Reduction = BUFFER_MEMORY_MANAGEMENT::CodeGen_Reduction("8","matC","int","sycl::plus<>()");
-	std::string D2HMemMove = BUFFER_MEMORY_MANAGEMENT::CodeGen_D2HMemMov("matC","int","1",true);
+	std::string Reduction = BUFFER_TEMPLATE::CodeGen_Reduction("8","matC","int","sycl::plus<>()");
+	std::string D2HMemMove = BUFFER_TEMPLATE::CodeGen_D2HMemMov("matC","int","1",true);
 
 	std::string opInit = CodeGen_RegularSliceInit("si","2","2","2");
 	opInit += CodeGen_RegularSliceInit("sj","2","2","2");

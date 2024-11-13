@@ -20,7 +20,7 @@ set(REWRITER_SOURCES
   rewriter/lib/dacInfo.cpp
   rewriter/lib/sub_template.cpp
   rewriter/lib/Rewriter.cpp
-  rewriter/lib/Buffer_memory_management.cpp
+  rewriter/lib/buffer_template.cpp
 )
 
 add_library(DacppLib ${DACPPLIB_SOURCES})

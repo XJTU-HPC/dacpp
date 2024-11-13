@@ -2,9 +2,9 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include "Buffer_memory_management.h"
+#include "buffer_template.h"
 
-namespace BUFFER_MEMORY_MANAGEMENT {
+namespace BUFFER_TEMPLATE {
 
 
 

@@ -1,5 +1,5 @@
-#ifndef BUFFER_MEMORY_MANAGEMENT_H
-#define BUFFER_MEMORY_MANAGEMENT_H
+#ifndef BUFFER_TEMPLATE_H
+#define BUFFER_TEMPLATE_H
 
 #include<string>
 #include<iostream>
@@ -7,7 +7,7 @@
 #include<vector>
 #include"dacInfo.h"
 
-namespace BUFFER_MEMORY_MANAGEMENT {
+namespace BUFFER_TEMPLATE {
     extern const char *BUFFER_ACCESSOR_Template;
     extern const char *DEVICE_MEM_ALLOC_Template;
     extern const char *H2D_MEM_MOV_Template;
