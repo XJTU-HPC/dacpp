@@ -19,6 +19,7 @@ set(PARSER_SOURCES
 set(REWRITER_SOURCES
   rewriter/lib/dacInfo.cpp
   rewriter/lib/sub_template.cpp
+  rewriter/lib/usm_template.cpp
   rewriter/lib/Rewriter.cpp
   rewriter/lib/buffer_template.cpp
 )
