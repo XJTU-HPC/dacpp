@@ -24,6 +24,47 @@ std::string templateString(std::string templ,
 	return templ;
 }
 
+const char *DAC2SYCL_Template = R"~~~(
+// 生成函数调用
+void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) { 
+    // 设备选择
+    auto selector = gpu_selector_v;
+    queue q(selector);
+    // 算子初始化
+    {{OP_INIT}}
+    // 数据重组
+    {{DATA_RECON}}
+    // 设备内存分配
+    {{DEVICE_MEM_ALLOC}}
+    // 数据移动
+    {{H2D_MEM_MOV}}   
+    // 内核执行
+    {{KERNEL_EXECUTE}}    
+    // 归约
+    {{REDUCTION}}
+    // 返回计算结果
+    {{D2H_MEM_MOV}}
+    // 内存释放
+    {{MEM_FREE}}
+})~~~";
+
+std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams,std::string opInit,std::string dataRecon,
+	std::string deviceMemAlloc,std::string H2DMemMove,std::string kernelExecute,std::string reduction,std::string D2HMemMove,std::string memFree){
+    return templateString(DAC2SYCL_Template,
+	{
+		{"{{DAC_SHELL_NAME}}",    dacShellName},
+		{"{{DAC_SHELL_PARAMS}}",  dacShellParams},
+		{"{{OP_INIT}}",           opInit},
+        {"{{DATA_RECON}}",        dataRecon},
+		{"{{DEVICE_MEM_ALLOC}}",  deviceMemAlloc},
+        {"{{H2D_MEM_MOV}}",       H2DMemMove},
+        {"{{KERNEL_EXECUTE}}",    kernelExecute},
+		{"{{REDUCTION}}",         reduction},
+        {"{{D2H_MEM_MOV}}",       D2HMemMove},
+        {"{{MEM_FREE}}",          memFree}
+	});
+}
+
 const char *DEVICE_MEM_ALLOC_Template = R"~~~(
     // 设备内存分配
     {{TYPE}} *d_{{NAME}}=malloc_device<{{TYPE}}>({{SIZE}},q);)~~~";

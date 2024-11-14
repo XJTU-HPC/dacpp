@@ -1,17 +1,21 @@
-#include "sub_template.h"
+#include "universal_template.h"
 #include "usm_template.h"
+
+using namespace USM_TEMPLATE;
+using namespace UNIVERSAL_TEMPLATE;
+
 int main(){
 	std::cout<<"************************************dac2sycl blockMatMul CodeGen test************************************\n\n";
 	
     // 设备内存分配
-    std::string deviceMemAlloc = USM_TEMPLATE::CodeGen_DeviceMemAlloc("int","matA", "16");
-    deviceMemAlloc += USM_TEMPLATE::CodeGen_DeviceMemAlloc("int","matB", "16");
-    deviceMemAlloc += USM_TEMPLATE::CodeGen_DeviceMemAlloc("int","matC", "16*2");
+    std::string deviceMemAlloc = CodeGen_DeviceMemAlloc("int","matA", "16");
+    deviceMemAlloc += CodeGen_DeviceMemAlloc("int","matB", "16");
+    deviceMemAlloc += CodeGen_DeviceMemAlloc("int","matC", "16*2");
     //std::cout<<deviceMemAlloc<<std::endl;
     
     // // 主机数据移动至设备
-    std::string H2DMemMove = USM_TEMPLATE::CodeGen_H2DMemMov("int","matA", "16");
-    H2DMemMove += USM_TEMPLATE::CodeGen_H2DMemMov("int","matB","16");
+    std::string H2DMemMove = CodeGen_H2DMemMov("int","matA", "16");
+    H2DMemMove += CodeGen_H2DMemMov("int","matB","16");
 	//std::cout<<H2DMemMove;
 
     // // 索引初始化 得到在工作项中的索引值 需要算子的步长stride与size
@@ -65,10 +69,10 @@ int main(){
 	args.push_back(d_matC);
 
 	std::string CalcEmbed = CodeGen_CalcEmbed("block_mat_mul",args);
-	std::string KernelExecute = USM_TEMPLATE::CodeGen_KernelExecute("8",IndexInit,CalcEmbed);
+	std::string KernelExecute = CodeGen_KernelExecute("8",IndexInit,CalcEmbed);
 	// std::cout<<KernelExecute;
-	std::string Reduction = USM_TEMPLATE::CodeGen_Reduction("8","matC","int","sycl::plus<>()");
-	std::string D2HMemMove = USM_TEMPLATE::CodeGen_D2HMemMov("matC","int","1",true);
+	std::string Reduction = CodeGen_Reduction("8","matC","int","sycl::plus<>()");
+	std::string D2HMemMove = CodeGen_D2HMemMov("matC","int","1",true);
 
 	std::string opInit = CodeGen_RegularSliceInit("si","2","2","2");
 	opInit += CodeGen_RegularSliceInit("sj","2","2","2");
@@ -90,9 +94,9 @@ int main(){
 	std::string dataOpsInit_C = CodeGen_DataOpsInit("matC", opPushBack_C);
 	dataRecon += CodeGen_DataReconstruct("int","matC", "32", dataOpsInit_C);
 
-	std::string MemFree = USM_TEMPLATE::CodeGen_MemFree("d_matA");
-	MemFree += USM_TEMPLATE::CodeGen_MemFree("d_matB");
-	MemFree += USM_TEMPLATE::CodeGen_MemFree("d_matC");
+	std::string MemFree = CodeGen_MemFree("d_matA");
+	MemFree += CodeGen_MemFree("d_matB");
+	MemFree += CodeGen_MemFree("d_matC");
 
 	std::string res = CodeGen_DAC2SYCL(
 		"blockMatMul",

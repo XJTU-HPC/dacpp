@@ -8,6 +8,7 @@
 #include"dacInfo.h"
 
 namespace USM_TEMPLATE {
+    extern const char *DAC2SYCL_Template;
     extern const char *DEVICE_MEM_ALLOC_Template;
     extern const char *H2D_MEM_MOV_Template;
     extern const char *KERNEL_EXECUTE_Template;
@@ -20,6 +21,9 @@ namespace USM_TEMPLATE {
     void replaceTextInString(std::string& text, const std::string &find, const std::string &replace);
 
     std::string templateString(std::string templ, std::vector<std::pair<std::string, std::string>> replacements);
+
+    std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams,std::string opInit,std::string dataRecon,
+	    std::string deviceMemAlloc,std::string H2DMemMove,std::string kernelExecute,std::string reduction,std::string D2HMemMove,std::string memFree);
 
     std::string CodeGen_DeviceMemAlloc(std::string type,std::string name,std::string size);
     //finish

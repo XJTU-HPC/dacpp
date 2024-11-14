@@ -8,6 +8,7 @@
 #include"dacInfo.h"
 
 namespace BUFFER_TEMPLATE {
+    extern const char *DAC2SYCL_Template;
     extern const char *BUFFER_ACCESSOR_Template;
     extern const char *ACCESSOR_POINTER_Template;
     extern const char *DEVICE_MEM_ALLOC_Template;
@@ -22,10 +23,13 @@ namespace BUFFER_TEMPLATE {
 
     std::string templateString(std::string templ, std::vector<std::pair<std::string, std::string>> replacements);
 
+    std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams,std::string opInit,std::string dataRecon,
+	    std::string deviceMemAlloc,std::string H2DMemMove,std::string kernelExecute,std::string reduction,std::string D2HMemMove);
+
     std::string CodeGen_DeviceMemAlloc(std::string type,std::string name,std::string size);
-    //finish
+
     std::string CodeGen_H2DMemMov(std::string type,std::string name,std::string size);
-    //finish
+
     std::string CodeGen_KernelExecute(std::string SplitSize,std::string IndexInit,std::string CalcEmbed);
 
     std::string CodeGen_Reduction(std::string SplitSize,std::string Name,std::string Type,std::string ReductionRule);
