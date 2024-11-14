@@ -9,6 +9,7 @@
 
 namespace BUFFER_TEMPLATE {
     extern const char *BUFFER_ACCESSOR_Template;
+    extern const char *ACCESSOR_POINTER_Template;
     extern const char *DEVICE_MEM_ALLOC_Template;
     extern const char *H2D_MEM_MOV_Template;
     extern const char *KERNEL_EXECUTE_Template;

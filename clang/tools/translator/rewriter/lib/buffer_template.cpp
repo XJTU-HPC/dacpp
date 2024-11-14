@@ -25,8 +25,11 @@ std::string templateString(std::string templ,
 }
 
 std::string BUFFER_ACCESSOR_LIST = "";
+std::string ACCESSOR_POINTER_LIST = "";
 const char *BUFFER_ACCESSOR_Template = R"~~~(
-    accessor d_{{NAME}}{b_{{NAME}}, h};)~~~";
+        accessor acc_{{NAME}}{b_{{NAME}}, h};)~~~";
+const char *ACCESSOR_POINTER_Template = R"~~~(
+            auto* d_{{NAME}} = acc_{{NAME}}.get_multi_ptr<access::decorated::no>().get())~~~";
 
 const char *DEVICE_MEM_ALLOC_Template = R"~~~(
     // Buffer设备内存分配
@@ -34,6 +37,9 @@ const char *DEVICE_MEM_ALLOC_Template = R"~~~(
 
 std::string CodeGen_DeviceMemAlloc(std::string type,std::string name,std::string size){
     BUFFER_ACCESSOR_LIST += templateString(BUFFER_ACCESSOR_Template,{
+        {"{{NAME}}", name}
+    });
+    ACCESSOR_POINTER_LIST += templateString(ACCESSOR_POINTER_Template,{
         {"{{NAME}}", name}
     });
     return templateString(DEVICE_MEM_ALLOC_Template,{
@@ -72,6 +78,8 @@ const char *KERNEL_EXECUTE_Template = R"~~~(
             const auto item_id = item.get_local_id(2);
             // 索引初始化
 			{{INDEX_INIT}}
+            // 获得accessor指针
+            {{ACCESSOR_POINTER_LIST}}
             // 嵌入计算
 			{{CALC_EMBED}}
         });
@@ -85,7 +93,8 @@ std::string CodeGen_KernelExecute(std::string SplitSize,std::string IndexInit,st
 		{"{{SPLIT_SIZE}}",    SplitSize},
 		{"{{INDEX_INIT}}",    IndexInit},
 		{"{{CALC_EMBED}}",    CalcEmbed},
-        {"{{ACCESSOR_LIST}}",   BUFFER_ACCESSOR_LIST}
+        {"{{ACCESSOR_LIST}}",   BUFFER_ACCESSOR_LIST},
+        {"{{ACCESSOR_POINTER_LIST}}",   ACCESSOR_POINTER_LIST}
 	});
 }
 

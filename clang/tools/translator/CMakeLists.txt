@@ -22,6 +22,7 @@ set(REWRITER_SOURCES
   rewriter/lib/usm_template.cpp
   rewriter/lib/Rewriter.cpp
   rewriter/lib/buffer_template.cpp
+  rewriter/lib/universal_template.cpp
 )
 
 add_library(DacppLib ${DACPPLIB_SOURCES})

@@ -229,19 +229,11 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 	int len = args.size;
 	for(int i=0;i<len;i++){
 		std::string IndexComb="(";
-		// for(int j=0;j<args[i].ops.size;j++){
-		// 	IndexComb+= args[i].ops[j].name+"*";
-		// }
 		for(int j=0;j<args[i].ops.size;j++){
 			IndexComb+= args[i].ops[j].name + "*" + std::to_string(args[i].ops[j].split_length);
-			// for(int k=j+1;k<args[i].ops.size;k++){
-			// 	IndexComb+="*"+std::to_string(args[i].getDimlength(args[i].ops[k].dimId));
-			// }
-			// 
 			if(j!=args[i].ops.size-1) IndexComb+="+";
 		}
 		IndexComb+=")";
-		// DacCalcArgs+=args[i].name + "+" + IndexComb + std::to_string(args[i].split_length);
 		DacCalcArgs+=args[i].name + "+" + IndexComb;
 		if(i==len-1){
 			DacCalcArgs+=");";
