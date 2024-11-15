@@ -4409,35 +4409,85 @@ int dacppTranslator::Calc::getNumParams() {
     return params.size();
 }
 
-void dacppTranslator::Calc::setBody(Stmt* body) {
-    for(Stmt::child_iterator it = body->child_begin(); it != body->child_end(); it++) {
-        if(isa<ExprWithCleanups>(*it) && getNode<BinaryOperator>(*it)) {
-            this->body.push_back("Expression");
-            BinaryOperator* dacExpr = getNode<BinaryOperator>(*it);
-            std::vector<std::vector<int>> shapes(getNumParams(), std::vector<int>());
-            for (int paramCount = 0; paramCount < getNumParams(); paramCount++) {
-                Param* param = getParam(paramCount);
+struct Visitor : DeclPrinter {
+    ASTContext &Context;
+    dacppTranslator::Calc *calc;
+    PrinterHelper *helper;
+    const PrintingPolicy &Policy;
+    raw_ostream &os;
+  
+    Visitor(dacppTranslator::Calc *calc, raw_ostream &os, PrinterHelper *helper,
+                const PrintingPolicy &Policy, unsigned Indentation = 0,
+                StringRef NL = "\n", ASTContext *Context = nullptr)
+        : DeclPrinter(os, helper, Policy, *Context, Indentation, NL), Context(*Context)
+        , calc(calc), helper(helper), Policy(Policy), os(os) {}
+
+    void Visit(Stmt* S) override {
+      bool bHandled = false; /* 是否被处理的标志。  */
+        if(isa<ExprWithCleanups>(S) && dacppTranslator::getNode<BinaryOperator>(S)) {
+            calc->body.push_back("Expression");
+            BinaryOperator* dacExpr = dacppTranslator::getNode<BinaryOperator>(S);
+            std::vector<std::vector<int>> shapes(calc->getNumParams(), std::vector<int>());
+            for (int paramCount = 0; paramCount < calc->getNumParams(); paramCount++) {
+                dacppTranslator::Param* param = calc->getParam(paramCount);
                 for(int dimCount = 0; dimCount < param->getDim(); dimCount++) {
                     shapes[paramCount].push_back(param->getShape(dimCount));
                 }
             }
-            setExpr(dacExpr, shapes);
-            continue;
+            calc->setExpr(dacExpr, shapes);
+            /* 已被处理。  */
+            bHandled = true;
         }
-        std::string temp = stmt2String(*it);
-        for(int i = 0; i < getNumParams(); i++) {
-            if(temp.find(getParam(i)->getName() + ".getShape") != -1) {
-                int pos = temp.find(getParam(i)->getName() + ".getShape");
-                int dim = (int)temp[pos + getParam(i)->getName().size() + 10] - (int)'0';
-                temp.replace(pos, getParam(i)->getName().size() + 12, std::to_string(getParam(i)->getShape(dim)));
-            }
-            if(temp.find(getParam(i)->getName()) != -1 && getParam(i)->getDim() == 0) {
-                int pos = temp.find(getParam(i)->getName());
-                temp.replace(pos, getParam(i)->getName().size(), getParam(i)->getName() + "[0]");
-            }
-        }
-        this->body.push_back(temp);
+      /* 如果未得到处理，则使用默认方法处理它。  */
+      if (!bHandled)
+        DeclPrinter::Visit(S);
     }
+
+void VisitCXXMemberCallExpr(CXXMemberCallExpr *Node) override {
+  bool bHandled = false; /* 是否被处理的标志。  */
+  std::string Msg;
+  llvm::raw_string_ostream SS(Msg);
+  if (const auto *Call = dyn_cast<CallExpr>(Node)) {
+    if (auto *Callee = Call->getCallee()) {
+      if (auto *ME = dyn_cast<MemberExpr>(Callee)) {
+        if (!isImplicitThis(ME->getBase())) {
+          if (const Expr *Base = ME->getBase()) {
+            if (auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
+              if (strstr (DRE->getDecl()->getType().getAsString().c_str(), "Tensor") &&
+                  ! strcmp ("getShape", ME->getMemberNameInfo().getAsString().c_str())) {
+                /* 已被处理。  */
+                bHandled = true;
+
+                for(int i = 0; i < calc->getNumParams(); i++) {
+                  if (!strcmp (DRE->getNameInfo().getAsString().c_str(), calc->getParam(i)->getName().c_str())) {
+                    Call->getArg(0)->printPretty(SS, helper, Policy);
+                    os << calc->getParam(i)->getShape(atoi(SS.str().c_str()));
+                    break;
+                  }
+                }
+
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /* 如果未得到处理，则使用默认方法处理它。  */
+  if (!bHandled)
+      DeclPrinter::VisitCXXMemberCallExpr(Node);
+}
+
+} ;
+
+
+void dacppTranslator::Calc::setBody(Stmt* body) {
+  std::string Msg;
+  llvm::raw_string_ostream SS(Msg);
+    Visitor V (this, SS, nullptr, PrintingPolicy (LangOptions ()), 0, "\n", nullptr);
+    V .Visit (body);
+    this->body.push_back(Msg);
 }
 
 std::string dacppTranslator::Calc::getBody(int idx) {

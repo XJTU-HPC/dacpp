@@ -27,7 +27,6 @@ class Calc {
 private:
     std::string name; // 函数名
     std::vector<Param*> params; // 参数
-    std::vector<std::string> body; // 函数体
     /*
         计算函数中可能也包含数据关联计算表达式
         存在数据关联表达式的嵌套这种情况需要以树的形式将其保存起来
@@ -61,6 +60,7 @@ public:
     FunctionDecl* getCalcLoc();
 
     void parseCalc(const BinaryOperator* dacExpr);
+    std::vector<std::string> body; // 函数体
 };
 
 
