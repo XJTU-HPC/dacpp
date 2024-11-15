@@ -22,7 +22,6 @@ add_executable(syclBlockMatMul0 blockMatMul0.sycl.cpp)
 add_executable(syclBlockMatMul1 blockMatMul1.sycl.cpp)
 add_executable(syclVectorMul0 vectorMul0.sycl.cpp)
 add_executable(outputSyclBlockMatrixMultiplication blockMatrixMultiplication_sycl.cpp)
-add_executable(FOuLa_sycl FOuLa_sycl.cpp)
 
 set_target_properties(syclBlockMatMul0 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests

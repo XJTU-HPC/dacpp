@@ -149,10 +149,6 @@ void dacppTranslator::DacppFile::setExpression(const BinaryOperator* dacExpr) {
             }
         }
         int count = 0;
-<<<<<<< HEAD
-        declRefExpr->getDecl()->dump();
-=======
->>>>>>> a1c73f1ec7c339253645b499c9a861e8de76df7b
         for(Stmt::child_iterator it = dyn_cast<VarDecl>(declRefExpr->getDecl())->getInit()->child_begin(); it != dyn_cast<VarDecl>(declRefExpr->getDecl())->getInit()->child_end(); it++) {
             if(count != 1) {
                 count++;
