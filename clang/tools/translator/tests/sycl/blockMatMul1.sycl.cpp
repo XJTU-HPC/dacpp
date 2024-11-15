@@ -135,7 +135,7 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     int *reduction_matC = malloc_device<int>(16,q);
     q.submit([&](handler &h) {
     	h.parallel_for(
-        range<1>(8 * 4),
+        range<1>(2 * 16),
         reduction(span<int,16>(reduction_matC,16), 
         sycl::plus<>(),
         property::reduction::initialize_to_identity()),

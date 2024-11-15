@@ -6,10 +6,10 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 
 #include "Rewriter.h"
-#include "../../parser/include/Split.h"
-#include "../../parser/include/Param.h"
-#include "../include/dacInfo.h"
-#include "../include/sub_template.h"
+#include "Split.h"
+#include "Param.h"
+#include "dacInfo.h"
+#include "sub_template.h"
 
 
 void dacppTranslator::Rewriter::setRewriter(clang::Rewriter* rewriter) {
@@ -56,11 +56,11 @@ void dacppTranslator::Rewriter::rewriteDac() {
                         continue;
                     }
                     setOut.insert(split->getId());
-                    if(split->type == "dacpp::RegularSplit") {
+                    if(split->type == "RegularSplit") {
                         RegularSplit* sp = static_cast<RegularSplit*>(split);
                         countOut *= sp->getSplitNumber();
                     }
-                    else if(split->type == "dacpp::IndexSplit") {
+                    else if(split->type == "IndexSplit") {
                         IndexSplit* sp = static_cast<IndexSplit*>(split);
                         countOut *= sp->getSplitNumber();
                     }
@@ -76,7 +76,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
                         RegularSplit* sp = static_cast<RegularSplit*>(split);
                         countIn *= sp->getSplitNumber();
                     }
-                    else if(split->type == "dacpp::IndexSplit") {
+                    else if(split->type == "IndexSplit") {
                         IndexSplit* sp = static_cast<IndexSplit*>(split);
                         countIn *= sp->getSplitNumber();
                     }
@@ -89,15 +89,15 @@ void dacppTranslator::Rewriter::rewriteDac() {
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam* shellParam = shell->getShellParam(j);
             mem[j] = 1;
-            int dim = shellParam->getDim();
+            int dim = shellParam->getNumSplit();
             for(int k = 0; k < dim; k++) {
                 Split* split = shellParam->getSplit(k);
                 // 降维划分
-                if(split->type.compare("dacpp::IndexSplit") == 0) {
+                if(split->type.compare("IndexSplit") == 0) {
                     mem[j] *= shellParam->getShape(k);
                 }
                 // 规则分区划分
-                else if(split->type.compare("dacpp::RegularSplit") == 0) {
+                else if(split->type.compare("RegularSplit") == 0) {
                     dacppTranslator::RegularSplit* regulerSplit = static_cast<dacppTranslator::RegularSplit*>(split);
                     mem[j] *= (shellParam->getShape(k) - regulerSplit->getSplitSize() + regulerSplit->getSplitStride()) / regulerSplit->getSplitStride() * regulerSplit->getSplitSize();
                 }
@@ -116,11 +116,10 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 code += ", ";
             }
         }
-        code += ") {\n";
+        code += ") \n";
         for(int count = 0; count < calc->getNumBody(); count++) {
-            code += "    " + calc->getBody(i) + "\n";
+            code += calc->getBody(count) + "\n";
         }
-        code += "}\n";
 
 
         std::string dacShellName = shell->getName();
@@ -159,7 +158,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
                     opPushBack += CodeGen_OpPushBack(shellParam->getName(), sp->getId(), std::to_string(sp->getDimIdx()), std::to_string(len / shellParam->getShape(count) * sp->getSplitSize()));
                     len = len / shellParam->getShape(count) * sp->getSplitSize();
                 }
-                else if(split->type == "dacpp::IndexSplit") {
+                else if(split->type == "IndexSplit") {
                     IndexSplit* sp = static_cast<IndexSplit*>(split);
                     opPushBack += CodeGen_OpPushBack(shellParam->getName(), sp->getId(), std::to_string(sp->getDimIdx()), std::to_string(len / shellParam->getShape(count)));
                     len /= shellParam->getShape(count);
@@ -182,9 +181,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
         std::string H2DMemMove = "";
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam* shellParam = shell->getShellParam(j);
-            if (shellParam->getRw() == 1) {
-                H2DMemMove += CodeGen_H2DMemMov(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[j] * countIn / countOut));
-            } else {
+            if (shellParam->getRw() == 0) {
                 H2DMemMove += CodeGen_H2DMemMov(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[j]));
             }
         }
@@ -243,7 +240,8 @@ void dacppTranslator::Rewriter::rewriteDac() {
             ShellParam* shellParam = shell->getShellParam(j);
             if(shellParam->getRw() == 1) {
                 std::string ReductionRule = "";
-                reduction += CodeGen_Reduction(std::to_string(countOut), shellParam->getName(), shellParam->getBasicType(), ReductionRule);
+                reduction += CodeGen_Reduction_Span(std::to_string(mem[j]), std::to_string(countIn / countOut),\
+                                                    std::to_string(countIn), shellParam->getName(), shellParam->getBasicType(), ReductionRule);
             }
         }
         // 归并结果返回
@@ -251,8 +249,6 @@ void dacppTranslator::Rewriter::rewriteDac() {
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam* shellParam = shell->getShellParam(j);
             if(shellParam->getRw() == 1) {
-                D2HMemMove += CodeGen_D2HMemMov(shellParam->getName(), shellParam->getBasicType(), std::to_string(mem[j] * countIn / countOut), false);
-            } else {
                 D2HMemMove += CodeGen_D2HMemMov(shellParam->getName(), shellParam->getBasicType(), std::to_string(mem[j]), false);
             }
         }
@@ -295,5 +291,19 @@ void dacpp::Source2Source::recursiveRewriteMain(Stmt* curStmt) {
 */
 
 void dacppTranslator::Rewriter::rewriteMain() {
-
+    for (int exprCount = 0; exprCount < dacppFile->getNumExpression(); exprCount++) {
+        Expression* expr = dacppFile->getExpression(exprCount);
+        Shell* shell = expr->getShell();
+        std::string code = "";
+        code += shell->getName() + "(";
+        for(int paramCount = 0; paramCount < shell->getNumParams(); paramCount++) {
+            code += shell->getParam(paramCount)->getName();
+            if(paramCount != shell->getNumParams() - 1) {
+                code += ", ";
+            }
+        }
+        code += ");";
+        expr->getDacExpr()->dump();
+        rewriter->InsertText(expr->getDacExpr()->getBeginLoc(), code);   
+    }
 }
