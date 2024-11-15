@@ -73,6 +73,18 @@ public:
     Tensor() {
     }
 
+    /**
+     * 标量 Tensor 构造函数
+    */
+    Tensor(ImplType data) {
+        data_ = std::shared_ptr<ImplType>(new ImplType[1], std::default_delete<ImplType[]>());
+        data_.get()[0] = data;
+        offset_ = 0;
+        dim_ = 0;
+        shape_ = std::shared_ptr<ImplType>(new int[1], std::default_delete<int[]>());
+        stride_ = std::shared_ptr<ImplType>(new int[1], std::default_delete<int[]>());
+    }
+
     Tensor(ImplType* data, int size, int* shape, int dim) {
         // 参数检查
         // int count = 1;

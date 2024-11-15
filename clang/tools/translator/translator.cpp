@@ -37,6 +37,7 @@ public:
     virtual void run(const MatchFinder::MatchResult &Result) {
         // 匹配数据关联计算表达式
         if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
+            dacExpr->dump();
             /*
                 对匹配到的数据关联计算表达式进行过滤，只解析顶级数据关联计算表达式
                 解析数据关联计算表达式时需要知道数据的维度，将其硬编码到生成的SYCL文件中
