@@ -77,6 +77,7 @@ FunctionDecl* dacppTranslator::Shell::getShellLoc() {
 void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes) {
     // 获取 DAC 数据关联表达式左值
     Expr* dacExprLHS = dacExpr->getLHS();
+    dacExpr->dump();
     CallExpr* shellCall = getNode<CallExpr>(dacExprLHS);
     FunctionDecl* shellFunc = shellCall->getDirectCallee();
     

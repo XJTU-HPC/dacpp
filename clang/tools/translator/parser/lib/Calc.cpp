@@ -4424,9 +4424,11 @@ struct Visitor : DeclPrinter {
 
     void Visit(Stmt* S) override {
       bool bHandled = false; /* 是否被处理的标志。  */
-        if(isa<ExprWithCleanups>(S) && dacppTranslator::getNode<BinaryOperator>(S)) {
+      BinaryOperator* dacExpr;
+        if (isa<ExprWithCleanups>(S) &&
+           (dacExpr = dacppTranslator::getNode<BinaryOperator>(S)) &&
+           dacExpr->getOpcode() == BO_LMG) {
             calc->body.push_back("Expression");
-            BinaryOperator* dacExpr = dacppTranslator::getNode<BinaryOperator>(S);
             std::vector<std::vector<int>> shapes(calc->getNumParams(), std::vector<int>());
             for (int paramCount = 0; paramCount < calc->getNumParams(); paramCount++) {
                 dacppTranslator::Param* param = calc->getParam(paramCount);
@@ -4567,11 +4569,11 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
         ShellParam* shellParam = shell->getShellParam(paramsCount);
 
         for(int i = 0; i < shell->getNumSplits(); i++) {
-            if(shell->getSplit(i)->type == "dacpp::RegularSplit") {
+            if(shell->getSplit(i)->type.compare("RegularSplit") == 0) {
                 RegularSplit* sp = static_cast<RegularSplit*>(shell->getSplit(i));
                 param->setShape(sp->getSplitSize());
             }
-            else if(shell->getSplit(i)->type == "dacpp::IndexSplit") {
+            else if(shell->getSplit(i)->type.compare("IndexSplit") == 0) {
                 IndexSplit* sp = static_cast<IndexSplit*>(shell->getSplit(i));
             } else {
                 param->setShape(shellParam->getShape(i));
