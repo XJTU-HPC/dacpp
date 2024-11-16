@@ -138,11 +138,10 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 code += ", ";
             }
         }
-        code += ") {\n";
+        code += ") \n";
         for(int count = 0; count < calc->getNumBody(); count++) {
-            code += "    " + calc->getBody(count) + "\n";
+            code += calc->getBody(count) + "\n";
         }
-        code += "}\n";
 
 
         std::string dacShellName = shell->getName();
