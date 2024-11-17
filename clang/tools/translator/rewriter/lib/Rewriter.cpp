@@ -270,10 +270,11 @@ void dacppTranslator::Rewriter::rewriteDac() {
         std::string reduction = "";
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam* shellParam = shell->getShellParam(j);
-            if(shellParam->getRw() == 1) {
+            if(shellParam->getRw() == 1 && countIn != countOut) {
                 std::string ReductionRule = "sycl::plus<>()";
-                reduction += CodeGen_Reduction_Span(std::to_string(mem[j]), std::to_string(countIn / countOut),\
-                                                    std::to_string(countIn), shellParam->getName(), shellParam->getBasicType(), ReductionRule);
+                reduction += CodeGen_Reduction_Span(std::to_string(mem[j]), std::to_string(countIn / countOut),
+                                                    std::to_string(countIn), shellParam->getName(), 
+                                                    shellParam->getBasicType(), ReductionRule);
             }
         }
         // 归并结果返回
