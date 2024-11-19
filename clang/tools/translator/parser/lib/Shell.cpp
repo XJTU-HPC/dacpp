@@ -77,6 +77,7 @@ FunctionDecl* dacppTranslator::Shell::getShellLoc() {
 void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes) {
     // 获取 DAC 数据关联表达式左值
     Expr* dacExprLHS = dacExpr->getLHS();
+    dacExpr->dump();
     CallExpr* shellCall = getNode<CallExpr>(dacExprLHS);
     FunctionDecl* shellFunc = shellCall->getDirectCallee();
     
@@ -140,11 +141,10 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
                 for(unsigned int i = 0; i < astExprs.size(); i++) {
                     if(getNode<DeclRefExpr>(astExprs[i])) {
                         VarDecl* vd = dyn_cast<VarDecl>(getNode<DeclRefExpr>(astExprs[i])->getDecl());
-                        vd->dump();
 
                         if(vd->getType().getAsString().compare("dacpp::RegularSplit") == 0) {
                             RegularSplit* sp = new RegularSplit();
-                            sp->type = "dacpp::RegularSplit";
+                            sp->type = "RegularSplit";
                             sp->setId(getNode<StringLiteral>(vd->getInit())->getString().str());
                             sp->setDimIdx(i);
                             CXXConstructExpr* CCE = getNode<CXXConstructExpr>(vd->getInit());
@@ -172,7 +172,7 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
                             shellParam->setSplit(sp);
                         } else if(vd->getType().getAsString().compare("dacpp::Index") == 0) {
                             IndexSplit* sp = new IndexSplit();
-                            sp->type = "dacpp::IndexSplit";
+                            sp->type = "IndexSplit";
                             sp->setId(getNode<StringLiteral>(vd->getInit())->getString().str());
                             sp->setDimIdx(i);
                             sp->setSplitNumber(shellParam->getShape(i));
@@ -186,7 +186,7 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
                         } 
                     } else {
                         Split* sp = new Split();
-                        sp->type = "dacpp::Split";
+                        sp->type = "Split";
                         sp->setId("void");
                         sp->setDimIdx(i);
                         shellParam->setSplit(sp);

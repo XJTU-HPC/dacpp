@@ -10,6 +10,7 @@
 #include "Param.h"
 #include "dacInfo.h"
 #include "sub_template.h"
+#include "test.h"
 
 
 void dacppTranslator::Rewriter::setRewriter(clang::Rewriter* rewriter) {
@@ -42,6 +43,26 @@ void dacppTranslator::Rewriter::rewriteDac() {
         Shell* shell = expr->getShell();
         Calc* calc = expr->getCalc();
 
+        std::vector<std::vector<int>> offset(shell->getNumShellParams(), std::vector<int>());
+        for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
+            ShellParam* shellParam = shell->getShellParam(shellParamIdx);
+            for (int splitIdx = shellParam->getNumSplit() - 1; splitIdx >= 0; splitIdx--) {
+                Split* split = shellParam->getSplit(splitIdx);
+                if (splitIdx == shellParam->getNumSplit() - 1) {
+                    offset[shellParamIdx].insert(offset[shellParamIdx].begin(), shellParam->getShape(split->getDimIdx()));
+                    continue;
+                }
+                if (split->type.compare("RegularSplit") == 0) {
+                    RegularSplit* sp = static_cast<RegularSplit*>(split);
+                    offset[shellParamIdx].insert(offset[shellParamIdx].begin(), sp->getSplitSize() * offset[shellParamIdx][0]);
+                }
+                else if(split->type.compare("IndexSplit") == 0) {
+                    IndexSplit* sp = static_cast<IndexSplit*>(split);
+                    offset[shellParamIdx].insert(offset[shellParamIdx].begin(), shellParam->getShape(sp->getDimIdx()) * offset[shellParamIdx][0]);
+                }
+            }
+        }
+
         // 计算输入和输出划分数量
         int countIn = 1;
         int countOut = 1;
@@ -49,18 +70,18 @@ void dacppTranslator::Rewriter::rewriteDac() {
         std::set<std::string> setOut;
         for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
             ShellParam* shellParam = shell->getShellParam(shellParamIdx);
-            if(shellParam->getRw() == true) {
+            if(shellParam->getRw() == 1) {
                 for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
                     Split* split = shellParam->getSplit(splitIdx);
                     if(setOut.count(split->getId()) == 1) {
                         continue;
                     }
                     setOut.insert(split->getId());
-                    if(split->type == "dacpp::RegularSplit") {
+                    if(split->type.compare("RegularSplit") == 0) {
                         RegularSplit* sp = static_cast<RegularSplit*>(split);
                         countOut *= sp->getSplitNumber();
                     }
-                    else if(split->type == "dacpp::IndexSplit") {
+                    else if(split->type.compare("IndexSplit") == 0) {
                         IndexSplit* sp = static_cast<IndexSplit*>(split);
                         countOut *= sp->getSplitNumber();
                     }
@@ -72,32 +93,33 @@ void dacppTranslator::Rewriter::rewriteDac() {
                         continue;
                     }
                     setIn.insert(split->getId());
-                    if(split->type == "dacpp::RegularSplit") {
+                    if(split->type.compare("RegularSplit") == 0) {
                         RegularSplit* sp = static_cast<RegularSplit*>(split);
                         countIn *= sp->getSplitNumber();
                     }
-                    else if(split->type == "dacpp::IndexSplit") {
+                    else if(split->type.compare("IndexSplit") == 0) {
                         IndexSplit* sp = static_cast<IndexSplit*>(split);
                         countIn *= sp->getSplitNumber();
                     }
                 }
             }
         }
+        std::cout << countIn << "   " << countOut;
 
         // 计算数据重排后需要的设备内存空间
         int* mem = new int[shell->getNumShellParams()];
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam* shellParam = shell->getShellParam(j);
             mem[j] = 1;
-            int dim = shellParam->getDim();
+            int dim = shellParam->getNumSplit();
             for(int k = 0; k < dim; k++) {
                 Split* split = shellParam->getSplit(k);
                 // 降维划分
-                if(split->type.compare("dacpp::IndexSplit") == 0) {
+                if(split->type.compare("IndexSplit") == 0) {
                     mem[j] *= shellParam->getShape(k);
                 }
                 // 规则分区划分
-                else if(split->type.compare("dacpp::RegularSplit") == 0) {
+                else if(split->type.compare("RegularSplit") == 0) {
                     dacppTranslator::RegularSplit* regulerSplit = static_cast<dacppTranslator::RegularSplit*>(split);
                     mem[j] *= (shellParam->getShape(k) - regulerSplit->getSplitSize() + regulerSplit->getSplitStride()) / regulerSplit->getSplitStride() * regulerSplit->getSplitSize();
                 }
@@ -116,11 +138,10 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 code += ", ";
             }
         }
-        code += ") {\n";
+        code += ") \n";
         for(int count = 0; count < calc->getNumBody(); count++) {
-            code += "    " + calc->getBody(count) + "\n";
+            code += calc->getBody(count) + "\n";
         }
-        code += "}\n";
 
 
         std::string dacShellName = shell->getName();
@@ -159,7 +180,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
                     opPushBack += CodeGen_OpPushBack(shellParam->getName(), sp->getId(), std::to_string(sp->getDimIdx()), std::to_string(len / shellParam->getShape(count) * sp->getSplitSize()));
                     len = len / shellParam->getShape(count) * sp->getSplitSize();
                 }
-                else if(split->type == "dacpp::IndexSplit") {
+                else if(split->type == "IndexSplit") {
                     IndexSplit* sp = static_cast<IndexSplit*>(split);
                     opPushBack += CodeGen_OpPushBack(shellParam->getName(), sp->getId(), std::to_string(sp->getDimIdx()), std::to_string(len / shellParam->getShape(count)));
                     len /= shellParam->getShape(count);
@@ -169,6 +190,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
             dataRecon += CodeGen_DataReconstruct(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[count]), dataOpsInit);
         }
 
+        // 设备内存分配
         std::string deviceMemAlloc = "";
         for(int count = 0; count < shell->getNumShellParams(); count++) {
             ShellParam* shellParam = shell->getShellParam(count);
@@ -217,7 +239,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
                     if(idx == k) continue;
                     length *= shellParam->getShape(idx);
                 }
-                op.setSplitLength(length);
+                op.setSplitLength(offset[j][k]);
                 ops.push_back(op);
             }
             
