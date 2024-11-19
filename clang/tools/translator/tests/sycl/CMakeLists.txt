@@ -20,6 +20,7 @@ include_directories(${SYCL_PATH})
 # 添加源文件
 add_executable(syclBlockMatMul0 blockMatMul0.sycl.cpp)
 add_executable(syclBlockMatMul1 blockMatMul1.sycl.cpp)
+add_executable(syclBlockMatMul2 blockMatMul2.sycl.cpp)
 add_executable(syclVectorMul0 vectorMul0.sycl.cpp)
 add_executable(outputSyclBlockMatrixMultiplication blockMatrixMultiplication_sycl.cpp)
 
@@ -27,6 +28,9 @@ set_target_properties(syclBlockMatMul0 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
 set_target_properties(syclBlockMatMul1 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+set_target_properties(syclBlockMatMul2 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
 set_target_properties(syclVectorMul0 PROPERTIES
@@ -39,5 +43,6 @@ set_target_properties(outputSyclBlockMatrixMultiplication PROPERTIES
 # 链接库到可执行文件
 target_link_libraries(syclBlockMatMul1 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(syclBlockMatMul0 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(syclBlockMatMul2 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(syclVectorMul0 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(outputSyclBlockMatrixMultiplication PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
