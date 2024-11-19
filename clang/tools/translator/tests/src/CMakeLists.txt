@@ -8,7 +8,6 @@ project(dac2sycl)
 set(CMAKE_C_COMPILER "/usr/bin/clang")
 set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
 
-# 添加源文件
 add_executable(blockMatMulTest blockMatMulTest.cpp)
 add_executable(blockMatMulTest2 blockMatMulTest2.cpp)
 add_executable(matmulTest matmulTest.cpp)
@@ -52,7 +51,6 @@ set_target_properties(vecMulScalarTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
 
-# 链接库到可执行文件
 target_link_libraries(blockMatMulTest DacppLib RewriterLib)
 target_link_libraries(blockMatMulTest2 DacppLib RewriterLib)
 target_link_libraries(matmulTest DacppLib RewriterLib)

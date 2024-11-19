@@ -8,7 +8,9 @@
 	文本替换。
 	将 text 中的 find 换成 replace。
 */
-void replaceTextInString(std::string& text, const std::string &find, const std::string &replace){
+void replaceTextInString(std::string& text, 
+const std::string &find, 
+const std::string &replace){
 	std::string::size_type pos = 0;
 	while ((pos = text.find(find, pos)) != std::string::npos){
 		text.replace(pos, find.length(), replace);
@@ -19,8 +21,9 @@ void replaceTextInString(std::string& text, const std::string &find, const std::
 	文本替换。
 	对 templ 做 replacements 中的文本替换。
 */
-std::string templateString(std::string templ, std::vector<std::pair<std::string, std::string>> replacements){
-	for(std::pair<std::string, std::string> &element : replacements)
+std::string templateString(std::string templ, 
+std::vector<std::pair<std::string, std::string>> replacements){
+	for(auto &element : replacements)
 		replaceTextInString(templ, element.first, element.second);
 	return templ;
 }
@@ -289,19 +292,11 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 	int len = args.size;
 	for(int i=0;i<len;i++){
 		std::string IndexComb="(";
-		// for(int j=0;j<args[i].ops.size;j++){
-		// 	IndexComb+= args[i].ops[j].name+"*";
-		// }
 		for(int j=0;j<args[i].ops.size;j++){
 			IndexComb+= args[i].ops[j].name + "*" + std::to_string(args[i].ops[j].split_length);
-			// for(int k=j+1;k<args[i].ops.size;k++){
-			// 	IndexComb+="*"+std::to_string(args[i].getDimlength(args[i].ops[k].dimId));
-			// }
-			// 
 			if(j!=args[i].ops.size-1) IndexComb+="+";
 		}
 		IndexComb+=")";
-		// DacCalcArgs+=args[i].name + "+" + IndexComb + std::to_string(args[i].split_length);
 		DacCalcArgs+=args[i].name + "+" + IndexComb;
 		if(i==len-1){
 			DacCalcArgs+=");";
