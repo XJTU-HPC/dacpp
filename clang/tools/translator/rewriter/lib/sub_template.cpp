@@ -94,13 +94,28 @@ std::string CodeGen_IndexInit(std::string opName,std::string splitSize){
 	});
 }
 
-const char *OP_PUSH_BACK_Template = R"~~~(
+const char *OP_PUSH_BACK2OPS_Template = R"~~~(
     {{OP_NAME}}.setDimId({{DIM_ID}});
     {{OP_NAME}}.setSplitLength({{SPLIT_LENGTH}});
     {{NAME}}_ops.push_back({{OP_NAME}});)~~~";
 
-std::string CodeGen_OpPushBack(std::string name, std::string opName, std::string dimId, std::string splitLength){
-    return templateString(OP_PUSH_BACK_Template,
+std::string CodeGen_OpPushBack2Ops(std::string name, std::string opName, std::string dimId, std::string splitLength){
+    return templateString(OP_PUSH_BACK2OPS_Template,
+	{
+		{"{{OP_NAME}}",    opName},
+		{"{{NAME}}",       name},
+		{"{{DIM_ID}}",     dimId},
+		{"{{SPLIT_LENGTH}}", splitLength}
+	});
+}
+
+const char *OP_PUSH_BACK2TOOL_Template = R"~~~(
+    {{OP_NAME}}.setDimId({{DIM_ID}});
+    {{OP_NAME}}.setSplitLength({{SPLIT_LENGTH}});
+    {{NAME}}_tool.push_back({{OP_NAME}});)~~~";
+
+std::string CodeGen_OpPushBack2Tool(std::string name, std::string opName, std::string dimId, std::string splitLength){
+    return templateString(OP_PUSH_BACK2TOOL_Template,
 	{
 		{"{{OP_NAME}}",    opName},
 		{"{{NAME}}",       name},
@@ -112,13 +127,13 @@ std::string CodeGen_OpPushBack(std::string name, std::string opName, std::string
 const char *DATA_OPS_INIT_Template = R"~~~(
     // 数据算子组初始化
     Dac_Ops {{NAME}}_ops;
-    {{OP_PUSH_BACK}})~~~";
+    {{OP_PUSH_BACK2OPS}})~~~";
 
-std::string CodeGen_DataOpsInit(std::string name,std::string opPushBack){
+std::string CodeGen_DataOpsInit(std::string name,std::string opPushBack2Ops){
     return templateString(DATA_OPS_INIT_Template,
 	{
 		{"{{NAME}}",       name},
-		{"{{OP_PUSH_BACK}}",    opPushBack},
+		{"{{OP_PUSH_BACK2OPS}}",    opPushBack2Ops},
 	});
 }
 
@@ -140,12 +155,60 @@ std::string CodeGen_DataReconstruct(std::string type,std::string name,std::strin
 	});
 }
 
+const char *DATA_RECON_OP_PUSH_Template = R"~~~(
+    // 数据重组
+    {{OP_PUSH_BACK2TOOL}}
+    {{NAME}}_tool.Reconstruct(r_{{NAME}});)~~~";
+
+std::string CodeGen_DataReconstructOpPush(std::string name,std::string opPushBack2Tool){
+    return templateString(DATA_RECON_Template,
+	{
+		{"{{NAME}}",       name},
+		{"{{OP_PUSH_BACK2TOOL}}", opPushBack2Tool}
+	});
+}
+
+const char *OP_POP_FROM_TOOL_Template = R"~~~(
+    {{NAME}}_tool.pop_back();)~~~";
+std::string CodeGen_OpPopFromTool(std::string name){
+    return templateString(OP_POP_FROM_TOOL_Template,
+	{
+		{"{{NAME}}", name}
+	});
+}
+
+const char *DATA_RECON_OP_POP_Template = R"~~~(
+    // 数据重组
+    {{OP_POP_FROM_TOOL}}
+    {{NAME}}_tool.Reconstruct(r_{{NAME}});)~~~";
+
+std::string CodeGen_DataReconstructOpPop(std::string name,std::string opPopFromTool){
+    return templateString(DATA_RECON_Template,
+	{
+		{"{{NAME}}",       name},
+		{"{{OP_POP_FROM_TOOL}}", opPopFromTool}
+	});
+}
+
 const char *DEVICE_MEM_ALLOC_Template = R"~~~(
     // 设备内存分配
     {{TYPE}} *d_{{NAME}}=malloc_device<{{TYPE}}>({{SIZE}},q);)~~~";
 
 std::string CodeGen_DeviceMemAlloc(std::string type,std::string name,std::string size){
     return templateString(DEVICE_MEM_ALLOC_Template,
+	{
+		{"{{TYPE}}", type},
+		{"{{NAME}}", name},
+		{"{{SIZE}}", size}
+	});
+}
+
+const char *DEVICE_MEM_ALLOC_REDUCTION_Template = R"~~~(
+    // 归约设备内存分配
+	{{TYPE}} *reduction_{{NAME}} = malloc_device<{{TYPE}}>({{SIZE}},q);)~~~";
+
+std::string CodeGen_DeviceMemAllocReduction(std::string  type,std::string name,std::string size){
+	return templateString(DEVICE_MEM_ALLOC_REDUCTION_Template,
 	{
 		{"{{TYPE}}", type},
 		{"{{NAME}}", name},
@@ -254,10 +317,9 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 	});
 }
 
-
+// aborted
 const char *REDUCTION_Template = R"~~~(
     // 归约
-    {{TYPE}} *reduction_{{NAME}} = malloc_device<{{TYPE}}>(1,q);
     //使用内核函数进行归约
     q.submit([&](handler &h) {
     	h.parallel_for(range<1>({{SPLIT_SIZE}}),reduction(reduction_{{NAME}}, {{REDUCTION_RULE}},property::reduction::initialize_to_identity()),[=](id<1> i,auto &reducer) {
@@ -266,51 +328,53 @@ const char *REDUCTION_Template = R"~~~(
  }).wait();
 )~~~";
 
+// aborted
 std::string CodeGen_Reduction(std::string SplitSize,std::string Name,std::string Type,std::string ReductionRule) {
     return templateString(REDUCTION_Template,
 	{
 		{"{{SPLIT_SIZE}}",       SplitSize},
 		{"{{TYPE}}",             Type},
 		{"{{NAME}}",             Name},
-		{"{{ReductionRule}}",    ReductionRule}
+		{"{{REDUCTION_RULE}}",   ReductionRule}
 	});
 }
 
 const char *REDUCTION_Template_Span = R"~~~(
     // 归约
-    {{TYPE}} *reduction_{{NAME}} = malloc_device<{{TYPE}}>({{ARRAY_SIZE}},q); //存归约结果 归约结果存在长度为ARRAY_SIZE的数组中
     q.submit([&](handler &h) {
     	h.parallel_for(
-        range<1>({{SPLIT_SIZE}} * {{ARRAY_SIZE}}),
-        reduction(span<{{TYPE}},{{ARRAY_SIZE}}>(reduction_{{NAME}},{{ARRAY_SIZE}}), 
+        range<1>({{SPLIT_SIZE}} * {{SPAN_SIZE}}),
+        reduction(span<{{TYPE}},{{SPAN_SIZE}}>(reduction_{{NAME}},{{SPAN_SIZE}}), 
         {{REDUCTION_RULE}},
         property::reduction::initialize_to_identity()),
         [=](id<1> i,auto &reducer) {
             	reducer[i % {{SPLIT_LENGTH}} + i/({{SPLIT_LENGTH}}*{{SPLIT_SIZE}})*{{SPLIT_LENGTH}}].combine(d_{{NAME}}[i]);
      	});
  }).wait();
+	q.memcpy(d_{{NAME}},reduction_{{NAME}}, {{SPAN_SIZE}}*sizeof({{TYPE}})).wait();
 )~~~";
 
-std::string CodeGen_Reduction_Span(std::string ArraySize,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule) {
+std::string CodeGen_Reduction_Span(std::string SpanSize,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule) {
     return templateString(REDUCTION_Template_Span,
 	{
-        {"{{ARRAY_SIZE}}",       ArraySize},   
+        {"{{SPAN_SIZE}}",        SpanSize},   
 		{"{{SPLIT_SIZE}}",       SplitSize},
 		{"{{SPLIT_LENGTH}}",     SplitLength},
 		{"{{TYPE}}",             Type},
 		{"{{NAME}}",             Name},
-		{"{{ReductionRule}}",    ReductionRule}
+		{"{{REDUCTION_RULE}}",   ReductionRule}
 	});
 }
 
 const char *D2H_MEM_MOV_1_Template = R"~~~(
     // 归并结果返回
-    q.memcpy(r_{{NAME}}, d_{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();)~~~";
+    q.memcpy(r_{{NAME}}, d_{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();
+	{{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}});)~~~";
 
 const char *D2H_MEM_MOV_2_Template = R"~~~(
     // 归约结果返回
-    q.memcpy(r_{{NAME}},reduction_{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();
-	{{NAME}} = {{NAME}}_tool.UpdateData(reduction_{{NAME}});)~~~";
+    q.memcpy(r_{{NAME}},d__{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();
+	{{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}});)~~~";
 
 std::string CodeGen_D2HMemMov(std::string Name,std::string Type,std::string Size,bool isReduction){
     if(isReduction){

@@ -25,13 +25,23 @@ std::string CodeGen_RegularSliceInit(std::string opName,std::string size,std::st
 
 std::string CodeGen_IndexInit(std::string opName,std::string splitSize);
 
-std::string CodeGen_OpPushBack(std::string name, std::string opName, std::string dimId, std::string splitLength);
+std::string CodeGen_OpPushBack2Ops(std::string name, std::string opName, std::string dimId, std::string splitLength);
+
+std::string CodeGen_OpPushBack2Tool(std::string name, std::string opName, std::string dimId, std::string splitLength);
 
 std::string CodeGen_DataOpsInit(std::string name,std::string opPushBack);
 
 std::string CodeGen_DataReconstruct(std::string type,std::string name,std::string size,std::string dataOpsInit);
 
+std::string CodeGen_DataReconstructOpPush(std::string name,std::string opPushBack2Tool);
+
+std::string CodeGen_OpPopFromTool(std::string name);
+
+std::string CodeGen_DataReconstructOpPop(std::string name,std::string opPopFromTool);
+
 std::string CodeGen_DeviceMemAlloc(std::string type,std::string name,std::string size);
+
+std::string CodeGen_DeviceMemAllocReduction(std::string  type,std::string name,std::string size);
 
 std::string CodeGen_H2DMemMov(std::string type,std::string name,std::string size);
 
@@ -43,7 +53,7 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args);
 
 std::string CodeGen_Reduction(std::string SplitSize,std::string Name,std::string Type,std::string ReductionRule);
 
-std::string CodeGen_Reduction_Span(std::string ARRAY_SIZE,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule);
+std::string CodeGen_Reduction_Span(std::string SPAN_SIZE,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule);
 
 std::string CodeGen_D2HMemMov(std::string Name,std::string Type,std::string Size,bool isReduction);
 
