@@ -18,8 +18,9 @@ struct Range
 
 struct PosNumber
 {
-    std::vector<int> number;
-    std::vector<int> pos;
+    std::vector<int> number;   // 数据索引
+    std::vector<int> pos;      // 物理位置
+    std::vector<Range> region; // 数据单元的区域
 };
 
 
@@ -30,40 +31,24 @@ template<typename ImplType>
 class DataReconstructor{
     private:
         dacpp::Tensor<ImplType> myTensor;      // 数据
-        Dac_Ops ops;                           // 作用于数据的算子
-        int cnt;                               // 结果长向量的计数器
-        std::vector<int> number;               // 存编号的中间变量
-        std::vector<PosNumber> posNumberList;  // 编号与其对应的位置
-        std::vector<int> pos;                  // 存位置的中间变量
-    public:
-        DataReconstructor(){
-
-        }
-
-        /*
-            通过 数据内容，作用于数据的算子 初始化数据重组器
-        */
-        void init(dacpp::Tensor<ImplType> myTensor, Dac_Ops ops){
-            this->myTensor=myTensor;
-            this->ops=ops;
-            GetPos(ops, 0);
-            std::sort(this->posNumberList.begin(),this->posNumberList.end(),[](PosNumber a,PosNumber b){return (a.number==b.number)?a.pos<b.pos:a.number<b.number;});
-        }
-
-        void GetPos(Dac_Ops ops, int now) {
+        Dac_Ops ops;                           // 作用于数据的算子组
+        std::vector<PosNumber> posNumberList;  // 数据索引与物理位置的映射
+        // int cnt;                               // 结果长向量的计数器
+        // std::vector<int> number;               // 存编号的中间变量
+        // std::vector<int> pos;                  // 存位置的中间变量     
+        void GetPos(std::vector<int> &pos, Dac_Ops &ops, int now) {
             if (now == this->myTensor.getDim()) {
                 // std::cout<<pos[0]<<" "<<pos[1]<<std::endl;
-                GetPosNumber(this->pos, ops);
+                GetPosNumber(pos, ops);
                 return;
             }
             for (int i = 0; i < this->myTensor.getShape(now); i++) {
-                this->pos.push_back(i);
-                GetPos(ops, now + 1);
-                this->pos.pop_back();
+                pos.push_back(i);
+                GetPos(pos, ops, now + 1);
+                pos.pop_back();
             }
         }
-
-        void GetPosNumber(std::vector<int> pos, Dac_Ops ops) {
+        void GetPosNumber(std::vector<int> &pos, Dac_Ops &ops) {
             int dimNum = this->myTensor.getDim();
             std::vector<Range> region;
             for (int i = 0; i < dimNum; i++) {
@@ -73,15 +58,19 @@ class DataReconstructor{
                 region.push_back(r);
             }
             // std::cout<<pos[0]<<" "<<pos[1]<<std::endl;
-            RecursiveTraversal(pos, region, 0);
+            std::vector<int> number;   // 存数据索引的中间变量
+            RecursiveTraversal(number, pos, region, 0);
         }
-
-        void RecursiveTraversal(std::vector<int> pos, std::vector<Range> region, int now) {
+        /*
+            递归得到物理位置 pos 在当前算子组作用下应该映射的数据索引，以及划分好的数据单元的数据区域。
+        */
+        void RecursiveTraversal(std::vector<int> &number,std::vector<int> &pos, std::vector<Range> &region, int now) {
             if (now == ops.size) {
                 // std::cout<<pos[0]<<" "<<pos[1]<<std::endl;
                 PosNumber posNum;
-                posNum.number = this->number;
+                posNum.number = number;
                 posNum.pos = pos;
+                posNum.region = region;
                 this->posNumberList.push_back(posNum);
                 return;
             }
@@ -95,52 +84,89 @@ class DataReconstructor{
             // while (region[op.dimId].start + r * op.stride > id) r--;
             // std::cout<<pos[0]<<" "<<pos[1]<<" "<<op.dimId<<" "<<id<<" "<<l<<" "<<r<<std::endl;
             for(int i = l; i <= r; i++) {
-                this->number.push_back(i);
+                number.push_back(i);
                 region[op.dimId].start = region[op.dimId].start + i * op.stride;
                 region[op.dimId].end = region[op.dimId].start + (i * op.stride + op.size);
-                RecursiveTraversal(pos, region, now + 1);
+                RecursiveTraversal(number, pos, region, now + 1);
                 region[op.dimId].end = region[op.dimId].start - (i * op.stride + op.size);
                 region[op.dimId].start = region[op.dimId].start - i * op.stride;
-                this->number.pop_back();
+                number.pop_back();
             }
         }
-
+        
         /*
             将特定位置元素写入res长向量。
         */
-        void WriteRes(ImplType* res, std::vector<int> pos) {
-            res[this->cnt++]=this->myTensor.getElement(pos);
+        void WriteRes(int &cnt, ImplType* res, std::vector<int> pos) {
+            res[cnt++]=this->myTensor.getElement(pos);
             // std::cout<<this->myTensor.getDim()<<" "<<pos.size()<<std::endl;
             // std::cout<<pos[0]<<" "<<pos[1]<<std::endl;
+        }
+
+        /*
+            将更新结果写入 myTensor
+        */
+        void WriteData(int &cnt, ImplType* res, std::vector<int> pos) {
+            myTensor.reviseValue(res[cnt++],pos);
+        }
+        
+    public:
+        DataReconstructor(){
+
+        }
+
+        /*
+            通过 数据，作用于数据的算子，初始化数据重组器
+        */
+        void init(dacpp::Tensor<ImplType> myTensor, Dac_Ops ops){
+            this->myTensor=myTensor;
+            this->ops=ops;
+            std::vector<int> pos; // 存位置的中间变量
+            GetPos(pos, ops, 0);
+            std::sort(this->posNumberList.begin(),this->posNumberList.end(),[](PosNumber a,PosNumber b){return (a.number==b.number)?a.pos<b.pos:a.number<b.number;});
         }
 
         /*
             将重组结果写入res长向量。
         */
         void Reconstruct(ImplType* res){
-            this->cnt=0;
+            int cnt=0;
             // std::sort(this->posNumberList.begin(),this->posNumberList.end(),[](PosNumber a,PosNumber b){return (a.number==b.number)?a.pos<b.pos:a.number<b.number;});
             // std::cout<<this->posNumberList.size()<<std::endl;
             for (int i=0; i<this->posNumberList.size(); i++) {
-                this->WriteRes(res,this->posNumberList[i].pos);
+                this->WriteRes(cnt, res,this->posNumberList[i].pos);
             }
-        }
-
-        /*
-            将更新结果写入 myTensor
-        */
-        void WriteData(ImplType* res, std::vector<int> pos) {
-            myTensor.reviseValue(res[this->cnt++],pos);
         }
 
         /*
             用重组结果更新原数据
         */
         dacpp::Tensor<ImplType> UpdateData(ImplType* res){
-            this->cnt=0;
+            int cnt=0;
             for (int i=0; i<this->posNumberList.size(); i++) {
-                this->WriteData(res,this->posNumberList[i].pos);
+                this->WriteData(cnt,res,this->posNumberList[i].pos);
             }
             return this->myTensor;
         }
+
+        /*
+            增加一个算子
+        */
+        void push_back(Dac_Op op) {
+            this->ops.push_back(op);
+            this->posNumberList.clear();
+            std::vector<int> pos; // 存位置的中间变量
+            GetPos(pos, this->ops, 0);
+            std::sort(this->posNumberList.begin(),this->posNumberList.end(),[](PosNumber a,PosNumber b){return (a.number==b.number)?a.pos<b.pos:a.number<b.number;});
+        }
+        /*
+            减少一个算子
+        */
+       void pop_back() {
+            this->ops.pop_back();
+            this->posNumberList.clear();
+            std::vector<int> pos; // 存位置的中间变量
+            GetPos(pos, this->ops, 0);
+            std::sort(this->posNumberList.begin(),this->posNumberList.end(),[](PosNumber a,PosNumber b){return (a.number==b.number)?a.pos<b.pos:a.number<b.number;});
+       }
 };

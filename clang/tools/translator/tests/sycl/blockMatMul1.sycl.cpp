@@ -18,7 +18,7 @@ void block_mat_mul(int *matA, int *matB, int *matC) {
 }
 void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp::Tensor<int> &matC)
 {
-    auto selector = cpu_selector_v;
+    auto selector = gpu_selector_v;
     queue q(selector);
 
     RegularSlice si = RegularSlice("si", 2, 2);

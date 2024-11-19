@@ -1,4 +1,9 @@
-#include "sub_template.h"
+#include "universal_template.h"
+#include "buffer_template.h"
+
+using namespace BUFFER_TEMPLATE;
+using namespace UNIVERSAL_TEMPLATE;
+
 int main(){
 	std::cout<<"************************************dac2sycl blockMatMul CodeGen test************************************\n\n";
 	
@@ -6,15 +11,15 @@ int main(){
     std::string deviceMemAlloc = CodeGen_DeviceMemAlloc("int","matA", "16");
     deviceMemAlloc += CodeGen_DeviceMemAlloc("int","matB", "16");
     deviceMemAlloc += CodeGen_DeviceMemAlloc("int","matC", "16*2");
-    // std::cout<<deviceMemAlloc;
+    //std::cout<<deviceMemAlloc<<std::endl;
     
-    // 主机数据移动至设备
+    // // 主机数据移动至设备
     std::string H2DMemMove = CodeGen_H2DMemMov("int","matA", "16");
     H2DMemMove += CodeGen_H2DMemMov("int","matB","16");
-	// std::cout<<H2DMemMove;
+	//std::cout<<H2DMemMove;
 
-    // 索引初始化 得到在工作项中的索引值 需要算子的步长stride与size
-	// 为了统一，默认降维算子的stride与size均为1
+    // // 索引初始化 得到在工作项中的索引值 需要算子的步长stride与size
+	// // 为了统一，默认降维算子的stride与size均为1
 	RegularSlice si = RegularSlice("si", 2, 2);
 	si.SetSplitSize(2);
 	RegularSlice sj = RegularSlice("sj", 2, 2);
@@ -27,7 +32,7 @@ int main(){
 	ops.push_back(sk);
 	std::string IndexInit = CodeGen_IndexInit(ops);
 
-	// 嵌入计算 需要算子的作用维度 算子的每份划分长度
+	// // 嵌入计算 需要算子的作用维度 算子的每份划分长度
 	Dac_Ops matA_ops;
 	si.setDimId(0);
 	si.setSplitLength(8);
@@ -73,25 +78,22 @@ int main(){
 	opInit += CodeGen_RegularSliceInit("sj","2","2","2");
 	opInit += CodeGen_RegularSliceInit("sk","2","2","2");
 
-	std::string opPushBack_A = CodeGen_OpPushBack2Ops("matA","si","0","8");
-	opPushBack_A += CodeGen_OpPushBack2Ops("matA","sk","1","4");
+	std::string opPushBack_A = CodeGen_OpPushBack("matA","si","0","8");
+	opPushBack_A += CodeGen_OpPushBack("matA","sk","1","4");
 	std::string dataOpsInit_A = CodeGen_DataOpsInit("matA", opPushBack_A);
 	std::string dataRecon = CodeGen_DataReconstruct("int","matA", "16", dataOpsInit_A);
 
-	std::string opPushBack_B = CodeGen_OpPushBack2Ops("matB","sk","0","8");
-	opPushBack_B += CodeGen_OpPushBack2Ops("matB","sj","1","4");
+	std::string opPushBack_B = CodeGen_OpPushBack("matB","sk","0","8");
+	opPushBack_B += CodeGen_OpPushBack("matB","sj","1","4");
 	std::string dataOpsInit_B = CodeGen_DataOpsInit("matB", opPushBack_B);
 	dataRecon += CodeGen_DataReconstruct("int","matB", "16", dataOpsInit_B);
 
-	std::string opPushBack_C = CodeGen_OpPushBack2Ops("matC","si","0","16");
-	opPushBack_C += CodeGen_OpPushBack2Ops("matC","sj","1","8");
-	opPushBack_C += CodeGen_OpPushBack2Ops("matC","sk","2","4");
+	std::string opPushBack_C = CodeGen_OpPushBack("matC","si","0","16");
+	opPushBack_C += CodeGen_OpPushBack("matC","sj","1","8");
+	opPushBack_C += CodeGen_OpPushBack("matC","sk","2","4");
 	std::string dataOpsInit_C = CodeGen_DataOpsInit("matC", opPushBack_C);
 	dataRecon += CodeGen_DataReconstruct("int","matC", "32", dataOpsInit_C);
 
-	std::string MemFree = CodeGen_MemFree("d_matA");
-	MemFree += CodeGen_MemFree("d_matB");
-	MemFree += CodeGen_MemFree("d_matC");
 	std::string res = CodeGen_DAC2SYCL(
 		"blockMatMul",
 		"(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp::Tensor<int> &matC)",
@@ -101,7 +103,6 @@ int main(){
 		H2DMemMove,
 		KernelExecute,
 		Reduction,
-		D2HMemMove,
-		MemFree);
+		D2HMemMove);
 	std::cout<<res;
 }

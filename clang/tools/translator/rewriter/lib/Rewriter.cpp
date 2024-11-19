@@ -177,12 +177,12 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 Split* split = shellParam->getSplit(count);
                 if(split->type == "dacpp::RegularSplit") {
                     RegularSplit* sp = static_cast<RegularSplit*>(split);
-                    opPushBack += CodeGen_OpPushBack(shellParam->getName(), sp->getId(), std::to_string(sp->getDimIdx()), std::to_string(len / shellParam->getShape(count) * sp->getSplitSize()));
+                    opPushBack += CodeGen_OpPushBack2Ops(shellParam->getName(), sp->getId(), std::to_string(sp->getDimIdx()), std::to_string(len / shellParam->getShape(count) * sp->getSplitSize()));
                     len = len / shellParam->getShape(count) * sp->getSplitSize();
                 }
                 else if(split->type == "IndexSplit") {
                     IndexSplit* sp = static_cast<IndexSplit*>(split);
-                    opPushBack += CodeGen_OpPushBack(shellParam->getName(), sp->getId(), std::to_string(sp->getDimIdx()), std::to_string(len / shellParam->getShape(count)));
+                    opPushBack += CodeGen_OpPushBack2Ops(shellParam->getName(), sp->getId(), std::to_string(sp->getDimIdx()), std::to_string(len / shellParam->getShape(count)));
                     len /= shellParam->getShape(count);
                 }
             }
