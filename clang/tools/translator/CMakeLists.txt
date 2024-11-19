@@ -12,6 +12,8 @@ set(DACPPLIB_SOURCES
 )
 set(PARSER_SOURCES
   parser/lib/ASTParse.cpp
+  parser/lib/Shell.cpp
+  parser/lib/Calc.cpp
   parser/lib/DacppStructure.cpp
   parser/lib/Param.cpp
   parser/lib/Split.cpp
@@ -38,7 +40,7 @@ set_target_properties(translator PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator
 )
 
-target_link_libraries(translator
+clang_target_link_libraries(translator
   PRIVATE
   clangAST
   clangASTMatchers

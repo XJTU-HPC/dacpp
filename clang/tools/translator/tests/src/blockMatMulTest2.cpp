@@ -73,19 +73,19 @@ int main(){
 	opInit += CodeGen_RegularSliceInit("sj","2","2","2");
 	opInit += CodeGen_RegularSliceInit("sk","2","2","2");
 
-	std::string opPushBack_A = CodeGen_OpPushBack("matA","si","0","8");
-	opPushBack_A += CodeGen_OpPushBack("matA","sk","1","4");
+	std::string opPushBack_A = CodeGen_OpPushBack2Ops("matA","si","0","8");
+	opPushBack_A += CodeGen_OpPushBack2Ops("matA","sk","1","4");
 	std::string dataOpsInit_A = CodeGen_DataOpsInit("matA", opPushBack_A);
 	std::string dataRecon = CodeGen_DataReconstruct("int","matA", "16", dataOpsInit_A);
 
-	std::string opPushBack_B = CodeGen_OpPushBack("matB","sk","0","8");
-	opPushBack_B += CodeGen_OpPushBack("matB","sj","1","4");
+	std::string opPushBack_B = CodeGen_OpPushBack2Ops("matB","sk","0","8");
+	opPushBack_B += CodeGen_OpPushBack2Ops("matB","sj","1","4");
 	std::string dataOpsInit_B = CodeGen_DataOpsInit("matB", opPushBack_B);
 	dataRecon += CodeGen_DataReconstruct("int","matB", "16", dataOpsInit_B);
 
-	std::string opPushBack_C = CodeGen_OpPushBack("matC","si","0","16");
-	opPushBack_C += CodeGen_OpPushBack("matC","sj","1","8");
-	opPushBack_C += CodeGen_OpPushBack("matC","sk","2","4");
+	std::string opPushBack_C = CodeGen_OpPushBack2Ops("matC","si","0","16");
+	opPushBack_C += CodeGen_OpPushBack2Ops("matC","sj","1","8");
+	opPushBack_C += CodeGen_OpPushBack2Ops("matC","sk","2","4");
 	std::string dataOpsInit_C = CodeGen_DataOpsInit("matC", opPushBack_C);
 	dataRecon += CodeGen_DataReconstruct("int","matC", "32", dataOpsInit_C);
 
