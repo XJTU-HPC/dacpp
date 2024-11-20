@@ -2,9 +2,9 @@
 
 #include "llvm/ADT/StringExtras.h"
 
+#include "Param.h"
 #include "Shell.h"
 #include "ASTParse.h"
-
 
 /**
  * 存储划分结构信息类实现
@@ -74,7 +74,11 @@ FunctionDecl* dacppTranslator::Shell::getShellLoc() {
 
 // 解析Shell节点，将解析到的信息存储到Shell类中
 void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes) {
-    // 获取 DAC 数据关联表达式左值
+    /*
+        数据关联计算表达式节点为一个BinaryOperator节点
+        左值为CallExpr节点，表示shell函数调用
+        右值为DeclRefExpr，表示calc函数引用
+    */
     Expr* dacExprLHS = dacExpr->getLHS();
     CallExpr* shellCall = getNode<CallExpr>(dacExprLHS);
     FunctionDecl* shellFunc = shellCall->getDirectCallee();
@@ -106,105 +110,41 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
 
         setParam(param);
     }
-    // 获取划分结构函数体
+
+    // 获取shell函数体
     Stmt* shellFuncBody = shellFunc->getBody();
     /*
-        InitList 节点下保存划分结构初始化节点列表
-        
+        只解析两种节点
+        1.算子(目前只有降维算子以及规则分区算子)
+        2.dacpp::list
     */
-    for(Stmt::child_iterator it = shellFuncBody->child_begin(); it != shellFuncBody->child_end(); it++) {
-        if(!isa<DeclStmt>(*it)) { continue; }
-        Decl* curDecl = dyn_cast<DeclStmt>(*it)->getSingleDecl();
-        if(!isa<VarDecl>(curDecl)) { continue; }
-        VarDecl* curVarDecl = dyn_cast<VarDecl>(curDecl);
-        if(curVarDecl->getType().getAsString().compare("dacpp::list") == 0) {
-            InitListExpr* ILE = getNode<InitListExpr>(*it);
-            for(unsigned int i = 0; i < ILE->getNumInits(); i++) {
-                ShellParam* shellParam = new ShellParam();
-                Expr* curExpr = ILE->getInit(i);
-                std::vector<Expr*> astExprs;
-
-                std::string name = "";
-                getSplitExpr(curExpr, name, astExprs);
-                shellParam->setName(name);
-                for(unsigned int paramsCount = 0; paramsCount < shellFunc->getNumParams(); paramsCount++) {            
-                    if(shellParam->getName() != shellFunc->getParamDecl(paramsCount)->getNameAsString()) { continue; }
-                    shellParam->setRw(inputOrOutput(shellFunc->getParamDecl(paramsCount)->getType().getAsString()));
-                    shellParam->setType(getParam(paramsCount)->getType());
-                    shellParam->setName(getParam(paramsCount)->getName());
-                    for(int shapeIdx = 0; shapeIdx < getParam(paramsCount)->getDim(); shapeIdx++) {
-                        shellParam->setShape(getParam(paramsCount)->getShape(shapeIdx));
-                    }
-                }
-                for(unsigned int i = 0; i < astExprs.size(); i++) {
-                    if(getNode<DeclRefExpr>(astExprs[i])) {
-                        VarDecl* vd = dyn_cast<VarDecl>(getNode<DeclRefExpr>(astExprs[i])->getDecl());
-
-                        if(vd->getType().getAsString().compare("dacpp::RegularSplit") == 0) {
-                            RegularSplit* sp = new RegularSplit();
-                            sp->type = "RegularSplit";
-                            sp->setId(getNode<StringLiteral>(vd->getInit())->getString().str());
-                            sp->setDimIdx(i);
-                            CXXConstructExpr* CCE = getNode<CXXConstructExpr>(vd->getInit());
-                            int count = 0;
-                            for (CXXConstructExpr::arg_iterator I = CCE->arg_begin(),
-                                                                E = CCE->arg_end();
-                                I != E; ++I) {
-                                if(count == 1) {
-                                    /* TODO(mtc): 计算常量表达式的值。  */
-                                    sp->setSplitSize(std::stoi(toString((dyn_cast<IntegerLiteral>(*I))->getValue(), 10, true)));
-                                } else if(count == 2) {
-                                    /* TODO(mtc): 计算常量表达式的值。  */
-                                    sp->setSplitStride(std::stoi(toString((dyn_cast<IntegerLiteral>(*I))->getValue(), 10, true)));
-                                }
-                                count++;
-                            }
-                            /* TODO: 处理除不尽的情况。  */
-                            sp->setSplitNumber((shellParam->getShape(i) - sp->getSplitSize()) / sp->getSplitStride() + 1);
-                            for(int m = 0; m < getNumSplits(); m++) {
-                                llvm::outs() << getSplit(m)->getId() << "  " << getSplit(m)->type;
-                                if(getSplit(m)->getId().compare(sp->getId()) == 0 && getSplit(m)->type.compare("RegularSplit") == 0) {
-                                    RegularSplit* isp = static_cast<RegularSplit*>(getSplit(m));
-                                    isp->setSplitNumber(sp->getSplitNumber());
-                                    llvm::outs() << isp->getSplitNumber();
-                                }
-                            }
-                            shellParam->setSplit(sp);
-                        } else if(vd->getType().getAsString().compare("dacpp::Index") == 0) {
-                            IndexSplit* sp = new IndexSplit();
-                            sp->type = "IndexSplit";
-                            sp->setId(getNode<StringLiteral>(vd->getInit())->getString().str());
-                            sp->setDimIdx(i);
-                            sp->setSplitNumber(shellParam->getShape(i));
-                            for(int m = 0; m < getNumSplits(); m++) {
-                                llvm::outs() << getSplit(m)->getId() << "  " << getSplit(m)->type;
-                                if(getSplit(m)->getId().compare(sp->getId()) == 0 && getSplit(m)->type.compare("IndexSplit") == 0) {
-                                    IndexSplit* isp = static_cast<IndexSplit*>(getSplit(m));
-                                    isp->setSplitNumber(sp->getSplitNumber());
-                                    llvm::outs() << isp->getSplitNumber();
-                                }
-                            }
-                            shellParam->setSplit(sp);
-                        } 
-                    } else {
-                        Split* sp = new Split();
-                        sp->type = "Split";
-                        sp->setId("void");
-                        sp->setDimIdx(i);
-                        shellParam->setSplit(sp);
-                    }
-                }
-                setShellParam(shellParam);
-            }
+    for (Stmt::child_iterator it = shellFuncBody->child_begin(); it != shellFuncBody->child_end(); it++) {
+        // 过滤无关节点
+        if (!isa<DeclStmt>(*it)) { 
+            continue;
         }
-        // 设置 Shell 划分列表
-        else if(curVarDecl->getType().getAsString().compare("dacpp::Index") == 0) {
+        Decl* curDecl = dyn_cast<DeclStmt>(*it)->getSingleDecl();
+        if (!isa<VarDecl>(curDecl)) {
+            continue;
+        }
+        VarDecl* curVarDecl = dyn_cast<VarDecl>(curDecl);
+        if (curVarDecl->getType().getAsString().compare("dacpp::list") != 0 && 
+            curVarDecl->getType().getAsString().compare("dacpp::Index") != 0 && 
+            curVarDecl->getType().getAsString().compare("dacpp::RegularSplit") != 0) {
+            continue;
+        }
+
+        // 解析降维算子
+        if (curVarDecl->getType().getAsString().compare("dacpp::Index") == 0) {
             IndexSplit* sp = new IndexSplit();                
             sp->setId(curVarDecl->getNameAsString());
             sp->type = "IndexSplit";
             setSplit(sp);
+            continue;
         }
-        else if(curVarDecl->getType().getAsString().compare("dacpp::RegularSplit") == 0) {
+
+        // 解析规则分区算子
+        if (curVarDecl->getType().getAsString().compare("dacpp::RegularSplit") == 0) {
             RegularSplit* sp = new RegularSplit();
             sp->setId(curVarDecl->getNameAsString());
             CXXConstructExpr* CCE = getNode<CXXConstructExpr>(curVarDecl->getInit());
@@ -223,6 +163,86 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
             }
             sp->type = "RegularSplit";
             setSplit(sp);
+            continue;
+        }
+
+        /*
+            解析dacpp::list
+            对数据的所有划分信息均在dacpp::list的初始化列表中
+        */
+        InitListExpr* ILE = getNode<InitListExpr>(*it);
+        for (unsigned int i = 0; i < ILE->getNumInits(); i++) {
+            ShellParam* shellParam = new ShellParam();
+            Expr* curExpr = ILE->getInit(i);
+            std::vector<Expr*> astExprs;
+
+            std::string name = "";
+            getSplitExpr(curExpr, name, astExprs);
+            shellParam->setName(name);
+            for (unsigned int paramsCount = 0; paramsCount < shellFunc->getNumParams(); paramsCount++) {            
+                if(shellParam->getName() != shellFunc->getParamDecl(paramsCount)->getNameAsString()) { continue; }
+                shellParam->setRw(inputOrOutput(shellFunc->getParamDecl(paramsCount)->getType().getAsString()));
+                shellParam->setType(getParam(paramsCount)->getType());
+                shellParam->setName(getParam(paramsCount)->getName());
+                for(int shapeIdx = 0; shapeIdx < getParam(paramsCount)->getDim(); shapeIdx++) {
+                    shellParam->setShape(getParam(paramsCount)->getShape(shapeIdx));
+                }
+            }
+            for (unsigned int i = 0; i < astExprs.size(); i++) {
+                if (getNode<DeclRefExpr>(astExprs[i])) {
+                    VarDecl* vd = dyn_cast<VarDecl>(getNode<DeclRefExpr>(astExprs[i])->getDecl());
+
+                    if (vd->getType().getAsString().compare("dacpp::RegularSplit") == 0) {
+                        RegularSplit* sp = new RegularSplit();
+                        sp->type = "RegularSplit";
+                        sp->setId(getNode<StringLiteral>(vd->getInit())->getString().str());
+                        sp->setDimIdx(i);
+                        CXXConstructExpr* CCE = getNode<CXXConstructExpr>(vd->getInit());
+                        int count = 0;
+                        for (CXXConstructExpr::arg_iterator I = CCE->arg_begin(),
+                                                            E = CCE->arg_end();
+                            I != E; ++I) {
+                            if(count == 1) {
+                                /* TODO: 计算常量表达式的值。  */
+                                sp->setSplitSize(std::stoi(toString((dyn_cast<IntegerLiteral>(*I))->getValue(), 10, true)));
+                            } else if(count == 2) {
+                                /* TODO: 计算常量表达式的值。  */
+                                sp->setSplitStride(std::stoi(toString((dyn_cast<IntegerLiteral>(*I))->getValue(), 10, true)));
+                            }
+                            count++;
+                        }
+                        /* TODO: 处理除不尽的情况。  */
+                        sp->setSplitNumber((shellParam->getShape(i) - sp->getSplitSize()) / sp->getSplitStride() + 1);
+                        for(int m = 0; m < getNumSplits(); m++) {
+                            if(getSplit(m)->getId().compare(sp->getId()) == 0 && getSplit(m)->type.compare("RegularSplit") == 0) {
+                                RegularSplit* isp = static_cast<RegularSplit*>(getSplit(m));
+                                isp->setSplitNumber(sp->getSplitNumber());
+                            }
+                        }
+                        shellParam->setSplit(sp);
+                    } else if(vd->getType().getAsString().compare("dacpp::Index") == 0) {
+                        IndexSplit* sp = new IndexSplit();
+                        sp->type = "IndexSplit";
+                        sp->setId(getNode<StringLiteral>(vd->getInit())->getString().str());
+                        sp->setDimIdx(i);
+                        sp->setSplitNumber(shellParam->getShape(i));
+                        for(int m = 0; m < getNumSplits(); m++) {
+                            if(getSplit(m)->getId().compare(sp->getId()) == 0 && getSplit(m)->type.compare("IndexSplit") == 0) {
+                                IndexSplit* isp = static_cast<IndexSplit*>(getSplit(m));
+                                isp->setSplitNumber(sp->getSplitNumber());
+                            }
+                        }
+                        shellParam->setSplit(sp);
+                    } 
+                } else {
+                    Split* sp = new Split();
+                    sp->type = "Split";
+                    sp->setId("void");
+                    sp->setDimIdx(i);
+                    shellParam->setSplit(sp);
+                }
+            }
+            setShellParam(shellParam);
         }
     }
 }
