@@ -3,16 +3,18 @@
 
 #include "clang/AST/AST.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-
 #include "DacppStructure.h"
+
+#include <string>
 
 namespace dacppTranslator {
 
 class Rewriter {
-
 private:
     clang::Rewriter* rewriter;
     DacppFile* dacppFile;
+
+    std::string getDacExpr(Expression* expr);
 
 public:   
 
@@ -25,6 +27,7 @@ public:
     void rewriteMain();
 };
 
+// namespace dacppTranslator
 }
 
 # endif
