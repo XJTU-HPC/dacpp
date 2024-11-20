@@ -4719,3 +4719,18 @@ def ClspvLibclcBuiltin: InheritableAttr {
   let Documentation = [ClspvLibclcBuiltinDoc];
   let SimpleHandler = 1;
 }
+
+//DACPP Attributes
+def DACPPShell : InheritableAttr {
+  let Spellings = [CustomKeyword<"shell">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
+}
+
+def DACPPCalc : InheritableAttr {
+  let Spellings = [CustomKeyword<"calc">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
+}

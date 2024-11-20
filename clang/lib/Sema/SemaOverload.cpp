@@ -9821,6 +9821,7 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
                     "Special operators don't use AddBuiltinOperatorCandidates");
 
   case OO_Comma:
+  case OO_LessMinusGreater:
   case OO_Arrow:
   case OO_Coawait:
     // C++ [over.match.oper]p3:
@@ -14786,7 +14787,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
       //   If the operator is the operator , [...] and there are no
       //   viable functions, then the operator is assumed to be the
       //   built-in operator and interpreted according to clause 5.
-      if (Opc == BO_Comma)
+      if (Opc == BO_Comma || Opc == BO_LMG)
         break;
 
       // When defaulting an 'operator<=>', we can try to synthesize a three-way

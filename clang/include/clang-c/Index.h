@@ -3796,7 +3796,8 @@ enum CX_BinaryOperatorKind {
   CX_BO_XorAssign = 31,
   CX_BO_OrAssign = 32,
   CX_BO_Comma = 33,
-  CX_BO_LAST = CX_BO_Comma
+  CX_BO_LMG = 34,
+  CX_BO_LAST = CX_BO_LMG
 };
 
 /**

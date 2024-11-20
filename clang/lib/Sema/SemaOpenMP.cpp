@@ -18288,6 +18288,7 @@ static bool actOnOMPReductionKindClause(
   case OO_PlusPlus:
   case OO_MinusMinus:
   case OO_Comma:
+  case OO_LessMinusGreater:
   case OO_ArrowStar:
   case OO_Arrow:
   case OO_Call:
@@ -18695,6 +18696,7 @@ static bool actOnOMPReductionKindClause(
       case BO_ShlAssign:
       case BO_ShrAssign:
       case BO_Comma:
+      case BO_LMG:
         llvm_unreachable("Unexpected reduction operation");
       }
     }

@@ -16624,6 +16624,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
     case BO_Xor:
     case BO_Or:
     case BO_Comma:
+    case BO_LMG:
     case BO_Cmp: {
       ICEDiag LHSResult = CheckICE(Exp->getLHS(), Ctx);
       ICEDiag RHSResult = CheckICE(Exp->getRHS(), Ctx);

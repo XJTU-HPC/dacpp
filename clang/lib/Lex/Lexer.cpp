@@ -4284,7 +4284,17 @@ LexStart:
     } else if (Char == '#' && /*Not a trigraph*/ SizeTmp == 1 &&
                lexEditorPlaceholder(Result, CurPtr)) {
       return true;
-    } else {
+    } else if (Char == '-') {
+      char After = getCharAndSize(CurPtr+SizeTmp, SizeTmp2);
+      if (After == '>') {
+        CurPtr = ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
+                             SizeTmp2, Result);
+        Kind = tok::lessminusgreater;
+        break;
+      }
+      Kind = tok::less;
+    }
+    else {
       Kind = tok::less;
     }
     break;

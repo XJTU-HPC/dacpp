@@ -485,6 +485,8 @@ static QualType getPreferredTypeOfBinaryRHS(Sema &S, Expr *LHS,
   switch (Op) {
   // No way to infer the type of RHS from LHS.
   case tok::comma:
+  // DACPP Assoc operator.
+  case tok::lessminusgreater:
     return QualType();
   // Prefer the type of the left operand for all of these.
   // Arithmetic operations.

@@ -9620,6 +9620,7 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
 
     // Comma acts as its right operand.
     case BO_Comma:
+    case BO_LMG:
       return GetExprRange(C, BO->getRHS(), MaxWidth, InConstantContext,
                           Approximate);
 

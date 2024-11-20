@@ -103,5 +103,7 @@ OVERLOADED_OPERATOR_MULTI(Subscript      , "[]"                       , false, t
 OVERLOADED_OPERATOR_MULTI(Conditional    , "?"                        , false, true , false)
 OVERLOADED_OPERATOR(Coawait              , "co_await", kw_co_await    , true , false, false)
 
+OVERLOADED_OPERATOR(LessMinusGreater     , "<->"  , lessminusgreater  , false, true , false)
+
 #undef OVERLOADED_OPERATOR_MULTI
 #undef OVERLOADED_OPERATOR

@@ -1585,6 +1585,7 @@ void MicrosoftCXXNameMangler::mangleOperatorName(OverloadedOperatorKind OO,
     break;
   }
 
+  case OO_LessMinusGreater: Out << "?__DACPP"; break;
   case OO_None:
   case NUM_OVERLOADED_OPERATORS:
     llvm_unreachable("Not an overloaded operator");

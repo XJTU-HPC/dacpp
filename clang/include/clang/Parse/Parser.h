@@ -3072,6 +3072,8 @@ private:
   void ParseNullabilityClassAttributes(ParsedAttributes &attrs);
   void ParseBorlandTypeAttributes(ParsedAttributes &attrs);
   void ParseOpenCLKernelAttributes(ParsedAttributes &attrs);
+  void ParseDACPPShellAttributes(ParsedAttributes &attrs);
+  void ParseDACPPCalcAttributes(ParsedAttributes &attrs);
   void ParseOpenCLQualifiers(ParsedAttributes &Attrs);
   void ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs);
   void ParseCUDAFunctionAttributes(ParsedAttributes &attrs);

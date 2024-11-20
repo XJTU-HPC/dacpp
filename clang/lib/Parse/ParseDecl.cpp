@@ -1107,6 +1107,26 @@ void Parser::ParseCUDAFunctionAttributes(ParsedAttributes &attrs) {
   }
 }
 
+void Parser::ParseDACPPShellAttributes(ParsedAttributes &attrs) {
+  // Treat these like attributes
+  while (Tok.is(tok::kw_shell)) {
+    IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+    SourceLocation AttrNameLoc = ConsumeToken();
+    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+                 tok::kw_shell);
+  }
+}
+
+void Parser::ParseDACPPCalcAttributes(ParsedAttributes &attrs) {
+  // Treat these like attributes
+  while (Tok.is(tok::kw_calc)) {
+    IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+    SourceLocation AttrNameLoc = ConsumeToken();
+    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+                 tok::kw_calc);
+  }
+}
+
 void Parser::ParseOpenCLQualifiers(ParsedAttributes &Attrs) {
   IdentifierInfo *AttrName = Tok.getIdentifierInfo();
   SourceLocation AttrNameLoc = Tok.getLocation();
@@ -4258,6 +4278,14 @@ void Parser::ParseDeclarationSpecifiers(
     // CUDA/HIP single token adornments.
     case tok::kw___noinline__:
       ParseCUDAFunctionAttributes(DS.getAttributes());
+      continue;
+
+    // DACPP single token adornments.
+    case tok::kw_shell:
+      ParseDACPPShellAttributes(DS.getAttributes());
+      continue;
+    case tok::kw_calc:
+      ParseDACPPCalcAttributes(DS.getAttributes());
       continue;
 
     // Nullability type specifiers.
