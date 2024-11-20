@@ -1,2 +1,2 @@
-add_mlir_dialect(ArmSVE arm_sve ArmSVE)
-add_mlir_doc(ArmSVE -gen-dialect-doc ArmSVE Dialects/)
+add_subdirectory(IR)
+add_subdirectory(Transforms)
