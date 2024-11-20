@@ -104,7 +104,6 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 }
             }
         }
-        std::cout << countIn << "   " << countOut;
 
         // 计算数据重排后需要的设备内存空间
         int* mem = new int[shell->getNumShellParams()];
@@ -155,6 +154,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
             }
         }
 
+        // 算子初始化
         std::string opInit = "";
         for(int count = 0; count < shell->getNumSplits(); count++) {
             Split* split = shell->getSplit(count);

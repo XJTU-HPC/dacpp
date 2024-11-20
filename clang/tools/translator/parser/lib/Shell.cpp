@@ -76,7 +76,6 @@ FunctionDecl* dacppTranslator::Shell::getShellLoc() {
 void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes) {
     // 获取 DAC 数据关联表达式左值
     Expr* dacExprLHS = dacExpr->getLHS();
-    dacExpr->dump();
     CallExpr* shellCall = getNode<CallExpr>(dacExprLHS);
     FunctionDecl* shellFunc = shellCall->getDirectCallee();
     
@@ -163,9 +162,11 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
                             /* TODO: 处理除不尽的情况。  */
                             sp->setSplitNumber((shellParam->getShape(i) - sp->getSplitSize()) / sp->getSplitStride() + 1);
                             for(int m = 0; m < getNumSplits(); m++) {
-                                if(getSplit(m)->getId().compare(sp->getId()) == 0) {
+                                llvm::outs() << getSplit(m)->getId() << "  " << getSplit(m)->type;
+                                if(getSplit(m)->getId().compare(sp->getId()) == 0 && getSplit(m)->type.compare("RegularSplit") == 0) {
                                     RegularSplit* isp = static_cast<RegularSplit*>(getSplit(m));
                                     isp->setSplitNumber(sp->getSplitNumber());
+                                    llvm::outs() << isp->getSplitNumber();
                                 }
                             }
                             shellParam->setSplit(sp);
@@ -176,9 +177,11 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
                             sp->setDimIdx(i);
                             sp->setSplitNumber(shellParam->getShape(i));
                             for(int m = 0; m < getNumSplits(); m++) {
-                                if(getSplit(m)->getId().compare(sp->getId()) == 0) {
+                                llvm::outs() << getSplit(m)->getId() << "  " << getSplit(m)->type;
+                                if(getSplit(m)->getId().compare(sp->getId()) == 0 && getSplit(m)->type.compare("IndexSplit") == 0) {
                                     IndexSplit* isp = static_cast<IndexSplit*>(getSplit(m));
                                     isp->setSplitNumber(sp->getSplitNumber());
+                                    llvm::outs() << isp->getSplitNumber();
                                 }
                             }
                             shellParam->setSplit(sp);
@@ -202,10 +205,22 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
             setSplit(sp);
         }
         else if(curVarDecl->getType().getAsString().compare("dacpp::RegularSplit") == 0) {
-            RegularSplit* sp = new RegularSplit();                 
+            RegularSplit* sp = new RegularSplit();
             sp->setId(curVarDecl->getNameAsString());
-            sp->setSplitSize(2);
-            sp->setSplitStride(2);
+            CXXConstructExpr* CCE = getNode<CXXConstructExpr>(curVarDecl->getInit());
+            int count = 0;
+            for (CXXConstructExpr::arg_iterator I = CCE->arg_begin(),
+                                                E = CCE->arg_end();
+                I != E; ++I) {
+                if(count == 1) {
+                    /* TODO: 计算常量表达式的值。  */
+                    sp->setSplitSize(std::stoi(toString((dyn_cast<IntegerLiteral>(*I))->getValue(), 10, true)));
+                } else if(count == 2) {
+                    /* TODO: 计算常量表达式的值。  */
+                    sp->setSplitStride(std::stoi(toString((dyn_cast<IntegerLiteral>(*I))->getValue(), 10, true)));
+                }
+                count++;
+            }
             sp->type = "RegularSplit";
             setSplit(sp);
         }
