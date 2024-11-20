@@ -394,7 +394,7 @@ const char *REDUCTION_Template_Span = R"~~~(
         {{REDUCTION_RULE}},
         property::reduction::initialize_to_identity()),
         [=](id<1> i,auto &reducer) {
-            	reducer[i % {{SPLIT_LENGTH}} + i/({{SPLIT_LENGTH}}*{{SPLIT_SIZE}})*{{SPLIT_LENGTH}}].combine(d_{{NAME}}[i]);
+            reducer[i % {{SPLIT_LENGTH}} + i/({{SPLIT_LENGTH}}*{{SPLIT_SIZE}})*{{SPLIT_LENGTH}}].combine(d_{{NAME}}[i]);
      	});
  }).wait();
 	q.memcpy(d_{{NAME}},reduction_{{NAME}}, {{SPAN_SIZE}}*sizeof({{TYPE}})).wait();

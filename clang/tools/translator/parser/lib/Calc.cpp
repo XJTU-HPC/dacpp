@@ -4568,16 +4568,19 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
         // 设置参数形状
         ShellParam* shellParam = shell->getShellParam(paramsCount);
 
-        for(int i = 0; i < shell->getNumSplits(); i++) {
-            if(shell->getSplit(i)->type.compare("RegularSplit") == 0) {
-                RegularSplit* sp = static_cast<RegularSplit*>(shell->getSplit(i));
-                param->setShape(sp->getSplitSize());
-            }
-            else if(shell->getSplit(i)->type.compare("IndexSplit") == 0) {
-                IndexSplit* sp = static_cast<IndexSplit*>(shell->getSplit(i));
+        for (int i = 0; i < shellParam->getNumSplit(); i++) {
+            Split* sp = shellParam->getSplit(i);
+            if(sp->type.compare("RegularSplit") == 0) {
+                RegularSplit* rsp = static_cast<RegularSplit*>(sp);
+                param->setShape(rsp->getSplitSize());
+            } else if(sp->type.compare("IndexSplit") == 0) {
+                IndexSplit* isp = static_cast<IndexSplit*>(sp);
             } else {
                 param->setShape(shellParam->getShape(i));
             }
+        }
+        if (param->getDim() == 0) {
+          param->setShape(1);
         }
         setParam(param);
     }
