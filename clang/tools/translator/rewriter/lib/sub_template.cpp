@@ -261,7 +261,8 @@ std::string CodeGen_KernelExecute(std::string SplitSize,std::string IndexInit,st
 const char *INDEX_INIT_Template = R"~~~(
             const auto {{NAME}}={{EXPRESSION}};)~~~";
 
-std::string CodeGen_IndexInit(Dac_Ops ops)//aborted
+//aborted
+std::string CodeGen_IndexInit(Dac_Ops ops)
 {
 	int len = ops.size;
 	for(int i=0;i<len;i++){
@@ -309,7 +310,7 @@ std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vec
 		for(int j = i + 1;j < sets_size;j ++){
 			sub_expression = sub_expression + "/" + std::to_string(sets_split[j]);
 		}
-		sub_expression = sub_expression + "%" + std::to_string(sets_split[i]);
+		//sub_expression = sub_expression + "%" + std::to_string(sets_split[i]);//取模操作应该在偏移之后
         sets_sub_expression[sets_order[i]] = sub_expression;//将子表达式和集合的名字进行关联
 	}
 
@@ -317,9 +318,10 @@ std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vec
     int len = ops.size;
     for(int i = 0;i < len;i ++)
     {
-        std::string index_expression = "";
+        std::string index_expression = "(";
         index_expression = index_expression + sets_sub_expression[sets[i]];//得到集合的索引
-        index_expression = index_expression + "+" + "(" + std::to_string(offsets[i]) + ")";//加上偏移量
+        index_expression = index_expression + "+" + "(" + std::to_string(offsets[i]) + ")" + "+" + std::to_string(ops[i].split_size) + ")";//加上偏移量和划分数 防止出现负数
+		index_expression = index_expression + "%" + std::to_string(ops[i].split_size);//偏移之后再取模
         ops[i].setExp(index_expression);
     }
 
