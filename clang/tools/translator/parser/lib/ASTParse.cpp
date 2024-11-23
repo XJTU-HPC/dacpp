@@ -59,30 +59,26 @@ bool dacppTranslator::inputOrOutput(std::string dataType) {
     }
 }
 
-static void printPretty(const Stmt* S, raw_ostream &Out, PrinterHelper *Helper,
+void DeclPrinter::printPretty(const Stmt* S, raw_ostream &Out, PrinterHelper *Helper,
                        const PrintingPolicy &Policy, unsigned Indentation,
                        StringRef NL, const ASTContext *Context) {
-  DeclPrinter P(Out, Helper, Policy, *Context, Indentation, NL);
-  P.Visit(const_cast<Stmt *>(S));
+  this->Visit(const_cast<Stmt *>(S));
 }
 
-static void printPrettyControlled(Stmt* S, raw_ostream &Out, PrinterHelper *Helper,
+void DeclPrinter::printPrettyControlled(Stmt* S, raw_ostream &Out, PrinterHelper *Helper,
                                  const PrintingPolicy &Policy,
                                  unsigned Indentation, StringRef NL,
                                  const ASTContext *Context) {
-  DeclPrinter P(Out, Helper, Policy, *Context, Indentation, NL);
-  P.PrintControlledStmt(const_cast<Stmt *>(S));
+  this->PrintControlledStmt(const_cast<Stmt *>(S));
 }
 
-static void print(Decl *D, raw_ostream &Out, const PrintingPolicy &Policy,
+void DeclPrinter::print(Decl *D, raw_ostream &Out, const PrintingPolicy &Policy,
                  unsigned Indentation, bool PrintInstantiation) {
-  DeclPrinter Printer(Out, nullptr, Policy, D->getASTContext(), Indentation,"\n", 
-                      PrintInstantiation);
-  Printer.Base::Visit(const_cast<Decl*>(D));
+  this->Base::Visit(const_cast<Decl*>(D));
 }
 
 
-static QualType GetBaseType(QualType T) {
+QualType DeclPrinter::GetBaseType(QualType T) {
   // FIXME: This should be on the Type class!
   QualType BaseType = T;
   while (!BaseType->isSpecifierType()) {
@@ -112,7 +108,7 @@ static QualType GetBaseType(QualType T) {
   return BaseType;
 }
 
-static QualType getDeclType(Decl* D) {
+QualType DeclPrinter::getDeclType(Decl* D) {
   if (TypedefNameDecl* TDD = dyn_cast<TypedefNameDecl>(D))
     return TDD->getUnderlyingType();
   if (ValueDecl* VD = dyn_cast<ValueDecl>(D))
@@ -120,7 +116,7 @@ static QualType getDeclType(Decl* D) {
   return QualType();
 }
 
-static void printGroup(Decl** Begin, unsigned NumDecls,
+void DeclPrinter::printGroup(Decl** Begin, unsigned NumDecls,
                       raw_ostream &Out, const PrintingPolicy &Policy,
                       unsigned Indentation) {
   if (NumDecls == 1) {
@@ -537,7 +533,7 @@ void DeclPrinter::VisitEnumConstantDecl(EnumConstantDecl *D) {
   }
 }
 
-static void printExplicitSpecifier(ExplicitSpecifier ES, llvm::raw_ostream &Out,
+void DeclPrinter::printExplicitSpecifier(ExplicitSpecifier ES, llvm::raw_ostream &Out,
                                    PrintingPolicy &Policy, unsigned Indentation,
                                    const ASTContext &Context) {
   std::string Proto = "explicit";
