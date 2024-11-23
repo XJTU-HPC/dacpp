@@ -1914,7 +1914,7 @@ void DeclPrinter::PrintRawDecl(Decl *D) {
 
 void DeclPrinter::PrintRawDeclStmt(const DeclStmt *S) {
   SmallVector<Decl *, 2> Decls(S->decls());
-  Decl::printGroup(Decls.data(), Decls.size(), Out, Policy, Indentation);
+  printGroup(Decls.data(), Decls.size(), Out, Policy, Indentation);
 }
 
 void DeclPrinter::VisitNullStmt(NullStmt *Node) {
