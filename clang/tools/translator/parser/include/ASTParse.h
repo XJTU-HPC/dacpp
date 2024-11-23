@@ -292,6 +292,23 @@ class ConstDeclVisitor
     virtual void printDeclType(QualType T, StringRef DeclName, bool Pack = false);
 
     bool isImplicitThis(const Expr *E);
+    void printPretty(const Stmt* S, raw_ostream &Out, PrinterHelper *Helper,
+                           const PrintingPolicy &Policy, unsigned Indentation,
+                           StringRef NL, const ASTContext *Context) ;
+    void printPrettyControlled(Stmt* S, raw_ostream &Out, PrinterHelper *Helper,
+                                     const PrintingPolicy &Policy,
+                                     unsigned Indentation, StringRef NL,
+                                     const ASTContext *Context) ;
+    void print(Decl *D, raw_ostream &Out, const PrintingPolicy &Policy,
+                     unsigned Indentation, bool PrintInstantiation) ;
+    QualType GetBaseType(QualType T) ;
+    QualType getDeclType(Decl* D) ;
+    void printGroup(Decl** Begin, unsigned NumDecls,
+                          raw_ostream &Out, const PrintingPolicy &Policy,
+                          unsigned Indentation) ;
+    void printExplicitSpecifier(ExplicitSpecifier ES, llvm::raw_ostream &Out,
+                                       PrintingPolicy &Policy, unsigned Indentation,
+                                       const ASTContext &Context) ;
   };
 
 
