@@ -3,9 +3,6 @@
 
 #include <string>
 
-typedef struct symtab_symbol symtab_symbol;
-typedef struct symtab symtab_t;
-
 namespace dacppTranslator {
 
 /*
@@ -28,8 +25,6 @@ public:
 
     void setDimIdx(int dimIdx);
     int getDimIdx();
-
-    symtab_symbol *ste;
 
 };
 

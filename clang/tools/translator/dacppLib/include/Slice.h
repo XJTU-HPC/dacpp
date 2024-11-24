@@ -76,11 +76,7 @@ struct Slice {
     Slice(Index i) : isIndex_(true) {}
 };
 
-void binding (Index, Index);
-void binding (Index, RegularSplit);
-void binding (RegularSplit, Index);
-void binding (RegularSplit, RegularSplit);
 
-} // namespace dacpp
+}
 
 #endif
