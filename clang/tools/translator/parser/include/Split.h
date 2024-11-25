@@ -3,8 +3,8 @@
 
 #include <string>
 
-typedef struct symtab_symbol symtab_symbol;
-typedef struct symtab symtab_t;
+typedef struct ALGraph ALGraph;
+typedef struct VNode VNode;
 
 namespace dacppTranslator {
 
@@ -29,7 +29,7 @@ public:
     void setDimIdx(int dimIdx);
     int getDimIdx();
 
-    symtab_symbol *ste;
+    VNode *v;
 
 };
 
