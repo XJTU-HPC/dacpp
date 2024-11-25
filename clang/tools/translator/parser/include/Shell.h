@@ -58,6 +58,7 @@ public:
     FunctionDecl* getShellLoc();
 
     void parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes);
+    bool GetBindInfo(clang::ValueDecl *var1, clang::ValueDecl *var2, std::string* pbindInfo);
 
     symtab_t* symtab;
 };
