@@ -15,6 +15,8 @@ private:
     std::string variable_;
 public:
     Index(std::string variable) : variable_(variable) {}
+    const Index operator+(const int &R)const;
+    const Index operator-(const int &R)const;
 };
 
 
@@ -27,6 +29,8 @@ private:
 
 public:
     RegularSplit(std::string variable, int size, int stride) : variable_(variable), size_(size), stride_(stride) {}
+    const RegularSplit operator+(const int &R)const;
+    const RegularSplit operator-(const int &R)const;
 }; 
 
 

@@ -6,106 +6,92 @@
 #include "Shell.h"
 #include "ASTParse.h"
 
-struct symtab_symbol {
+typedef struct ArcNode
+{
+    int adjvex; /* 该弧所指向的顶点的位置 */
+    struct ArcNode *nextarc; /* 指向下一条弧的指针 */
+}ArcNode; /* 表结点 */
+
+struct VNode {
     int id;
-    int cls;
     clang::ValueDecl *D;
-    struct symtab* ste_table;
+    ArcNode *firstarc; /* 第一个表结点的地址,指向第一条依附该顶点的弧的指针 */
 } ;
 
-struct symtab {
+struct ALGraph {
     /* table of entries.  */
-    symtab_symbol **symbols;
+    VNode *vertices;
 
     /* number of actual entries entered in the table.  */
-    int count;
+    int vexnum;
 
     /* number of entries allocated currently.  */
     int allocated;
-
-    struct symtab* parent;
-    int next_id;
 } ;
 
-static void
-ste_dealloc(symtab_symbol *ste)
-{
-    free (ste);
+int LocateVex(ALGraph *G,const clang::ValueDecl *u)
+{ /* 初始条件: 图G存在,u和G中顶点有相同特征 */
+  /* 操作结果: 若G中存在顶点u,则返回该顶点在图中位置;否则返回-1 */
+  int i;
+  for(i=0;i<G->vexnum;++i)
+    if(u == G->vertices[i].D)
+      return i;
+  return -1;
 }
 
-static void destroy_symtab (symtab_t* symtab)
-{
-    int i;
-    if (!symtab) return;
-    for (i = 0; i < symtab->count; ++i)
-        ste_dealloc (symtab->symbols[i]);
-    free (symtab->symbols);
-    free (symtab);
-}
-
-static struct symtab* build_symtab (symtab_t* parent)
-{
-    symtab_t* symtab = NULL;
-
-    symtab = (symtab_t*) malloc (sizeof (struct symtab));
-    if (symtab == NULL)
-        goto quit;
-
-    memset (symtab, 0, sizeof (*symtab));
-    symtab->parent = parent;
-
-    return symtab;
-quit:
-    if (symtab) destroy_symtab (symtab);
-    assert (0);
-    return NULL;
-}
-
-static symtab_symbol *
-ste_new(symtab_t *st)
-{
-    symtab_symbol *ste = NULL;
-    symtab_t *parent = st;
-
-    /* 分配内存。  */
-    ste = (symtab_symbol *) malloc (sizeof (symtab_symbol));
-    if (ste == NULL)
-        goto fail;
-
-    memset (ste, 0, sizeof (symtab_symbol));
-
-    /* 插入符号表。  */
-    ste->ste_table = st;
-    if (st->allocated <= st->count)
+void DestroyGraph(ALGraph *G)
+{ /* 初始条件: 图G存在。操作结果: 销毁图G */
+  int i;
+  ArcNode *p,*q;
+  G->vexnum = G->allocated = 0;
+  for(i=0;i<(*G).vexnum;++i)
+  {
+    p=(*G).vertices[i].firstarc;
+    while(p)
     {
-        st->symbols = (symtab_symbol **)realloc (st->symbols, (1 + st->allocated) * sizeof (symtab_symbol *));
-        if (st->symbols == NULL)
-            goto fail;
-        st->allocated += 1;
+      q=p->nextarc;
+      free(p);
+      p=q;
     }
-    st->symbols[st->count++] = ste;
-
-    /* 更新符号表项标识符。  */
-    while (parent->parent)
-        parent = parent->parent;
-    ste->id = ++parent->next_id;
-    ste->cls = ste->id;
-
-    return ste;
- fail:
-    ste_dealloc (ste);
-    assert (0);
-    return NULL;
+  }
+  free(G);
 }
 
-static symtab_symbol *search_symbol(symtab_t* symtab, const clang::ValueDecl *sym_name)
-{
-    int i;
+ALGraph *CreateGraph(void)
+{ /* 采用邻接表存储结构,构造没有相关信息的图G*/
+  ALGraph *G = (ALGraph*) malloc (sizeof (struct ALGraph));
+  memset (G, 0, sizeof (*G));
+  return G;
+}
 
-    for (i = 0; i < symtab->count; ++i)
-        if (sym_name == symtab->symbols[i]->D)
-            return symtab->symbols[i];
-    return symtab->parent ? search_symbol (symtab->parent, sym_name) : NULL;
+VNode* GetVex(ALGraph *G,int v)
+{ /* 初始条件: 图G存在,v是G中某个顶点的序号。操作结果: 返回v的值 */
+  return &G->vertices[v];
+}
+
+int InsertVex(ALGraph *G,clang::ValueDecl *v)
+{ /* 初始条件: 图G存在,v和图中顶点有相同特征 */
+  /* 操作结果: 在图G中增添新顶点v(不增添与顶点相关的弧,留待InsertArc()去做) */
+  if (G->allocated <= G->vexnum)
+  {
+    G->vertices = (VNode *)realloc (G->vertices, (1 + G->allocated) * sizeof (VNode));
+    G->allocated += 1;
+  }
+  (*G).vertices[(*G).vexnum].D = v;
+  (*G).vertices[(*G).vexnum].id = (*G).vexnum;
+  (*G).vertices[(*G).vexnum].firstarc=NULL;
+  (*G).vexnum++; /* 图G的顶点数加1 */
+  return (*G).vexnum - 1;
+}
+
+void InsertArc(ALGraph *G,int i,int j)
+{ /* 初始条件: 图G存在,v和w是G中两个顶点 */
+  /* 操作结果: 在G中增添弧<v,w>,若G是无向的,则还增添对称弧<w,v> */
+  ArcNode *p;
+  p=(ArcNode*)malloc(sizeof(ArcNode));
+  p->adjvex=j;
+  p->nextarc=(*G).vertices[i].firstarc; /* 插在表头 */
+  (*G).vertices[i].firstarc=p;
 }
 
 
@@ -113,11 +99,11 @@ static symtab_symbol *search_symbol(symtab_t* symtab, const clang::ValueDecl *sy
  * 存储划分结构信息类实现
  */
 dacppTranslator::Shell::Shell() {
-    this->symtab = build_symtab (NULL);
+    this->G = CreateGraph ();
 }
 
 dacppTranslator::Shell::~Shell() {
-    destroy_symtab (this->symtab);
+    DestroyGraph (this->G);
 }
 
 void dacppTranslator::Shell::setName(std::string name) {
@@ -218,27 +204,29 @@ void Visitor::VisitCallExpr(CallExpr *Call) {
   std::string TempString;
   llvm::raw_string_ostream SS(TempString);
   unsigned i, e;
-  symtab_symbol *vars[2];
+  int vars[2];
 
   Call->getCallee()->printPretty(SS, nullptr, Policy);
-  if (!strcmp(SS.str().c_str(), "binding")) {
+  if (!strcmp(SS.str().c_str(), "binding")/*0*/) {
     for (i = 0, e = Call->getNumArgs(); i != e; ++i) {
       if (isa<CXXDefaultArgExpr>(Call->getArg(i))) {
         // Don't print any defaulted arguments
         break;
       }
-      if (Expr *tempExpr = ignoreImplicitSemaNodes(Call->getArg(i)))
-        if (CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(tempExpr))
+      if (Expr *tempExpr = ignoreImplicitSemaNodes(Call->getArg(i))) {
+        if (CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(tempExpr)) {
           if (CCE->getNumArgs() == 1) {
             tempExpr = ignoreImplicitSemaNodes(CCE->getArg(0));
             if (const auto *DeclRef = dyn_cast<DeclRefExpr>(tempExpr))
               /* 应该总是能找到。  */
-              vars[i] = search_symbol(sh->symtab, DeclRef->getDecl());
+              vars[i] = LocateVex (sh->G, DeclRef->getDecl());
           }
+        }
+      }
     }
-    vars[0]->cls = (vars[0]->cls > vars[1]->cls) ? vars[1]->cls : vars[0]->cls;
-    vars[1]->cls = vars[0]->cls;
+    InsertArc (sh->G, vars[0], vars[1]);
   }
+  DeclPrinter::VisitCallExpr(Call);
 }
 
 void Visitor::VisitVarDecl (VarDecl *D)
@@ -264,8 +252,9 @@ void Visitor::VisitVarDecl (VarDecl *D)
       sp->setId(curVarDecl->getNameAsString());
       sp->type = "IndexSplit";
       sh->setSplit(sp);
-      sp->ste = ste_new(sh->symtab);
-      sp->ste->D = curVarDecl;
+      if (-1 == LocateVex(sh->G, curVarDecl)) {
+		sp->v = GetVex (sh->G, InsertVex (sh->G, curVarDecl));
+      }
       break;
     }
 
@@ -293,8 +282,9 @@ void Visitor::VisitVarDecl (VarDecl *D)
       }
       sp->type = "RegularSplit";
       sh->setSplit(sp);
-      sp->ste = ste_new (sh->symtab);
-      sp->ste->D = curVarDecl;
+      if (-1 == LocateVex (sh->G, curVarDecl)) {
+		sp->v = GetVex (sh->G, InsertVex (sh->G, curVarDecl));
+      }
       break;
     }
 
@@ -408,6 +398,17 @@ void Visitor::VisitVarDecl (VarDecl *D)
   DeclPrinter::VisitVarDecl(D);
 }
 
+bool DFS(ALGraph *G,int v,int w, bool *visited)
+{ /* 从第v个顶点出发递归地深度优先遍历图G。*/
+  ArcNode *p;
+  visited[v]=true; /* 设置访问标志为TRUE(已访问) */
+  for(p=G->vertices[v].firstarc;p;p=p->nextarc)
+    if(!visited[p->adjvex])
+      if (w == p->adjvex || DFS(G,p->adjvex, w, visited))
+		return true; /* 对v的尚未访问的邻接点w递归调用DFS */
+  return false;
+}
+
 /*
  * GetBindInfo
  *
@@ -415,27 +416,22 @@ void Visitor::VisitVarDecl (VarDecl *D)
  *  计算两算子是否属于同一集合；获取两算子偏移量。
  *
  * 参数：
- *  var1            算子1。
- *  var2            算子2。
+ *  v               算子1。
+ *  w               算子2。
  *  pbindInfo       两算子偏移量。
  *
  * 返回值：
  *  bool            两算子是否属于同一集合。 若属于，则通过pbindInfo返回偏移量。
  */
 
-bool dacppTranslator::Shell::GetBindInfo(clang::ValueDecl *var1,
-                                         clang::ValueDecl *var2,
+bool dacppTranslator::Shell::GetBindInfo(VNode *v,VNode *w,
                                          std::string *pbindInfo) {
-  bool bResult;
-  symtab_symbol *vars[2];
-
-  vars[0] = search_symbol(symtab, var1);
-  vars[1] = search_symbol(symtab, var2);
-  bResult = vars[0] && vars[1] && vars[0]->cls == vars[1]->cls;
-  if (pbindInfo && bResult) {
-    pbindInfo->clear();
-    pbindInfo->append("0");
-  }
+  bool bResult = false;
+  bool *visited;
+  visited = (bool *) malloc (sizeof (bool) * G->vexnum);
+  memset (visited, 0, sizeof (bool) * G->vexnum);
+  bResult = DFS(G,v->id, w->id, visited);
+  free (visited);
   return bResult;
 }
 
