@@ -2,14 +2,16 @@
 
 #include "llvm/ADT/StringExtras.h"
 
+#include "ASTParse.h"
 #include "Param.h"
 #include "Shell.h"
-#include "ASTParse.h"
+
 
 typedef struct ArcNode
 {
     int adjvex; /* 该弧所指向的顶点的位置 */
     struct ArcNode *nextarc; /* 指向下一条弧的指针 */
+    char *offset;
 }ArcNode; /* 表结点 */
 
 struct VNode {
@@ -29,7 +31,7 @@ struct ALGraph {
     int allocated;
 } ;
 
-int LocateVex(ALGraph *G,const clang::ValueDecl *u)
+static int LocateVex(ALGraph *G,const clang::ValueDecl *u)
 { /* 初始条件: 图G存在,u和G中顶点有相同特征 */
   /* 操作结果: 若G中存在顶点u,则返回该顶点在图中位置;否则返回-1 */
   int i;
@@ -39,7 +41,7 @@ int LocateVex(ALGraph *G,const clang::ValueDecl *u)
   return -1;
 }
 
-void DestroyGraph(ALGraph *G)
+static void DestroyGraph(ALGraph *G)
 { /* 初始条件: 图G存在。操作结果: 销毁图G */
   int i;
   ArcNode *p,*q;
@@ -50,6 +52,7 @@ void DestroyGraph(ALGraph *G)
     while(p)
     {
       q=p->nextarc;
+      free ((void *)p->offset);
       free(p);
       p=q;
     }
@@ -57,19 +60,19 @@ void DestroyGraph(ALGraph *G)
   free(G);
 }
 
-ALGraph *CreateGraph(void)
+static ALGraph *CreateGraph(void)
 { /* 采用邻接表存储结构,构造没有相关信息的图G*/
   ALGraph *G = (ALGraph*) malloc (sizeof (struct ALGraph));
   memset (G, 0, sizeof (*G));
   return G;
 }
 
-VNode* GetVex(ALGraph *G,int v)
+static VNode* GetVex(ALGraph *G,int v)
 { /* 初始条件: 图G存在,v是G中某个顶点的序号。操作结果: 返回v的值 */
   return &G->vertices[v];
 }
 
-int InsertVex(ALGraph *G,clang::ValueDecl *v)
+static int InsertVex(ALGraph *G,clang::ValueDecl *v)
 { /* 初始条件: 图G存在,v和图中顶点有相同特征 */
   /* 操作结果: 在图G中增添新顶点v(不增添与顶点相关的弧,留待InsertArc()去做) */
   if (G->allocated <= G->vexnum)
@@ -84,11 +87,14 @@ int InsertVex(ALGraph *G,clang::ValueDecl *v)
   return (*G).vexnum - 1;
 }
 
-void InsertArc(ALGraph *G,int i,int j)
+static void InsertArc(ALGraph *G,int i,int j, const char *offset)
 { /* 初始条件: 图G存在,v和w是G中两个顶点 */
   /* 操作结果: 在G中增添弧<v,w>,若G是无向的,则还增添对称弧<w,v> */
   ArcNode *p;
   p=(ArcNode*)malloc(sizeof(ArcNode));
+  p->offset = (char *) malloc (sizeof (char) *
+         (strlen (offset) + 1));
+  strcpy (p->offset, offset);
   p->adjvex=j;
   p->nextarc=(*G).vertices[i].firstarc; /* 插在表头 */
   (*G).vertices[i].firstarc=p;
@@ -204,27 +210,49 @@ void Visitor::VisitCallExpr(CallExpr *Call) {
   std::string TempString;
   llvm::raw_string_ostream SS(TempString);
   unsigned i, e;
-  int vars[2];
+  int v1 = -1,v2 = -1;
+  std::string offset1, offset2;
 
   Call->getCallee()->printPretty(SS, nullptr, Policy);
-  if (!strcmp(SS.str().c_str(), "binding")/*0*/) {
+  /* 如果是一个binding函数，就进行解析。  */
+  if (!strcmp(SS.str().c_str(), "binding")) {
     for (i = 0, e = Call->getNumArgs(); i != e; ++i) {
       if (isa<CXXDefaultArgExpr>(Call->getArg(i))) {
         // Don't print any defaulted arguments
         break;
       }
       if (Expr *tempExpr = ignoreImplicitSemaNodes(Call->getArg(i))) {
+        /* 不带偏移量。  */
         if (CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(tempExpr)) {
           if (CCE->getNumArgs() == 1) {
             tempExpr = ignoreImplicitSemaNodes(CCE->getArg(0));
             if (const auto *DeclRef = dyn_cast<DeclRefExpr>(tempExpr))
               /* 应该总是能找到。  */
-              vars[i] = LocateVex (sh->G, DeclRef->getDecl());
+              (i % 2 ? v2 : v1) = LocateVex (sh->G, DeclRef->getDecl());
+          }
+        }
+        
+        /* 带偏移量。  */
+        else if (auto *OpCallExpr = dyn_cast<CXXOperatorCallExpr>(tempExpr)) {
+          /* ‘+’/‘-’有两个参数。 */
+          if (OpCallExpr->getNumArgs() == 2) {
+            llvm::raw_string_ostream Buf(i % 2 ? offset2 : offset1);
+            tempExpr = ignoreImplicitSemaNodes(OpCallExpr->getArg(0));
+            if (const auto *DeclRef = dyn_cast<DeclRefExpr>(tempExpr))
+              /* 应该总是能找到。  */
+              (i % 2 ? v2 : v1) = LocateVex (sh->G, DeclRef->getDecl());
+            /* 加数/减数 */
+            Buf << ' ' << getOperatorSpelling(OpCallExpr->getOperator()) << ' ';
+            OpCallExpr->getArg(1)->printPretty(Buf, nullptr, Policy);
           }
         }
       }
     }
-    InsertArc (sh->G, vars[0], vars[1]);
+    /* 如果被加数/被减数带偏移量，则移项 */
+    if (offset1.c_str()[0])
+      offset2 += " - (" + offset1 + ")";
+    /* 插入边 */
+    InsertArc (sh->G, v1, v2, offset2.c_str());
   }
   DeclPrinter::VisitCallExpr(Call);
 }
@@ -253,7 +281,7 @@ void Visitor::VisitVarDecl (VarDecl *D)
       sp->type = "IndexSplit";
       sh->setSplit(sp);
       if (-1 == LocateVex(sh->G, curVarDecl)) {
-		sp->v = GetVex (sh->G, InsertVex (sh->G, curVarDecl));
+        sp->v = GetVex (sh->G, InsertVex (sh->G, curVarDecl));
       }
       break;
     }
@@ -283,7 +311,7 @@ void Visitor::VisitVarDecl (VarDecl *D)
       sp->type = "RegularSplit";
       sh->setSplit(sp);
       if (-1 == LocateVex (sh->G, curVarDecl)) {
-		sp->v = GetVex (sh->G, InsertVex (sh->G, curVarDecl));
+        sp->v = GetVex (sh->G, InsertVex (sh->G, curVarDecl));
       }
       break;
     }
@@ -398,15 +426,22 @@ void Visitor::VisitVarDecl (VarDecl *D)
   DeclPrinter::VisitVarDecl(D);
 }
 
-bool DFS(ALGraph *G,int v,int w, bool *visited)
-{ /* 从第v个顶点出发递归地深度优先遍历图G。*/
+static int DFS(ALGraph *G, int v, int w, bool *visited, int t,
+               char **P) { 
+  /* 从第v个顶点出发递归地深度优先遍历图G。*/
   ArcNode *p;
-  visited[v]=true; /* 设置访问标志为TRUE(已访问) */
-  for(p=G->vertices[v].firstarc;p;p=p->nextarc)
-    if(!visited[p->adjvex])
-      if (w == p->adjvex || DFS(G,p->adjvex, w, visited))
-		return true; /* 对v的尚未访问的邻接点w递归调用DFS */
-  return false;
+  int result;
+  visited[v] = true; /* 设置访问标志为TRUE(已访问) */
+  for (p = G->vertices[v].firstarc; p; p = p->nextarc)
+    if (!visited[p->adjvex]) {
+      P[t] = p->offset;
+      if (w == p->adjvex)
+        return t + 1;
+      result = DFS(G, p->adjvex, w, visited, t + 1, P);
+      if (result)
+        return result; /* 对v的尚未访问的邻接点w递归调用DFS */
+    }
+  return 0;
 }
 
 /*
@@ -424,15 +459,23 @@ bool DFS(ALGraph *G,int v,int w, bool *visited)
  *  bool            两算子是否属于同一集合。 若属于，则通过pbindInfo返回偏移量。
  */
 
-bool dacppTranslator::Shell::GetBindInfo(VNode *v,VNode *w,
+bool dacppTranslator::Shell::GetBindInfo(VNode *v, VNode *w,
                                          std::string *pbindInfo) {
-  bool bResult = false;
+  int result, i;
   bool *visited;
-  visited = (bool *) malloc (sizeof (bool) * G->vexnum);
-  memset (visited, 0, sizeof (bool) * G->vexnum);
-  bResult = DFS(G,v->id, w->id, visited);
-  free (visited);
-  return bResult;
+  char **p;
+  visited = (bool *)malloc(sizeof(bool) * G->vexnum);
+  p = (char **)malloc(sizeof(char *) * G->vexnum);
+  memset(visited, 0, sizeof(bool) * G->vexnum);
+  result = DFS(G, v->id, w->id, visited, 0, p);
+  if (result && pbindInfo) {
+    pbindInfo->clear();
+    for (i = 0; i < result; ++i)
+      (*pbindInfo) += p[i];
+  }
+  free(p);
+  free(visited);
+  return result;
 }
 
 // 解析Shell节点，将解析到的信息存储到Shell类中
