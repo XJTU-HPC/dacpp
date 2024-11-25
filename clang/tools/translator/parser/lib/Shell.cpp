@@ -408,6 +408,37 @@ void Visitor::VisitVarDecl (VarDecl *D)
   DeclPrinter::VisitVarDecl(D);
 }
 
+/*
+ * GetBindInfo
+ *
+ * 目的：
+ *  计算两算子是否属于同一集合；获取两算子偏移量。
+ *
+ * 参数：
+ *  var1            算子1。
+ *  var2            算子2。
+ *  pbindInfo       两算子偏移量。
+ *
+ * 返回值：
+ *  bool            两算子是否属于同一集合。 若属于，则通过pbindInfo返回偏移量。
+ */
+
+bool dacppTranslator::Shell::GetBindInfo(clang::ValueDecl *var1,
+                                         clang::ValueDecl *var2,
+                                         std::string *pbindInfo) {
+  bool bResult;
+  symtab_symbol *vars[2];
+
+  vars[0] = search_symbol(symtab, var1);
+  vars[1] = search_symbol(symtab, var2);
+  bResult = vars[0] && vars[1] && vars[0]->cls == vars[1]->cls;
+  if (pbindInfo && bResult) {
+    pbindInfo->clear();
+    pbindInfo->append("0");
+  }
+  return bResult;
+}
+
 // 解析Shell节点，将解析到的信息存储到Shell类中
 void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes) {
   std::string Msg;
