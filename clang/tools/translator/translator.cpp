@@ -1,5 +1,4 @@
 #include <string>
-
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -12,11 +11,12 @@
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "parser/Split.h"
-#include "parser/Param.h"
-#include "parser/DacppStructure.h"
-#include "rewriter/Rewriter.h"
-#include "test/test.h"
+#include "Split.h"
+#include "Param.h"
+#include "DacppStructure.h"
+#include "Rewriter.h"
+#include "test.h"
+#include "ASTParse.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -35,20 +35,32 @@ public:
     DacHandler() {}
 
     virtual void run(const MatchFinder::MatchResult &Result) {
-    
-        /*
-            匹配数据关联计算表达式
-        */
+        // 匹配数据关联计算表达式
         if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
             /*
-            解析 DACPP 文件中的数据管理计算表达式
+                对匹配到的数据关联计算表达式进行过滤，只解析顶级数据关联计算表达式
+                解析数据关联计算表达式时需要知道数据的维度，将其硬编码到生成的SYCL文件中
+                而子数据关联计算表达式在编译期无法从得到该信息
+                顶级数据关联计算表达式在编译期可以找到数据的定义位置，从其构造函数中得到数据的维度信息
             */
+           // 获取 DAC 数据关联表达式左值
+            Expr* dacExprLHS = dacExpr->getLHS();
+            CallExpr* shellCall = dacppTranslator::getNode<CallExpr>(dacExprLHS);
+            Expr* curExpr = shellCall->getArg(0);
+            DeclRefExpr* declRefExpr;
+            if(isa<DeclRefExpr>(curExpr)) {
+                declRefExpr = dyn_cast<DeclRefExpr>(curExpr);
+            }
+            else {
+                declRefExpr = dacppTranslator::getNode<DeclRefExpr>(curExpr);
+            }
+            if(isa<ParmVarDecl>(declRefExpr->getDecl())) {
+                return;
+            }
+            // 解析 DACPP 文件中的顶级数据关联计算表达式
             dacppFile->setExpression(dacExpr);
         }
-
-        /*
-            匹配主函数
-        */
+        // 匹配主函数
         else if (const FunctionDecl* mainFunc = Result.Nodes.getNodeAs<clang::FunctionDecl>("main")) {
             dacppFile->setMainFuncLoc(mainFunc);
         }
@@ -73,10 +85,7 @@ public:
     MyASTConsumer() {
         // 可以通过 addMatcher 添加用户构造的匹配器到 MatchFinder中
         // Matcher.addMatcher(binaryOperator(hasOperatorName("<->")).bind("dac_expr"), &HandleForDac);
-        Matcher.addMatcher(binaryOperator(
-                                        hasOperatorName("<->"), 
-                                        hasParent(exprWithCleanups(hasParent(compoundStmt(hasParent(functionDecl(hasName("main")))))))
-                                        ).bind("dac_expr"), &HandleForDac);
+        Matcher.addMatcher(binaryOperator(hasOperatorName("<->")).bind("dac_expr"), &HandleForDac);
         Matcher.addMatcher(functionDecl(hasName("main")).bind("main"), &HandleForDac);
     }
 
@@ -107,28 +116,25 @@ public:
 
     void EndSourceFileAction() override {
         dacppTranslator::Rewriter* rewriter = new dacppTranslator::Rewriter();
-
         rewriter->setRewriter(clangRewriter);
-
         rewriter->setDacppFile(dacppFile);
-
+        dacppTranslator::printDacppFileInfo(dacppFile);
         rewriter->rewriteDac();
 
-        // this will output to screen as what you got.
+        /*
+        this will output to screen as what you got.
         clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID())
             .write(llvm::outs());
+        */
         
-        /*
         // 生成 SYCL 文件
         std::error_code error_code;
-        std::string fileName = getCurrentFile().str();
-        int pos = fileName.find("dacpp/");
-        fileName.replace(pos, fileName.size() - pos + 1, "sycl/" + fileName.substr(pos + 10));
-        llvm::raw_fd_ostream outFile(fileName, error_code, llvm::sys::fs::F_None);
+        std::string file = getCurrentFile().str();
+        file.replace(file.find(".cpp"), 4, "_sycl.cpp");
+        llvm::raw_fd_ostream outFile(file, error_code, llvm::sys::fs::F_None);
         // this will write the result to outFile
-        rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID()).write(outFile);
+        clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID()).write(outFile);
         outFile.close();
-        */
   }
 
 };
