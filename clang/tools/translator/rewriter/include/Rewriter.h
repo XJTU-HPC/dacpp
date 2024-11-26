@@ -15,7 +15,6 @@ private:
     clang::Rewriter* rewriter;
     DacppFile* dacppFile;
 
-    void addSplit(std::vector<std::vector<int>>& shapes, std::vector<std::vector<Split*>>& splits, Expression* expr);
     int* calcDeviceMem(Expression* expr);
     std::string getDacExpr(Expression* expr);
     std::string generateCalc(std::string code, Expression* expr) {
@@ -55,7 +54,11 @@ private:
         return code;
     }
 
-public:   
+public:
+    void addSplit(std::vector<std::vector<int>>& shapes, std::vector<std::vector<Split*>>& splits,
+                  Expression* expr);
+    std::string generateChildExpr(Expression* expr);
+    std::string generateSyclFunc(Expression* expr);
 
     void setRewriter(clang::Rewriter* rewriter);
 
