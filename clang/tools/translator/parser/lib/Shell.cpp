@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "clang/AST/AST.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 
 #include "ASTParse.h"
 #include "Param.h"
@@ -173,19 +174,12 @@ FunctionDecl* dacppTranslator::Shell::getShellLoc() {
     return shellLoc;
 }
 
-struct Visitor : DeclPrinter {
-    ASTContext &Context;
+struct Visitor : RecursiveASTVisitor<Visitor> {
     dacppTranslator::Shell *sh;
-    PrinterHelper *helper;
-    const PrintingPolicy &Policy;
-    raw_ostream &os;
     const BinaryOperator* dacExpr;
   
-    Visitor(dacppTranslator::Shell *sh, const BinaryOperator* dacExpr, raw_ostream &os, PrinterHelper *helper,
-                const PrintingPolicy &Policy, unsigned Indentation = 0,
-                StringRef NL = "\n", ASTContext *Context = nullptr)
-        : DeclPrinter(os, helper, Policy, *Context, Indentation, NL), Context(*Context)
-        , sh(sh), helper(helper), Policy(Policy), os(os), dacExpr(dacExpr) {}
+    Visitor(dacppTranslator::Shell *sh, const BinaryOperator* dacExpr)
+        : sh(sh), dacExpr(dacExpr) {}
 
     Expr *ignoreImplicitSemaNodes(Expr *Node) {
         Expr *E = Node;
@@ -203,18 +197,18 @@ struct Visitor : DeclPrinter {
         return E;
     }
 
-    void VisitVarDecl(VarDecl *D) override;
-    void VisitCallExpr(CallExpr *Call) override;
+    bool VisitVarDecl(VarDecl *D);
+    bool VisitCallExpr(CallExpr *Call);
 };
 
-void Visitor::VisitCallExpr(CallExpr *Call) {
+bool Visitor::VisitCallExpr(CallExpr *Call) {
   std::string TempString;
   llvm::raw_string_ostream SS(TempString);
   unsigned i, e;
   int v1 = -1,v2 = -1;
   std::string offset1, offset2;
 
-  Call->getCallee()->printPretty(SS, nullptr, Policy);
+  Call->getCallee()->printPretty(SS, nullptr, PrintingPolicy(LangOptions()));
   /* 如果是一个binding函数，就进行解析。  */
   if (!strcmp(SS.str().c_str(), "binding")) {
     for (i = 0, e = Call->getNumArgs(); i != e; ++i) {
@@ -244,7 +238,7 @@ void Visitor::VisitCallExpr(CallExpr *Call) {
               (i % 2 ? v2 : v1) = LocateVex (sh->G, DeclRef->getDecl());
             /* 加数/减数 */
             Buf << ' ' << getOperatorSpelling(OpCallExpr->getOperator()) << ' ';
-            OpCallExpr->getArg(1)->printPretty(Buf, nullptr, Policy);
+            OpCallExpr->getArg(1)->printPretty(Buf, nullptr, PrintingPolicy(LangOptions()));
           }
         }
       }
@@ -255,10 +249,10 @@ void Visitor::VisitCallExpr(CallExpr *Call) {
     /* 插入边 */
     InsertArc (sh->G, v1, v2, offset2.c_str());
   }
-  DeclPrinter::VisitCallExpr(Call);
+  return true;
 }
 
-void Visitor::VisitVarDecl (VarDecl *D)
+bool Visitor::VisitVarDecl (VarDecl *D)
 {
   VarDecl *curVarDecl = D;
   do
@@ -426,7 +420,7 @@ void Visitor::VisitVarDecl (VarDecl *D)
     }
   } while (0);
 
-  DeclPrinter::VisitVarDecl(D);
+  return true;
 }
 
 static int DFS(ALGraph *G, int v, int w, bool *visited, int t,
@@ -485,8 +479,7 @@ bool dacppTranslator::Shell::GetBindInfo(VNode *v, VNode *w,
 void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes) {
   std::string Msg;
   llvm::raw_string_ostream SS(Msg);
-  Visitor V(this, dacExpr, SS, nullptr, PrintingPolicy(LangOptions()), 0, "\n",
-            nullptr);
+    Visitor V (this, dacExpr);
 
   /*
       数据关联计算表达式节点为一个BinaryOperator节点
@@ -530,5 +523,5 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
 
     // 获取shell函数体
     Stmt* shellFuncBody = shellFunc->getBody();
-    V.Visit (shellFuncBody);
+    V.TraverseStmt (shellFuncBody);
 }
