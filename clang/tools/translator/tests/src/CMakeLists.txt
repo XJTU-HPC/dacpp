@@ -10,6 +10,7 @@ set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
 
 add_executable(blockMatMulTest blockMatMulTest.cpp)
 add_executable(blockMatMulTest2 blockMatMulTest2.cpp)
+add_executable(blockMatMulTest3 blockMatMulTest3.cpp)
 add_executable(matmulTest matmulTest.cpp)
 add_executable(packingTest DataReconstructorTest.cpp)
 add_executable(packingTest2 DataReconstructorTest2.cpp)
@@ -25,6 +26,9 @@ set_target_properties(blockMatMulTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
 set_target_properties(blockMatMulTest2 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+set_target_properties(blockMatMulTest3 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
 set_target_properties(matmulTest PROPERTIES
@@ -57,6 +61,7 @@ set_target_properties(bindIndexInitTest PROPERTIES
 
 target_link_libraries(blockMatMulTest DacppLib RewriterLib)
 target_link_libraries(blockMatMulTest2 DacppLib RewriterLib)
+target_link_libraries(blockMatMulTest3 DacppLib RewriterLib)
 target_link_libraries(matmulTest DacppLib RewriterLib)
 target_link_libraries(packingTest DacppLib RewriterLib)
 target_link_libraries(packingTest2 DacppLib RewriterLib)
