@@ -507,7 +507,78 @@ void dacppTranslator::Rewriter::rewriteDac() {
                     }
                 }
             }
+        }//可能有问题
+        
+        // 判断是否需要添加算子
+        bool exop = 0;
+        1if(countIn > countOut)
+            exop = 1;
+        Dac_Ops ExOps;
+        
+        //添加算子
+        if(exop){
+            int CountExOp = 0;
+            std::set<std::string> setOut;
+            for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
+                ShellParam* shellParam = shell->getShellParam(shellParamIdx);
+                if(shellParam->getRw() == 1) {
+                    for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
+                        Split* split = shellParam->getSplit(splitIdx);
+                        if(setOut.count(split->getId()) == 1) {
+                            continue;
+                        }
+                        setOut.insert(split->getId());
+                    }
+                }
+            }
+            for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
+                ShellParam* shellParam = shell->getShellParam(shellParamIdx);
+                if(shellParam->getRw() == 0) {
+                    for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
+                        Split* split = shellParam->getSplit(splitIdx);
+                        if(setOut.count(split->getId()) == 1) {
+                            continue;
+                        }
+                        Dac_Op op = Dac_Op(split->getId(), split->getDimIdx(), splitIdx);//要改的
+                        /*通过 算子名称，算子划分数，算子作用的维度 创建算子. Dac_Op(std::string Name,int SplitSize,int dimId);*/
+                        op.setSplitLength(countOut);
+                        ExOps.push_back(op);
+                        setOut.insert(split->getId());
+                        CountExOp++;
+                    }
+                }
+            }
         }
+
+        std::vector<std::vector<int>> offset(shell->getNumShellParams(), std::vector<int>());
+        for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
+            ShellParam* shellParam = shell->getShellParam(shellParamIdx);
+            // 首先计算ShellParam中数据的数量
+            int count = 1;
+            for (int dim = 0; dim < shellParam->getDim(); dim++) {
+                count *= shellParam->getShape(dim);
+            }
+            for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
+                Split* sp = shellParam->getSplit(splitIdx);
+                // 规则分区
+                if (sp->type.compare("RegularSplit") == 0) {
+                    RegularSplit* rsp = static_cast<RegularSplit*>(sp);
+                    count = count / shellParam->getShape(rsp->getDimIdx()) * rsp->getSplitSize();
+                    offset[shellParamIdx].push_back(count);
+                }
+                // 降维
+                else if(sp->type.compare("IndexSplit") == 0) {
+                    IndexSplit* isp = static_cast<IndexSplit*>(sp);
+                    count = count / shellParam->getShape(isp->getDimIdx());
+                    offset[shellParamIdx].push_back(count);
+                }
+                // 保形
+                else {
+                    offset[shellParamIdx].push_back(count);
+                }
+            }
+        }
+
 
         // // 计算输入和输出划分数量
         // int countIn = 1;
@@ -662,8 +733,19 @@ void dacppTranslator::Rewriter::rewriteDac() {
                     length *= shellParam->getShape(idx);
                 }
                 */
-                op.setSplitLength(offset[j][k]);
+                if(shellParam->getRw() == 1 && exop == 1){
+                    op.setSplitLength(offset[j][k] * countIn / countOut);
+                }else{
+                    op.setSplitLength(offset[j][k]);
+                }
+
                 ops.push_back(op);
+            }
+            // code += "\ncountOut = " + std::to_string(countOut) + "\n";
+            // code += "\ncountIn = " + std::to_string(countIn) + "\n";
+            if(exop == 1 && shellParam->getRw() == 1 ){
+                for(int i = 0; i < ExOps.size; i++)
+                ops.push_back(ExOps[i]);
             }
             
             DacData temp = DacData("d_" + shellParam->getName(), shellParam->getDim(), ops);
