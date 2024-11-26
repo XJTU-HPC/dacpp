@@ -41,11 +41,11 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     int *reduction_matC = malloc_device<int>(16*2,q);
 
     // 算子初始化
-    RegularSlice si = RegularSlice("idx1", 2, 2);
+    RegularSlice si = RegularSlice("si", 2, 2);
 	si.SetSplitSize(2);
-	RegularSlice sj = RegularSlice("idx2", 2, 2);
+	RegularSlice sj = RegularSlice("sj", 2, 2);
 	sj.SetSplitSize(2);
-    RegularSlice sk = RegularSlice("idx3", 2, 2);
+    RegularSlice sk = RegularSlice("sk", 2, 2);
 	sk.SetSplitSize(2);
 
     // 数据划分重组
@@ -167,8 +167,9 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
 
     // 算子初始化
     Index i = Index("i");
+    Index i = Index("i");
 	i.SetSplitSize(2);
-	Index j = Index("i");
+	Index j = Index("j");
 	j.SetSplitSize(2);
     
     // 数据划分重组
@@ -267,7 +268,7 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     // matC.print();
 
     // 算子初始化
-    Index k = Index("idx6");
+    Index k = Index("k");
 	k.SetSplitSize(2);
 
     // 数据划分重组
