@@ -511,7 +511,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
         
         // 判断是否需要添加算子
         bool exop = 0;
-        1if(countIn > countOut)
+        if(countIn > countOut)
             exop = 1;
         Dac_Ops ExOps;
         
@@ -549,36 +549,6 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 }
             }
         }
-
-        std::vector<std::vector<int>> offset(shell->getNumShellParams(), std::vector<int>());
-        for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
-            ShellParam* shellParam = shell->getShellParam(shellParamIdx);
-            // 首先计算ShellParam中数据的数量
-            int count = 1;
-            for (int dim = 0; dim < shellParam->getDim(); dim++) {
-                count *= shellParam->getShape(dim);
-            }
-            for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
-                Split* sp = shellParam->getSplit(splitIdx);
-                // 规则分区
-                if (sp->type.compare("RegularSplit") == 0) {
-                    RegularSplit* rsp = static_cast<RegularSplit*>(sp);
-                    count = count / shellParam->getShape(rsp->getDimIdx()) * rsp->getSplitSize();
-                    offset[shellParamIdx].push_back(count);
-                }
-                // 降维
-                else if(sp->type.compare("IndexSplit") == 0) {
-                    IndexSplit* isp = static_cast<IndexSplit*>(sp);
-                    count = count / shellParam->getShape(isp->getDimIdx());
-                    offset[shellParamIdx].push_back(count);
-                }
-                // 保形
-                else {
-                    offset[shellParamIdx].push_back(count);
-                }
-            }
-        }
-
 
         // // 计算输入和输出划分数量
         // int countIn = 1;
