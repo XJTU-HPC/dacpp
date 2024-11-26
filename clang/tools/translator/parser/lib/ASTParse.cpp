@@ -52,4 +52,3 @@ bool dacppTranslator::inputOrOutput(std::string dataType) {
         return false;
     }
 }
-

@@ -55,5 +55,4 @@ bool inputOrOutput(std::string dataType);
 
 }
 
-
 #endif

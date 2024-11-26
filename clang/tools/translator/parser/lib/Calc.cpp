@@ -1,4 +1,4 @@
-#include <string>
+﻿#include <string>
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclFriend.h"

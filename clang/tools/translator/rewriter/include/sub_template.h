@@ -20,6 +20,11 @@ void replaceTextInString(std::string& text, const std::string &find, const std::
 */
 std::string templateString(std::string templ, std::vector<std::pair<std::string, std::string>> replacements);
 
+std::string CodeGen_DataAssocComp(std::string dataRecon, std::string H2DMemMove, std::string kernelExecute, std::string reduction, std::string D2HMemMove);
+
+std::string CodeGen_DAC2SYCL(std::string dacShellName, std::string dacShellParams, std::string deviceMemAlloc, std::string opInit, std::string dataAssocComp, std::string memFree);
+
+// aborted
 std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams,std::string opInit,std::string dataRecon,
 	std::string deviceMemAlloc,std::string H2DMemMove,std::string kernelExecute,std::string reduction,std::string D2HMemMove,std::string memFree);
 

@@ -34,7 +34,7 @@ class DacHandler : public MatchFinder::MatchCallback {
 public:
     DacHandler() {}
 
-    virtual void run(const MatchFinder::MatchResult &Result) {
+    virtual void run(const MatchFinder::MatchResult &Result) override {
         // 匹配数据关联计算表达式
         if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
             /*
@@ -118,7 +118,7 @@ public:
         dacppTranslator::Rewriter* rewriter = new dacppTranslator::Rewriter();
         rewriter->setRewriter(clangRewriter);
         rewriter->setDacppFile(dacppFile);
-        dacppTranslator::printDacppFileInfo(dacppFile);
+        //dacppTranslator::printDacppFileInfo(dacppFile);
         rewriter->rewriteDac();
 
         /*

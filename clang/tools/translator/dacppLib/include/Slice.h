@@ -1,4 +1,4 @@
-﻿#ifndef SLICE_H
+#ifndef SLICE_H
 #define SLICE_H
 
 #include <string>
@@ -86,6 +86,5 @@ void binding (RegularSplit, Index);
 void binding (RegularSplit, RegularSplit);
 
 } // namespace dacpp
-
 
 #endif

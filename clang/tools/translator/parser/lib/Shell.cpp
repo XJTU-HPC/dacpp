@@ -1,5 +1,7 @@
-#include <string>
+﻿#include <string>
+#include <iostream>
 
+#include "clang/AST/AST.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -478,41 +480,44 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
   llvm::raw_string_ostream SS(Msg);
     Visitor V (this, dacExpr);
 
-    /*
-        数据关联计算表达式节点为一个BinaryOperator节点
-        左值为CallExpr节点，表示shell函数调用
-        右值为DeclRefExpr，表示calc函数引用
-    */
-    Expr* dacExprLHS = dacExpr->getLHS();
-    CallExpr* shellCall = getNode<CallExpr>(dacExprLHS);
-    FunctionDecl* shellFunc = shellCall->getDirectCallee();
+  /*
+      数据关联计算表达式节点为一个BinaryOperator节点
+      左值为CallExpr节点，表示shell函数调用
+      右值为DeclRefExpr，表示calc函数引用
+  */
+  Expr *dacExprLHS = dacExpr->getLHS();
+  CallExpr *shellCall = getNode<CallExpr>(dacExprLHS);
+  FunctionDecl *shellFunc = shellCall->getDirectCallee();
 
-    // 设置 AST 中 Shell 节点的位置
-    setShellLoc(shellFunc);
+  // 设置 AST 中 Shell 节点的位置
+  setShellLoc(shellFunc);
 
-    // 设置 Shell 函数名称
-    setName(shellFunc->getNameAsString());
+  // 设置 Shell 函数名称
+  setName(shellFunc->getNameAsString());
 
-    // 设置 Shell 参数列表
-    for(unsigned int paramsCount = 0; paramsCount < shellFunc->getNumParams(); paramsCount++) {
-        Param* param = new Param();
+  // 设置 Shell 参数列表
+  for (unsigned int paramsCount = 0; paramsCount < shellFunc->getNumParams();
+       paramsCount++) {
+    Param *param = new Param();
 
-        // 获取参数读写属性
-        param->setRw(inputOrOutput(shellFunc->getParamDecl(paramsCount)->getType().getAsString()));
+    // 获取参数读写属性
+    param->setRw(inputOrOutput(
+        shellFunc->getParamDecl(paramsCount)->getType().getAsString()));
 
-        // 设置参数类型
-        std::string type = shellFunc->getParamDecl(paramsCount)->getType().getAsString();
-        param->setType(type);
-        
-        // 设置参数名称
-        param->setName(shellFunc->getParamDecl(paramsCount)->getNameAsString());
-        
-        // 设置参数形状
-        for(unsigned int i = 0; i < shapes[paramsCount].size(); i++) {
-            param->setShape(shapes[paramsCount][i]);
-        }
+    // 设置参数类型
+    std::string type =
+        shellFunc->getParamDecl(paramsCount)->getType().getAsString();
+    param->setType(type);
 
-        setParam(param);
+    // 设置参数名称
+    param->setName(shellFunc->getParamDecl(paramsCount)->getNameAsString());
+
+    // 设置参数形状
+    for (unsigned int i = 0; i < shapes[paramsCount].size(); i++) {
+      param->setShape(shapes[paramsCount][i]);
+    }
+
+    setParam(param);
     }
 
     // 获取shell函数体
