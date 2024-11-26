@@ -5,6 +5,8 @@
 #include<iostream>
 #include<fstream>
 #include<vector>
+#include <unordered_map>
+#include <set>
 #include"dacInfo.h"
 
 /*
@@ -47,7 +49,9 @@ std::string CodeGen_H2DMemMov(std::string type,std::string name,std::string size
 
 std::string CodeGen_KernelExecute(std::string SplitSize,std::string IndexInit,std::string CalcEmbed);
 
-std::string CodeGen_IndexInit(Dac_Ops ops);
+std::string CodeGen_IndexInit(Dac_Ops ops);//aborted
+
+std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vector<int> offsets);
 
 std::string CodeGen_CalcEmbed(std::string Name,Args args);
 

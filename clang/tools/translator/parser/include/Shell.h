@@ -7,9 +7,8 @@
 
 #include "clang/AST/AST.h"
 
-#include "Split.h"
 #include "Param.h"
-
+#include "Split.h"
 
 using namespace clang;
 
@@ -35,6 +34,7 @@ private:
 
 public:
     Shell();
+    ~Shell();
 
     void setName(std::string name);
     std::string getName();
@@ -58,9 +58,12 @@ public:
     FunctionDecl* getShellLoc();
 
     void parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes);
+    bool GetBindInfo(VNode *, VNode *, std::string*);
+
+    ALGraph *G;
 };
 
 
-}
+} // namespace dacppTranslator
 
 #endif

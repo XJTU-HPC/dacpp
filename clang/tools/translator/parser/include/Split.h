@@ -3,6 +3,9 @@
 
 #include <string>
 
+typedef struct ALGraph ALGraph;
+typedef struct VNode VNode;
+
 namespace dacppTranslator {
 
 /*
@@ -25,6 +28,8 @@ public:
 
     void setDimIdx(int dimIdx);
     int getDimIdx();
+
+    VNode *v;
 
 };
 
