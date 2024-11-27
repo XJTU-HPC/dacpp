@@ -282,7 +282,6 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 H2DMemMove += CodeGen_H2DMemMov(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[j]));
             }
         }
-
         // 索引初始化
         Dac_Ops ops;
         for(int count = 0; count < shell->getNumSplits(); count++) {
@@ -299,23 +298,25 @@ void dacppTranslator::Rewriter::rewriteDac() {
             }
         }
 
-        std::vector<std::string> sets(ops.size, "0");  // 存储每个节点所属的连通分量的ID
-        std::vector<std::string> bindoffset(ops.size, "0");  // 存储每个节点相对于其连通分量代表节点的偏移
+        std::vector<std::string> sets(shell->getNumSplits(), "0");  // 存储每个节点所属的连通分量的ID
+        std::vector<std::string> bindoffset(shell->getNumSplits(), "0");  // 存储每个节点相对于其连通分量代表节点的偏移
         int componentID = 1;                               // 连通分量的编号
         std::string s;                                     // 用于存储 GetBindInfo 的偏移量字符串
 
         for (int i = 0; i < shell->getNumSplits(); i++) {
-            Split* si = shell->getSplit(i);
+            if(shell->getSplit(i)->getId() == "void") { continue;}
+            Split* si = shell->getSplit(i);          
             if (sets[i] == "0") {                          // 如果当前节点还未分配连通分量
                 bindoffset[i] = "0";                       // 当前节点为代表节点，偏移为 "0"
-                sets[i] = "Component_" + std::to_string(componentID);  // 分配新的连通分量ID
+                sets[i] = "id" + std::to_string(componentID);  // 分配新的连通分量ID
                 componentID++;
             }
-
             for (int j = i + 1; j < shell->getNumSplits(); j++) {
                 Split* sj = shell->getSplit(j);
+                if(shell->getSplit(j)->getId() == "void") { continue;}
                 // 检查节点 i 和 j 是否属于同一连通分量
-                if (dacppTranslator::Shell::GetBindInfo(si->v, sj->v, &s)) {
+                if (shell->GetBindInfo(si->v, sj->v, &s)) {
+
                     int offset = std::stoi(bindoffset[i]) + std::stoi(s);  // 计算偏移量（整数运算）
                     bindoffset[j] = std::to_string(offset);               // 将结果转换为字符串存储
                     sets[j] = sets[i];                     // 将节点 j 分配到节点 i 的连通分量
@@ -324,6 +325,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
         }
 
         std::string IndexInit = CodeGen_IndexInit(ops,sets,bindoffset);
+        // std::string IndexInit = CodeGen_IndexInit(ops);
         // std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vector<int> offsets)//sets表示每个算子属于的集合的名字 offsets表示每个算子相对于集合的偏移量
 
         // 嵌入计算
