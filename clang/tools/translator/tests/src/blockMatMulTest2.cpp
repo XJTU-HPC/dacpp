@@ -6,6 +6,7 @@ int main(){
     std::string deviceMemAlloc = CodeGen_DeviceMemAlloc("int","matA", "16");
     deviceMemAlloc += CodeGen_DeviceMemAlloc("int","matB", "16");
     deviceMemAlloc += CodeGen_DeviceMemAlloc("int","matC", "16*2");
+	deviceMemAlloc += CodeGen_DeviceMemAllocReduction("int","matC", "16");
     // std::cout<<deviceMemAlloc;
     
     // 主机数据移动至设备
@@ -92,16 +93,15 @@ int main(){
 	std::string MemFree = CodeGen_MemFree("d_matA");
 	MemFree += CodeGen_MemFree("d_matB");
 	MemFree += CodeGen_MemFree("d_matC");
+
+	std::string dac = CodeGen_DataAssocComp(dataRecon, H2DMemMove, KernelExecute, Reduction, D2HMemMove);
+
 	std::string res = CodeGen_DAC2SYCL(
 		"blockMatMul",
 		"(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp::Tensor<int> &matC)",
-		opInit,
-		dataRecon,
 		deviceMemAlloc,
-		H2DMemMove,
-		KernelExecute,
-		Reduction,
-		D2HMemMove,
+		opInit,
+		dac,
 		MemFree);
 	std::cout<<res;
 }

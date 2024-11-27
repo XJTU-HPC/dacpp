@@ -4,10 +4,8 @@
 #include <memory>
 #include <vector>
 #include <iostream>
-#include <CL/sycl.hpp>
+
 #include "Slice.h"
-#include "Tensor_Sycl.hpp"
-#include "TensorException.hpp"
 
 namespace dacpp {
 
@@ -92,7 +90,6 @@ public:
         // int count = 1;
         // for(int i = 0; i < dim; i++) count *= shape[i];
         // if(count != size) {}
-        CHECK_TENSOR_SIZE(size, shape, dim);
 
         data_ = std::shared_ptr<ImplType>(new ImplType[size], std::default_delete<ImplType[]>());
         for(int idx = 0; idx < size; idx++) {
@@ -114,7 +111,6 @@ public:
         // int count = 1;
         // for(int i = 0; i < shape.size(); i++) count *= shape[i];
         // if(count != data.size()) {}
-        CHECK_TENSOR_SIZE(data.size(), shape.data(), shape.size());
 
         data_ = std::shared_ptr<ImplType>(new ImplType[data.size()], std::default_delete<ImplType[]>());
         for(int idx = 0; idx < data.size(); idx++) {
@@ -162,9 +158,9 @@ public:
     int getShape(int dimIdx) const {
         // 参数检查
         // if(dimIdx >= dim_) {}
+
         return shape_.get()[dimIdx]; 
     }
-
 
     int getStride(int dimIdx) const {
         return stride_.get()[dimIdx];
@@ -181,11 +177,6 @@ public:
     // 获得 Tensor 指定下标数据
     // indices：所有维度的下标组成的数组
     ImplType getData(int* indices) const {
-            
-        for (int idx = 0; idx < dim_; ++idx) {
-            CHECK_INDEX_BOUNDS(indices[idx], shape_.get()[idx]);
-        }
-
         int index = offset_;
         for(int idx = 0; idx < dim_; idx++) {
             index += indices[idx] * stride_.get()[idx];
@@ -193,67 +184,82 @@ public:
         return data_.get()[index];
     }
 
-    const ImplType* Tensor<ImplType>::get_data() const {
-        return data_.get();
-    }
-
     Tensor<ImplType> operator+(const Tensor<ImplType>& operand) const {
-        CHECK_SHAPE_MATCH(*this, operand);
-    
-        int size = getSize();
-        sycl::buffer<ImplType, 1> bufferA(getDataPtr(), sycl::range<1>(size));
-        sycl::buffer<ImplType, 1> bufferB(operand.getDataPtr().get(), sycl::range<1>(size));
-        return Tensor<ImplType>(sycl_add(bufferA,bufferB),getSize(),getShapePtr().get(),getDim());
-    }
-
-    Tensor<ImplType> operator-(const Tensor<ImplType>& operand) const {
-        CHECK_SHAPE_MATCH(*this, operand);
-
-        int size = getSize();
-        sycl::buffer<ImplType, 1> bufferA(getDataPtr(), sycl::range<1>(size));
-        sycl::buffer<ImplType, 1> bufferB(operand.getDataPtr().get(), sycl::range<1>(size));
-    
-        return Tensor<ImplType>(sycl_sub(bufferA, bufferB), getSize(), getShapePtr().get(), getDim());
-    }
-
-    Tensor<ImplType> operator*(const Tensor<ImplType>& other) const {
-
+        // // 参数检查
+        // if(dim_ != operand.getDim()) {}
+        // for(int i = 0; i < dim_; i++) {
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
+        // }
         if(dim_ == 0) {
             int* indices = new int[1];
             indices[0] = 0;
-            ImplType tmp = data_.get()[offset_] * other.getData(indices);
+            ImplType tmp = data_.get()[offset_] + operand.getData(indices);
             delete[] indices;
             int* a = new ImplType[1];
             a[0] = tmp;
             return Tensor(a, 1, nullptr, 0);
         }
         else if(dim_ == 1) {
-            int result_rows = getShapePtr().get()[0];  
-            int result_cols = other.getShapePtr().get()[1];  
-            int common_dim = getShapePtr().get()[1];  
-            int shape[] = {result_rows, result_cols};  // 形状数组
 
-            ImplType* result_data(new ImplType[result_rows * result_cols]);
-            // 进行矩阵乘法
-            MatrixMultiplySYCL_1D(getDataPtr().get(), other.getDataPtr().get(), result_data, result_rows, common_dim, result_cols);
-
-            Tensor<ImplType> result(result_data, result_rows * result_cols, shape, 2);
-            return result;
         }
         else if(dim_ == 2) {
-            CHECK_MATRIX_MULTIPLY_COMPATIBLE(*this,other);
 
-            int result_rows = getShapePtr().get()[0];  
-            int result_cols = other.getShapePtr().get()[1];  
-            int common_dim = getShapePtr().get()[1];  
-            int shape[] = {result_rows, result_cols};  // 形状数组
+        }
+        else {
 
-            ImplType* result_data(new ImplType[result_rows * result_cols]);
-            // 进行矩阵乘法
-            // MatrixMultiplySYCL(getDataPtr().get(), other.getDataPtr().get(), result_data, result_rows, common_dim, result_cols);
-            StrassenMatrixMultiplySYCL(getDataPtr().get(), other.getDataPtr().get(), result_data, result_rows, common_dim, result_cols);
-            Tensor<ImplType> result(result_data, result_rows * result_cols, shape, 2);
-            return result;
+        }
+    }
+
+    // Tensor<ImplType> operator+(ImplType> operand) const {
+
+    // }
+
+    Tensor<ImplType> operator-(const Tensor<ImplType>& operand) const {
+        // // 参数检查
+        // if(dim_ != operand.getDim()) {}
+        // for(int i = 0; i < dim_; i++) {
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
+        // }
+        if(dim_ == 0) {
+            int* indices = new int[1];
+            indices[0] = 0;
+            ImplType tmp = data_.get()[offset_] - operand.getData(indices);
+            delete[] indices;
+            int* a = new ImplType[1];
+            a[0] = tmp;
+            return Tensor(a, 1, nullptr, 0);
+        }
+        else if(dim_ == 1) {
+
+        }
+        else if(dim_ == 2) {
+
+        }
+        else {
+
+        }
+    }
+
+    Tensor<ImplType> operator*(const Tensor<ImplType>& operand) const {
+        // // 参数检查
+        // if(dim_ != operand.getDim()) {}
+        // for(int i = 0; i < dim_; i++) {
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
+        // }
+        if(dim_ == 0) {
+            int* indices = new int[1];
+            indices[0] = 0;
+            ImplType tmp = data_.get()[offset_] * operand.getData(indices);
+            delete[] indices;
+            int* a = new ImplType[1];
+            a[0] = tmp;
+            return Tensor(a, 1, nullptr, 0);
+        }
+        else if(dim_ == 1) {
+
+        }
+        else if(dim_ == 2) {
+
         }
         else {
 
@@ -261,44 +267,170 @@ public:
     }
 
     Tensor<ImplType> operator/(const Tensor<ImplType>& operand) const {
-        CHECK_SHAPE_MATCH(*this, operand);
+        // // 参数检查
+        // if(dim_ != operand.getDim()) {}
+        // for(int i = 0; i < dim_; i++) {
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
+        // }
+        if(dim_ == 0) {
+            int* indices = new int[1];
+            indices[0] = 0;
+            ImplType tmp = data_.get()[offset_] / operand.getData(indices);
+            delete[] indices;
+            int* a = new ImplType[1];
+            a[0] = tmp;
+            return Tensor(a, 1, nullptr, 0);
+        }
+        else if(dim_ == 1) {
 
-        int size = getSize();
-        sycl::buffer<ImplType, 1> bufferA(getDataPtr(), sycl::range<1>(size));
-        sycl::buffer<ImplType, 1> bufferB(operand.getDataPtr().get(), sycl::range<1>(size));
+        }
+        else if(dim_ == 2) {
 
-        return Tensor<ImplType>(sycl_div(bufferA, bufferB), getSize(), getShapePtr().get(), getDim());
+        }
+        else {
+
+        }
     }
 
     Tensor<ImplType> operator%(const Tensor<ImplType>& operand) const {
-        CHECK_SHAPE_MATCH(*this, operand);
+        // // 参数检查
+        // if(dim_ != operand.getDim()) {}
+        // for(int i = 0; i < dim_; i++) {
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
+        // }
+        if(dim_ == 0) {
+            int* indices = new int[1];
+            indices[0] = 0;
+            ImplType tmp = data_.get()[offset_] % operand.getData(indices);
+            delete[] indices;
+            int* a = new ImplType[1];
+            a[0] = tmp;
+            return Tensor(a, 1, nullptr, 0);
+        }
+        else if(dim_ == 1) {
 
-        int size = getSize();
-        sycl::buffer<ImplType, 1> bufferA(getDataPtr(), sycl::range<1>(size));
-        sycl::buffer<ImplType, 1> bufferB(operand.getDataPtr().get(), sycl::range<1>(size));
+        }
+        else if(dim_ == 2) {
 
-        return Tensor<ImplType>(sycl_modulo(bufferA, bufferB), getSize(), getShapePtr().get(), getDim());
+        }
+        else {
+
+        }
     }
 
     void operator+=(const Tensor<ImplType>& operand) {
-        *this = *this + operand;
+        // // 参数检查
+        // if(dim_ != operand.getDim()) {}
+        // for(int i = 0; i < dim_; i++) {
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
+        // }
+        if(dim_ == 0) {
+            int* indices = new int[1];
+            indices[0] = 0;
+            data_.get()[offset_] += operand.getData(indices);
+            delete[] indices;
+        }
+        else if(dim_ == 1) {
+
+        }
+        else if(dim_ == 2) {
+
+        }
+        else {
+
+        }
     }
 
     void operator-=(const Tensor<ImplType>& operand) {
-        *this = *this - operand;
+        // // 参数检查
+        // if(dim_ != operand.getDim()) {}
+        // for(int i = 0; i < dim_; i++) {
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
+        // }
+        if(dim_ == 0) {
+            int* indices = new int[1];
+            indices[0] = 0;
+            data_.get()[offset_] -= operand.getData(indices);
+            delete[] indices;
+        }
+        else if(dim_ == 1) {
+
+        }
+        else if(dim_ == 2) {
+
+        }
+        else {
+
+        }
     }
 
- 
-    Tensor<ImplType> Tensor<ImplType>::operator*=(const Tensor<ImplType>& operand) const {
-        *this = *this * operand;
+    void operator*=(const Tensor<ImplType>& operand) {
+        // // 参数检查
+        // if(dim_ != operand.getDim()) {}
+        // for(int i = 0; i < dim_; i++) {
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
+        // }
+        if(dim_ == 0) {
+            int* indices = new int[1];
+            indices[0] = 0;
+            data_.get()[offset_] *= operand.getData(indices);
+            delete[] indices;
+        }
+        else if(dim_ == 1) {
+
+        }
+        else if(dim_ == 2) {
+
+        }
+        else {
+
+        }
     }
 
     void operator/=(const Tensor<ImplType>& operand) {
-        *this = *this / operand;
+        // // 参数检查
+        // if(dim_ != operand.getDim()) {}
+        // for(int i = 0; i < dim_; i++) {
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
+        // }
+        if(dim_ == 0) {
+            int* indices = new int[1];
+            indices[0] = 0;
+            data_.get()[offset_] /= operand.getData(indices);
+            delete[] indices;
+        }
+        else if(dim_ == 1) {
+
+        }
+        else if(dim_ == 2) {
+
+        }
+        else {
+
+        }
     }
 
     void operator%=(const Tensor<ImplType>& operand) {
-        *this = *this % operand;
+        // // 参数检查
+        // if(dim_ != operand.getDim()) {}
+        // for(int i = 0; i < dim_; i++) {
+        //     if(shape_.get()[i] != operand.getShape(i)) {}
+        // }
+        if(dim_ == 0) {
+            int* indices = new int[1];
+            indices[0] = 0;
+            data_.get()[offset_] %= operand.getData(indices);
+            delete[] indices;
+        }
+        else if(dim_ == 1) {
+
+        }
+        else if(dim_ == 2) {
+
+        }
+        else {
+
+        }
     }
 
     void operator=(const Tensor<ImplType>& operand) {
@@ -333,8 +465,6 @@ public:
         // 参数检查
         // if(dimIdx >= dim_ || idx >= shape_.get()[dimIdx]) {}
 
-        CHECK_SLICE(dimIdx, idx, 0, dim_, shape_);
-
         int offset = offset_ + idx * stride_.get()[dimIdx];
         int dim = dim_ - 1;
         std::shared_ptr<int> shape(new int[dim], std::default_delete<int[]>());
@@ -360,8 +490,6 @@ public:
     Tensor<ImplType> slice(int dimIdx, int start, int end, int sliceStride = 1) const {
         // 参数检查
         // if(dimIdx >= dim_ || start >= shape_.get()[dimIdx] || end > shape_.get()[dimIdx]) {}
-        
-        CHECK_SLICE(dimIdx, start, end, dim_, shape_);
 
         int offset = start * stride_.get()[dimIdx];
         int dim = dim_;
@@ -406,9 +534,6 @@ public:
         std::cout << "\n";
     }
 
-<<<<<<< HEAD:clang/tools/translator/dacppLib/Tensor.hpp
- 
-=======
     /**
      * 修改 Tensor 中的值
      * 
@@ -438,7 +563,6 @@ public:
     //     std::cout << "\n";
     // }
 
->>>>>>> zjx:clang/tools/translator/dacppLib/include/Tensor.hpp
 };
 
 } // namespace dacpp
