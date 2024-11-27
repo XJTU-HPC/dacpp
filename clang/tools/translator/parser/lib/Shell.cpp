@@ -273,7 +273,7 @@ bool Visitor::VisitVarDecl (VarDecl *D)
 
     // 解析降维算子
     if (curVarDecl->getType().getAsString().compare("dacpp::Index") == 0) {
-      dacppTranslator::IndexSplit *sp = new dacppTranslator::IndexSplit();
+      dacppTranslator::IndexSplit *sp = new dacppTranslator::IndexSplit(curVarDecl);
       sp->setId(curVarDecl->getNameAsString());
       sp->type = "IndexSplit";
       sh->setSplit(sp);
@@ -286,7 +286,7 @@ bool Visitor::VisitVarDecl (VarDecl *D)
     // 解析规则分区算子
     if (curVarDecl->getType().getAsString().compare("dacpp::RegularSplit") ==
         0) {
-      dacppTranslator::RegularSplit *sp = new dacppTranslator::RegularSplit();
+      dacppTranslator::RegularSplit *sp = new dacppTranslator::RegularSplit(curVarDecl);
       sp->setId(curVarDecl->getNameAsString());
       CXXConstructExpr *CCE =
           dacppTranslator::getNode<CXXConstructExpr>(curVarDecl->getInit());
@@ -353,7 +353,7 @@ bool Visitor::VisitVarDecl (VarDecl *D)
 
           if (vd->getType().getAsString().compare("dacpp::RegularSplit") == 0) {
             dacppTranslator::RegularSplit *sp =
-                new dacppTranslator::RegularSplit();
+                new dacppTranslator::RegularSplit(vd);
             sp->type = "RegularSplit";
             sp->setId(dacppTranslator::getNode<StringLiteral>(vd->getInit())
                           ->getString()
@@ -393,7 +393,7 @@ bool Visitor::VisitVarDecl (VarDecl *D)
             }
             shellParam->setSplit(sp);
           } else if (vd->getType().getAsString().compare("dacpp::Index") == 0) {
-            dacppTranslator::IndexSplit *sp = new dacppTranslator::IndexSplit();
+            dacppTranslator::IndexSplit *sp = new dacppTranslator::IndexSplit(vd);
             sp->type = "IndexSplit";
             sp->setId(dacppTranslator::getNode<StringLiteral>(vd->getInit())
                           ->getString()
@@ -411,7 +411,7 @@ bool Visitor::VisitVarDecl (VarDecl *D)
             shellParam->setSplit(sp);
           }
         } else {
-          dacppTranslator::Split *sp = new dacppTranslator::Split();
+          dacppTranslator::Split *sp = new dacppTranslator::Split(nullptr);
           sp->type = "Split";
           sp->setId("void");
           sp->setDimIdx(i);
@@ -471,6 +471,12 @@ void dacppTranslator::Shell::GetBindInfo(
     }
   }
   free(visited);
+}
+
+VNode * dacppTranslator::Shell::search_symbol(const clang::ValueDecl *u) 
+{
+  int ret = LocateVex(G, u);
+  return ret == -1 ? nullptr : GetVex (G, ret);
 }
 
 // 解析Shell节点，将解析到的信息存储到Shell类中
