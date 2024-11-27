@@ -34,7 +34,7 @@ class DacHandler : public MatchFinder::MatchCallback {
 public:
     DacHandler() {}
 
-    virtual void run(const MatchFinder::MatchResult &Result) override {
+    virtual void run(const MatchFinder::MatchResult &Result) {
         // 匹配数据关联计算表达式
         if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
             /*

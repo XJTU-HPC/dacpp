@@ -422,56 +422,52 @@ bool Visitor::VisitVarDecl (VarDecl *D)
   return true;
 }
 
-static int DFS(ALGraph *G, int v, int w, bool *visited, int t,
-               char **P) { 
-  /* 从第v个顶点出发递归地深度优先遍历图G。*/
-  ArcNode *p;
-  int result;
-  visited[v] = true; /* 设置访问标志为TRUE(已访问) */
-  for (p = G->vertices[v].firstarc; p; p = p->nextarc)
-    if (!visited[p->adjvex]) {
-      P[t] = p->offset;
-      if (w == p->adjvex)
-        return t + 1;
-      result = DFS(G, p->adjvex, w, visited, t + 1, P);
-      if (result)
-        return result; /* 对v的尚未访问的邻接点w递归调用DFS */
-    }
-  return 0;
-}
-
-/*
- * GetBindInfo
- *
- * 目的：
- *  计算两算子是否属于同一集合；获取两算子偏移量。
- *
- * 参数：
- *  v               算子1。
- *  w               算子2。
- *  pbindInfo       两算子偏移量。
- *
- * 返回值：
- *  bool            两算子是否属于同一集合。 若属于，则通过pbindInfo返回偏移量。
- */
-
-bool dacppTranslator::Shell::GetBindInfo(VNode *v, VNode *w,
-                                         std::string *pbindInfo) {
-  int result, i;
+void dacppTranslator::Shell::GetBindInfo(
+    std::vector<BINDINFO> *pbindInfo)
+{ /*按广度优先非递归遍历图G。使用辅助队列Q和访问标志数组visited。*/
   bool *visited;
-  char **p;
+  std::queue<BINDINFO *> Q;
+  int v;
+  BINDINFO bindinfo ;
+  std::string parent;
+  int icls = 0;
+  ArcNode *p;
+
+  pbindInfo->clear();
   visited = (bool *)malloc(sizeof(bool) * G->vexnum);
-  p = (char **)malloc(sizeof(char *) * G->vexnum);
   memset(visited, 0, sizeof(bool) * G->vexnum);
-  result = DFS(G, v->id, w->id, visited, 0, p);
-  if (result && pbindInfo) {
-    pbindInfo->clear();
-    for (i = 0; i < result; ++i)
-      (*pbindInfo) += p[i];
+  for(v=0;v<G->vexnum;v++) /* 如果是连通图,只v=0就遍历全图 */
+  {
+    if(!visited[v]) /* v尚未访问 */
+    {
+      icls++;
+      visited[v]=true;
+      bindinfo.icls = icls;
+      bindinfo.v = GetVex (G, v);
+      bindinfo.offset = "";
+      pbindInfo->push_back(bindinfo);
+      Q.push (&bindinfo);
+      while(!Q.empty()) /* 队列不空 */
+      {
+        bindinfo = *Q.front();
+        parent = bindinfo.offset;
+        Q.pop();
+        for (p = G->vertices[bindinfo.v->id].firstarc; p; p = p->nextarc)
+        {
+          if(!visited[p->adjvex]) /* 尚未访问的邻接顶点 */
+          {
+            visited[p->adjvex]=true;
+            bindinfo.icls = icls;
+            bindinfo.v = GetVex (G, p->adjvex);
+            bindinfo.offset = parent + p->offset;
+            pbindInfo->push_back(bindinfo);
+            Q.push (&bindinfo); /* 入队 */
+          }
+        }
+      }
+    }
   }
-  free(p);
   free(visited);
-  return result;
 }
 
 // 解析Shell节点，将解析到的信息存储到Shell类中
