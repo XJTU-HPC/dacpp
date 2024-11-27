@@ -1,8 +1,3 @@
-#include <set>
-#include <iostream>
-#include <sstream>
-#include <vector>
-
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "Rewriter.h"
 #include "Split.h"
@@ -10,6 +5,11 @@
 #include "dacInfo.h"
 #include "sub_template.h"
 #include "test.h"
+
+#include <set>
+#include <iostream>
+#include <sstream>
+#include <vector>
 
 void dacppTranslator::Rewriter::setRewriter(clang::Rewriter* rewriter) {
     this->rewriter = rewriter;
@@ -40,26 +40,31 @@ void dacppTranslator::Rewriter::addSplit(std::vector<std::vector<int>>& shapes, 
                     shapes[shellParamIdx][idx] = 1;
                 }
             }
-            Split* newSplit = new Split();
             if (split->type.compare("RegularSplit") == 0) {
+                RegularSplit* rsp2 = new RegularSplit();
                 RegularSplit* rsp1 = static_cast<RegularSplit*>(split);
-                RegularSplit* rsp2 = static_cast<RegularSplit*>(newSplit);
                 rsp2->type = "RegularSplit";
                 rsp2->setId(rsp1->getId());
                 rsp2->setSplitNumber(rsp1->getSplitNumber());
                 rsp2->setSplitSize(rsp1->getSplitSize());
                 rsp2->setSplitStride(rsp1->getSplitStride());
+                rsp2->setDimIdx(idx++);
+                splits[shellParamIdx].push_back(rsp2);
             }
             // 降维
             else if(split->type.compare("IndexSplit") == 0) {
+                IndexSplit* isp2 = new IndexSplit();
                 IndexSplit* isp1 = static_cast<IndexSplit*>(split);
-                IndexSplit* isp2 = static_cast<IndexSplit*>(newSplit);
                 isp2->type = "IndexSplit";
                 isp2->setId(isp1->getId());
                 isp2->setSplitNumber(isp1->getSplitNumber());
+                isp2->setDimIdx(idx++);
+                splits[shellParamIdx].push_back(isp2);
+            } else {
+                Split* newSplit = new Split();
+                newSplit->setDimIdx(idx++);
+                splits[shellParamIdx].push_back(newSplit);
             }
-            newSplit->setDimIdx(idx++);
-            splits[shellParamIdx].push_back(newSplit);
         }
     }
     Calc* calc = expr->getCalc();
@@ -72,7 +77,7 @@ void dacppTranslator::Rewriter::addSplit(std::vector<std::vector<int>>& shapes, 
  * 生成子数据关联表达式相关代码
  * 包括数据重排
  */
-std::string dacppTranslator::Rewriter::generateChildExpr(Expression* expr, Dac_Ops ops, std::vector<Dac_Ops> tensorsOps) {
+std::string dacppTranslator::Rewriter::generateChildExpr(Expression* ancestor, Expression* expr, Dac_Ops ops, std::vector<Dac_Ops> tensorsOps) {
     Shell* shell = expr->getShell();
 
     // 数据偏移
@@ -185,33 +190,40 @@ std::string dacppTranslator::Rewriter::generateChildExpr(Expression* expr, Dac_O
         }
     }
 
+    // 设备内存分配
+    std::string deviceMemAlloc = "";
+    for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
+        ShellParam* shellParam = shell->getShellParam(shellParamIdx);
+        if (shellParam->getRw() == 1) {
+            deviceMemAlloc += CodeGen_DeviceMemAllocReduction(shellParam->getBasicType(), shellParam->getName(), 
+                                                              std::to_string(mem[shellParamIdx]));
+        }
+    }
+
     // 数据重排
     std::string dataRecon = "";
     for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
         ShellParam* shellParam = shell->getShellParam(shellParamIdx);
-        std::string opPushBack = "";
+        std::string toolPushBack = "";
         for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
             Split* split = shellParam->getSplit(splitIdx);
             if (split->type.compare("Split") == 0) {
                 continue;
             }
-            opPushBack += CodeGen_OpPushBack2Tool(shellParam->getName(), split->getId(),
+            toolPushBack += CodeGen_OpPushBack2Tool(ancestor->getShell()->getShellParam(shellParamIdx)->getName(), split->getId(),
                                                  std::to_string(split->getDimIdx()), std::to_string(offset[shellParamIdx][splitIdx]));
         }
-        std::string dataOpsInit = CodeGen_DataOpsInit(shellParam->getName(), opPushBack);
-        dataRecon += CodeGen_DataReconstruct(shellParam->getBasicType(), shellParam->getName(),
-                                             std::to_string(mem[shellParamIdx]), dataOpsInit);
+        dataRecon += CodeGen_DataReconstructOpPush(ancestor->getShell()->getShellParam(shellParamIdx)->getName(), toolPushBack);
     }
 
     // 主机数据移动至设备
     // data host->device
-    std::string H2DMemMove = "";
+    std::string h2DMemMove = "";
     for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
         ShellParam* shellParam = shell->getShellParam(shellParamIdx);
-        H2DMemMove += CodeGen_H2DMemMov(shellParam->getBasicType(), shellParam->getName(), 
+        h2DMemMove += CodeGen_H2DMemMov(shellParam->getBasicType(), ancestor->getShell()->getShellParam(shellParamIdx)->getName(), 
                                         std::to_string(mem[shellParamIdx]));
     }
-    std::cout << H2DMemMove << "\n\n";
 
     // parallel_for中的索引
     std::string indexInit = "";
@@ -255,7 +267,7 @@ std::string dacppTranslator::Rewriter::generateChildExpr(Expression* expr, Dac_O
                 tensorsOps[shellParamIdx].push_back(s);
             }
         }
-        DacData d_tensor = DacData("d_" + shellParam->getName(), shellParam->getDim(), tensorsOps[shellParamIdx]);
+        DacData d_tensor = DacData("d_" + ancestor->getShell()->getShellParam(shellParamIdx)->getName(), shellParam->getDim(), tensorsOps[shellParamIdx]);
         args.push_back(d_tensor);
     }
 
@@ -264,10 +276,28 @@ std::string dacppTranslator::Rewriter::generateChildExpr(Expression* expr, Dac_O
     std::string calcEmbed = CodeGen_CalcEmbed(calc->getName(), args);
 	std::string kernelExecute = CodeGen_KernelExecute("64", indexInit, calcEmbed);
 
-    std::string dac = CodeGen_DataAssocComp(dataRecon, "", kernelExecute, "", "");
+    // 规约
+    std::string reduction = "";
+    for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
+        ShellParam* shellParam = shell->getShellParam(shellParamIdx);
+        if (shellParam->getRw() == 1) {
+            reduction += CodeGen_Reduction_Span("32", "2", "1", ancestor->getShell()->getShellParam(shellParamIdx)->getName(), shellParam->getBasicType(), "sycl::plus<>()");
+        }
+    }
+    
+    // data device->host
+    std::string d2HMemMove = "";
+    for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
+        ShellParam* shellParam = shell->getShellParam(shellParamIdx);
+        if (shellParam->getRw()) {
+            d2HMemMove += CodeGen_D2HMemMov(ancestor->getShell()->getShellParam(shellParamIdx)->getName(), shellParam->getBasicType(), std::to_string(mem[shellParamIdx]), false);
+        }
+    }
+
+    std::string dac = CodeGen_DataAssocComp(dataRecon, h2DMemMove, kernelExecute, reduction, d2HMemMove);
 
     for (int exprIdx = 0; exprIdx < calc->getNumExprs(); exprIdx++) {
-        dac += generateChildExpr(calc->getExpr(exprIdx), ops, tensorsOps);
+        dac += generateChildExpr(ancestor, calc->getExpr(exprIdx), ops, tensorsOps);
     }
 
     // 算子弹出
@@ -276,12 +306,12 @@ std::string dacppTranslator::Rewriter::generateChildExpr(Expression* expr, Dac_O
         ShellParam* shellParam = shell->getShellParam(shellParamIdx);
         std::string toolPopBack = "";
         for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
-            toolPopBack += CodeGen_OpPopFromTool(shellParam->getName());
+            toolPopBack += CodeGen_OpPopFromTool(ancestor->getShell()->getShellParam(shellParamIdx)->getName());
         }
-        dataReconReverse += CodeGen_DataReconstructOpPop(shellParam->getName(), toolPopBack);
+        dataReconReverse += CodeGen_DataReconstructOpPop(ancestor->getShell()->getShellParam(shellParamIdx)->getName(), toolPopBack);
     }
 
-    return dac + dataReconReverse;
+    return deviceMemAlloc + dac + dataReconReverse;
 }
 
 /**
@@ -498,6 +528,15 @@ std::string dacppTranslator::Rewriter::generateSyclFunc(Expression* expr) {
         }
     }
 
+    // 设备规约内存分配
+    for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
+        ShellParam* shellParam = shell->getShellParam(shellParamIdx);
+        if (shellParam->getRw() == 1) {
+            deviceMemAlloc += CodeGen_DeviceMemAllocReduction(shellParam->getBasicType(), shellParam->getName(), 
+                                                              std::to_string(deviceMem[shellParamIdx] / allIn * allOut * in / out));
+        }
+    }
+
     // 计算数据重排需要分配的空间
     int* mem = new int[shell->getNumShellParams()];
     // 数据关联表达式shellParam的形状，上一步获取所有算子时修改过，恢复回来
@@ -549,18 +588,17 @@ std::string dacppTranslator::Rewriter::generateSyclFunc(Expression* expr) {
         }
         std::string dataOpsInit = CodeGen_DataOpsInit(shellParam->getName(), opPushBack);
         dataRecon += CodeGen_DataReconstruct(shellParam->getBasicType(), shellParam->getName(),
-                                             std::to_string(mem[shellParamIdx]), dataOpsInit);
+                                             std::to_string(deviceMem[shellParamIdx]), dataOpsInit);
     }
 
     // 主机数据移动至设备
     // data host->device
-    std::string H2DMemMove = "";
+    std::string h2DMemMove = "";
     for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
         ShellParam* shellParam = shell->getShellParam(shellParamIdx);
-        H2DMemMove += CodeGen_H2DMemMov(shellParam->getBasicType(), shellParam->getName(), 
-                                        std::to_string(mem[shellParamIdx]));
+        h2DMemMove += CodeGen_H2DMemMov(shellParam->getBasicType(), shellParam->getName(), 
+                                        std::to_string(deviceMem[shellParamIdx]));
     }
-    std::cout << H2DMemMove << "\n\n";
 
     // parallel_for中的索引
     std::string indexInit = "";
@@ -582,108 +620,7 @@ std::string dacppTranslator::Rewriter::generateSyclFunc(Expression* expr) {
     }
     indexInit = CodeGen_IndexInit(ops);
 
-    // parallel_for中的计算
-    Args args = Args();
-    std::vector<Dac_Ops> tensorsOps(shell->getNumShellParams());
-    for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
-        ShellParam* shellParam = shell->getShellParam(shellParamIdx);
-        Dac_Ops tensorOps;
-        for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
-            Split* split = shellParam->getSplit(splitIdx);
-            if(split->type.compare("RegularSplit") == 0) {
-                RegularSplit* sp = static_cast<RegularSplit*>(split);
-                RegularSlice s = RegularSlice(sp->getId(), sp->getSplitSize(), sp->getSplitStride());
-                s.SetSplitSize(sp->getSplitNumber());
-                s.setDimId(sp->getDimIdx());
-                s.setSplitLength(offset[shellParamIdx][splitIdx]);
-                tensorOps.push_back(s);
-                tensorsOps.push_back(tensorOps);
-            }
-            else if(split->type.compare("IndexSplit") == 0) {
-                IndexSplit* sp = static_cast<IndexSplit*>(split);
-                Index s = Index(sp->getId());
-                s.SetSplitSize(sp->getSplitNumber());
-                s.setDimId(sp->getDimIdx());
-                s.setSplitLength(offset[shellParamIdx][splitIdx]);
-                tensorOps.push_back(s);
-                tensorsOps.push_back(tensorOps);
-            }
-        }
-        DacData d_tensor = DacData("d_" + shellParam->getName(), shellParam->getDim(), tensorOps);
-        args.push_back(d_tensor);
-    }
-
-    Calc* calc = expr->getCalc();
-
-    std::string calcEmbed = CodeGen_CalcEmbed(calc->getName(), args);
-	std::string kernelExecute = CodeGen_KernelExecute("64", indexInit, calcEmbed);
-
-    std::string dac = CodeGen_DataAssocComp(dataRecon, "", kernelExecute, "", "");
-
-    for (int exprIdx = 0; exprIdx < calc->getNumExprs(); exprIdx++) {
-        // dac += generateChildExpr(calc->getExpr(exprIdx), ops, tensorsOps);
-    }
-
-    // 设备内存释放
-    std::string memFree = "";
-    for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
-        ShellParam* shellParam = shell->getShellParam(shellParamIdx);
-        memFree += CodeGen_MemFree(shellParam->getName());
-    }
-
-    std::string syclFunc = CodeGen_DAC2SYCL(dacShellName, dacShellParams, deviceMemAlloc,
-                                       opInit, dac, memFree);
-    
-    return syclFunc;
-}
-
-void dacppTranslator::Rewriter::rewriteDac() {
-
-    std::string code = "";
-
-    // 添加头文件
-    for(int i = 0; i < dacppFile->getNumHeaderFile(); i++) {
-        code += "#include " + dacppFile->getHeaderFile(i)->getName() + "\n";
-    }
-    code += "\n";
-    
-    // 添加命名空间
-    for(int i = 0; i < dacppFile->getNumNameSpace(); i++) {
-        code += "using namespace " + dacppFile->getNameSpace(i)->getName() + ";\n";
-    }
-    code += "\n";
-    
-    // 添加数据关联表达式对应的划分结构和计算结构
-    for(int i = 0; i < dacppFile->getNumExpression(); i++) {
-        Expression* expr = dacppFile->getExpression(i);
-
-        code += generateSyclFunc(expr) + "\n";
-        
-        Shell* shell = expr->getShell();
-        Calc* calc = expr->getCalc();
-
-        // 删除原来的shell和calc
-        rewriter->RemoveText(shell->getShellLoc()->getSourceRange());
-        rewriter->RemoveText(calc->getCalcLoc()->getSourceRange());
-        
-        // TODO: 计算结构拆分
-        code += "void " + calc->getName() + "(";
-        for(int count = 0; count < calc->getNumParams(); count++) {
-            code += calc->getParam(count)->getBasicType() + "* " + calc->getParam(count)->getName();
-            if(count != calc->getNumParams() - 1) {
-                code += ", ";
-            }
-        }
-        code += ") \n";
-        for(int count = 0; count < calc->getNumBody(); count++) {
-            code += calc->getBody(count) + "\n";
-        }
-
-        // 插入新生成的sycl函数
-        rewriter->InsertText(dacppFile->getMainFuncLoc()->getBeginLoc(), code);
-    }
-        
-    //     // 判断是否需要添加算子
+    // // 判断是否需要添加算子
     //     bool exop = 0;
     //     if(countIn > countOut)
     //         exop = 1;
@@ -724,34 +661,124 @@ void dacppTranslator::Rewriter::rewriteDac() {
     //         }
     //     }
 
+    // parallel_for中的计算
+    Args args = Args();
+    std::vector<Dac_Ops> tensorsOps(shell->getNumShellParams());
+    for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
+        ShellParam* shellParam = shell->getShellParam(shellParamIdx);
+        Dac_Ops tensorOps;
+        for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
+            Split* split = shellParam->getSplit(splitIdx);
+            if(split->type.compare("RegularSplit") == 0) {
+                RegularSplit* sp = static_cast<RegularSplit*>(split);
+                RegularSlice s = RegularSlice(sp->getId(), sp->getSplitSize(), sp->getSplitStride());
+                s.SetSplitSize(sp->getSplitNumber());
+                s.setDimId(sp->getDimIdx());
+                s.setSplitLength(offset[shellParamIdx][splitIdx]);
+                tensorOps.push_back(s);
+                tensorsOps.push_back(tensorOps);
+            }
+            else if(split->type.compare("IndexSplit") == 0) {
+                IndexSplit* sp = static_cast<IndexSplit*>(split);
+                Index s = Index(sp->getId());
+                s.SetSplitSize(sp->getSplitNumber());
+                s.setDimId(sp->getDimIdx());
+                s.setSplitLength(offset[shellParamIdx][splitIdx]);
+                tensorOps.push_back(s);
+                tensorsOps.push_back(tensorOps);
+            }
+        }
+        DacData d_tensor = DacData("d_" + shellParam->getName(), shellParam->getDim(), tensorOps);
+        args.push_back(d_tensor);
+    }
 
+    Calc* calc = expr->getCalc();
 
-    //     std::string H2DMemMove = "";
-    //     for(int j = 0; j < shell->getNumShellParams(); j++) {
-    //         ShellParam* shellParam = shell->getShellParam(j);
-    //         H2DMemMove += CodeGen_H2DMemMov(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[j]));
-    //     }
+    std::string calcEmbed = CodeGen_CalcEmbed(calc->getName(), args);
+	std::string kernelExecute = CodeGen_KernelExecute(std::to_string(allOut), indexInit, calcEmbed);
 
-    //     // 归约结果返回
-    //     std::string reduction = "";
-    //     for(int j = 0; j < shell->getNumShellParams(); j++) {
-    //         ShellParam* shellParam = shell->getShellParam(j);
-    //         if(shellParam->getRw() == 1 && countIn != countOut) {
-    //             std::string ReductionRule = "sycl::plus<>()";
-    //             reduction += CodeGen_Reduction_Span(std::to_string(mem[j]), std::to_string(countIn / countOut),
-    //                                                 std::to_string(countIn), shellParam->getName(), 
-    //                                                 shellParam->getBasicType(), ReductionRule);
-    //         }
-    //     }
-    //     // 归并结果返回
-    //     std::string D2HMemMove = "";
-    //     for(int j = 0; j < shell->getNumShellParams(); j++) {
-    //         ShellParam* shellParam = shell->getShellParam(j);
-    //         if(shellParam->getRw() == 1) {
-    //             D2HMemMove += CodeGen_D2HMemMov(shellParam->getName(), shellParam->getBasicType(), std::to_string(mem[j]), false);
-    //         }
-    //     }
-    // }
+    // 规约
+    std::string reduction = "";
+    for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
+        ShellParam* shellParam = shell->getShellParam(shellParamIdx);
+        if (shellParam->getRw() == 1) {
+            reduction += CodeGen_Reduction_Span(std::to_string(mem[shellParamIdx]), "2", "1", shellParam->getName(), shellParam->getBasicType(), "sycl::plus<>()");
+        }
+    }
+    
+    // data device->host
+    std::string d2HMemMove = "";
+    for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
+        ShellParam* shellParam = shell->getShellParam(shellParamIdx);
+        if (shellParam->getRw() == 1) {
+            d2HMemMove += CodeGen_D2HMemMov(shellParam->getName(), shellParam->getBasicType(), std::to_string(mem[shellParamIdx]), false);
+        }
+    }
+
+    std::string dac = CodeGen_DataAssocComp(dataRecon, h2DMemMove, kernelExecute, reduction, d2HMemMove);
+
+    for (int exprIdx = 0; exprIdx < calc->getNumExprs(); exprIdx++) {
+        dac += generateChildExpr(expr, calc->getExpr(exprIdx), ops, tensorsOps);
+    }
+
+    // 设备内存释放
+    std::string memFree = "";
+    for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
+        ShellParam* shellParam = shell->getShellParam(shellParamIdx);
+        memFree += CodeGen_MemFree(shellParam->getName());
+    }
+
+    std::string syclFunc = CodeGen_DAC2SYCL(dacShellName, dacShellParams, deviceMemAlloc,
+                                       opInit, dac, memFree);
+    
+    return syclFunc;
+}
+
+void dacppTranslator::Rewriter::rewriteDac() {
+
+    std::string code = "";
+
+    // 添加头文件
+    for(int i = 0; i < dacppFile->getNumHeaderFile(); i++) {
+        code += "#include " + dacppFile->getHeaderFile(i)->getName() + "\n";
+    }
+    code += "\n";
+    
+    // 添加命名空间
+    for(int i = 0; i < dacppFile->getNumNameSpace(); i++) {
+        code += "using namespace " + dacppFile->getNameSpace(i)->getName() + ";\n";
+    }
+    code += "\n";
+    
+    // 添加数据关联表达式对应的划分结构和计算结构
+    for(int i = 0; i < dacppFile->getNumExpression(); i++) {
+        Expression* expr = dacppFile->getExpression(i);
+
+        Shell* shell = expr->getShell();
+        Calc* calc = expr->getCalc();
+
+        // TODO: 计算结构拆分
+        code += "void " + calc->getName() + "(";
+        for(int count = 0; count < calc->getNumParams(); count++) {
+            code += calc->getParam(count)->getBasicType() + "* " + calc->getParam(count)->getName();
+            if(count != calc->getNumParams() - 1) {
+                code += ", ";
+            }
+        }
+        code += ") \n";
+        for(int count = 0; count < calc->getNumBody(); count++) {
+            code += calc->getBody(count) + "\n";
+        }
+
+        code += generateSyclFunc(expr) + "\n\n";
+
+        // 删除原来的shell和calc
+        rewriter->RemoveText(shell->getShellLoc()->getSourceRange());
+        rewriter->RemoveText(calc->getCalcLoc()->getSourceRange());
+
+        // 插入新生成的sycl函数
+        rewriter->InsertText(dacppFile->getMainFuncLoc()->getBeginLoc(), code);
+    }
 }
 
 /*

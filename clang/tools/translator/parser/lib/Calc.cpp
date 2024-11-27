@@ -3294,7 +3294,7 @@ void DeclPrinter::VisitImplicitCastExpr(ImplicitCastExpr *Node) {
 void DeclPrinter::VisitBinaryOperator(BinaryOperator *Node) {
 /****************************************************************************/
   if (Node->getOpcode() == BO_LMG) {
-    calc->body.push_back("Expression");
+    Out << "@Expression";
     std::vector<std::vector<int>> shapes(calc->getNumParams(),
                                          std::vector<int>());
     for (int paramCount = 0; paramCount < calc->getNumParams(); paramCount++) {

@@ -61,7 +61,7 @@ public:
     void addSplit(std::vector<std::vector<int>>& shapes, std::vector<std::vector<Split*>>& splits,
                   Expression* expr);
     
-    std::string generateChildExpr(Expression* expr, Dac_Ops index, std::vector<Dac_Ops> tensorOps);
+    std::string generateChildExpr(Expression* ancestor, Expression* expr, Dac_Ops index, std::vector<Dac_Ops> tensorOps);
     
     std::string generateSyclFunc(Expression* expr);
 
