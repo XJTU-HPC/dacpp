@@ -49,8 +49,8 @@ int main(){
     Dac_Ops vecB2_ops;
 	DacData d_vecB2 = DacData("d_vecB2",1,vecB2_ops);
 
-	Dac_Ops d_dotProduct2;
-	DacData d_dotProduct2 = DacData("d_dotProduct2",2,d_dotProduct2);
+	Dac_Ops d_dotProduct2_ops;
+	DacData d_dotProduct2 = DacData("d_dotProduct2",2,d_dotProduct2_ops);
 
 
 
