@@ -42,7 +42,8 @@ double exact(double x, double t) {
 shell dacpp::list PDE(const dacpp::Tensor<int> u_kin, dacpp::Tensor<int> & u_kout,const dacpp::Tensor<int> r) {
     dacpp::Index idx1("idx1");
     dacpp::RegularSplit S1("S1",3,1);
-    //这里一一对应，都用S1
+    //这里一 一对应，都用S1
+
     dacpp::list dataList{u_kin[{S1}][{}], u_kout[{idx1}],r[{}]};
     return dataList;
 }
