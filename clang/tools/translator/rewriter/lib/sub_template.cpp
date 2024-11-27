@@ -335,7 +335,7 @@ std::string CodeGen_IndexInit(Dac_Ops ops)
 	return expression;
 }
 
-std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vector<int> offsets)//sets表示每个算子属于的集合的名字 offsets表示每个算子相对于集合的偏移量
+std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vector<std::string> offsets)//sets表示每个算子属于的集合的名字 offsets表示每个算子相对于集合的偏移量
 { 
     std::set<std::string> sets_map;//用于辅助找到不同的集合的个数
     std::vector<std::string> sets_order;//记录了不同的集合出现的顺序，储存集合的名字： idx idy idz
@@ -369,7 +369,7 @@ std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vec
     {
         std::string index_expression = "(";
         index_expression = index_expression + sets_sub_expression[sets[i]];//得到集合的索引
-        index_expression = index_expression + "+" + "(" + std::to_string(offsets[i]) + ")" + "+" + std::to_string(ops[i].split_size) + ")";//加上偏移量和划分数 防止出现负数
+        index_expression = index_expression + "+" + "(" + offsets[i] + ")" + "+" + std::to_string(ops[i].split_size) + ")";//加上偏移量和划分数 防止出现负数
 		index_expression = index_expression + "%" + std::to_string(ops[i].split_size);//偏移之后再取模
         ops[i].setExp(index_expression);
     }
@@ -399,7 +399,13 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 			if(j!=args[i].ops.size-1) IndexComb+="+";
 		}
 		IndexComb+=")";
-		DacCalcArgs+=args[i].name + "+" + IndexComb;
+		if(IndexComb == "()")
+		{
+			DacCalcArgs+=args[i].name;
+		}
+		else{
+			DacCalcArgs+=args[i].name + "+" + IndexComb;
+		}		
 		if(i==len-1){
 			DacCalcArgs+=");";
 		}
