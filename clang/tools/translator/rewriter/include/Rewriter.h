@@ -5,6 +5,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "DacppStructure.h"
 #include "Param.h"
+#include "sub_template.h"
 
 #include <string>
 
@@ -15,8 +16,6 @@ private:
     clang::Rewriter* rewriter;
     DacppFile* dacppFile;
 
-    int* calcDeviceMem(Expression* expr);
-    std::string getDacExpr(Expression* expr);
     std::string generateCalc(std::string code, Expression* expr) {
         Calc* calc = expr->getCalc();
         // 计算结构
@@ -55,14 +54,16 @@ private:
     }
 
 public:
-    void addSplit(std::vector<std::vector<int>>& shapes, std::vector<std::vector<Split*>>& splits,
-                  Expression* expr);
-    std::string generateChildExpr(Expression* expr);
-    std::string generateSyclFunc(Expression* expr);
-
     void setRewriter(clang::Rewriter* rewriter);
 
     void setDacppFile(DacppFile* dacppFile);
+
+    void addSplit(std::vector<std::vector<int>>& shapes, std::vector<std::vector<Split*>>& splits,
+                  Expression* expr);
+    
+    std::string generateChildExpr(Expression* expr, Dac_Ops index, std::vector<Dac_Ops> tensorOps);
+    
+    std::string generateSyclFunc(Expression* expr);
 
     void rewriteDac();
 

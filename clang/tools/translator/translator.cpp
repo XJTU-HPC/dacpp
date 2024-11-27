@@ -118,14 +118,12 @@ public:
         dacppTranslator::Rewriter* rewriter = new dacppTranslator::Rewriter();
         rewriter->setRewriter(clangRewriter);
         rewriter->setDacppFile(dacppFile);
-        dacppTranslator::printDacppFileInfo(dacppFile);
+        // dacppTranslator::printDacppFileInfo(dacppFile);
         rewriter->rewriteDac();
 
-        /*
-        this will output to screen as what you got.
-        clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID())
-            .write(llvm::outs());
-        */
+        // // this will output to screen as what you got.
+        // clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID())
+        //     .write(llvm::outs());
         
         // 生成 SYCL 文件
         std::error_code error_code;
