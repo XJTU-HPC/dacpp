@@ -18,6 +18,12 @@ namespace dacppTranslator {
 
 class Expression;
 
+typedef struct _tagBINDINFO
+    {
+    int icls;
+    VNode *v;
+    std::string offset;
+    } 	BINDINFO;
 
 /**
  * 存储划分结构信息
@@ -58,7 +64,7 @@ public:
     FunctionDecl* getShellLoc();
 
     void parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes);
-    bool GetBindInfo(VNode *, VNode *, std::string*);
+    void GetBindInfo(std::vector<BINDINFO> *pbindInfo) ;
 
     ALGraph *G;
 };
