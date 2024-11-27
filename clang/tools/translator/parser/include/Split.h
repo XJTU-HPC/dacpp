@@ -1,7 +1,6 @@
 #ifndef TRANSLATOR_PARSER_SPLIT_H
 #define TRANSLATOR_PARSER_SPLIT_H
 
-# include "clang/AST/Decl.h"
 #include <string>
 
 typedef struct ALGraph ALGraph;
@@ -20,9 +19,9 @@ private:
 
 public:
     std::string type;
-    Split(clang::ValueDecl *D);
+    Split();
     virtual ~Split() {}
-    Split(clang::ValueDecl *D, std::string id, int dimIdx);
+    Split(std::string id, int dimIdx);
 
     void setId(std::string id);
     std::string getId();
@@ -31,7 +30,6 @@ public:
     int getDimIdx();
 
     VNode *v;
-    clang::ValueDecl *D;
 
 };
 
@@ -44,8 +42,8 @@ private:
     int splitNumber; // 划分总份数
 
 public:
-    IndexSplit(clang::ValueDecl *D);
-    IndexSplit(clang::ValueDecl *D, std::string id, int dimIdx, int splitNumber);
+    IndexSplit();
+    IndexSplit(std::string id, int dimIdx, int splitNumber);
 
     void setSplitNumber(int splitNumber);
     int getSplitNumber();
@@ -63,8 +61,8 @@ private:
     int splitNumber; // 划分总份数
 
 public:
-    RegularSplit(clang::ValueDecl *D ) ;
-    RegularSplit(clang::ValueDecl *D, std::string id, int dimIdx, int splitSize, int splitStride, int splitNumber);
+    RegularSplit();
+    RegularSplit(std::string id, int dimIdx, int splitSize, int splitStride, int splitNumber);
 
     void setSplitSize(int splitSize);
     int getSplitSize();
