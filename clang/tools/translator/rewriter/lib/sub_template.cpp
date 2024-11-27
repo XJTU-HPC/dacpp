@@ -399,7 +399,13 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 			if(j!=args[i].ops.size-1) IndexComb+="+";
 		}
 		IndexComb+=")";
-		DacCalcArgs+=args[i].name + "+" + IndexComb;
+		if(IndexComb == "()")
+		{
+			DacCalcArgs+=args[i].name;
+		}
+		else{
+			DacCalcArgs+=args[i].name + "+" + IndexComb;
+		}		
 		if(i==len-1){
 			DacCalcArgs+=");";
 		}
