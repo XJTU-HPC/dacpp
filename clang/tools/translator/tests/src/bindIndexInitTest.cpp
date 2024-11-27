@@ -18,7 +18,7 @@ int main(){
     ops.push_back(l);
 
     std::vector<std::string> sets = {"id0", "id1", "id2", "id0"};
-    std::vector<int> offsets = {0, 1, 2, 3};
+    std::vector<std::string> offsets = {"0", "1", "2", "3"};
 	// std::vector<std::string> sets = {"id0","id1"};
 	// std::vector<int> offsets = {0,1};
 	std::string IndexInit = CodeGen_IndexInit(ops,sets,offsets);
