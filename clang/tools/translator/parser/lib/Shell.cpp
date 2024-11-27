@@ -243,11 +243,13 @@ bool Visitor::VisitCallExpr(CallExpr *Call) {
         }
       }
     }
-    /* 如果被加数/被减数带偏移量，则移项 */
-    if (offset1.c_str()[0])
-      offset2 += " - (" + offset1 + ")";
-    /* 插入边 */
-    InsertArc (sh->G, v1, v2, offset2.c_str());
+    if (v1 != v2) {
+      /* 如果被加数/被减数带偏移量，则移项 */
+      if (offset1.c_str()[0])
+        offset2 += " - (" + offset1 + ")";
+      /* 插入边 */
+      InsertArc(sh->G, v1, v2, offset2.c_str());
+    }
   }
   return true;
 }
