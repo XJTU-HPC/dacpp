@@ -20,6 +20,7 @@ typedef struct ArcNode
 struct VNode {
     int id;
     clang::ValueDecl *D;
+    dacppTranslator::Split *s;
     ArcNode *firstarc; /* 第一个表结点的地址,指向第一条依附该顶点的弧的指针 */
 } ;
 
@@ -75,15 +76,16 @@ static VNode* GetVex(ALGraph *G,int v)
   return &G->vertices[v];
 }
 
-static int InsertVex(ALGraph *G,clang::ValueDecl *v)
+static int InsertVex(ALGraph *G,clang::ValueDecl *v, dacppTranslator::Split *s)
 { /* 初始条件: 图G存在,v和图中顶点有相同特征 */
   /* 操作结果: 在图G中增添新顶点v(不增添与顶点相关的弧,留待InsertArc()去做) */
   if (G->allocated <= G->vexnum)
-  {
+  { 
     G->vertices = (VNode *)realloc (G->vertices, (1 + G->allocated) * sizeof (VNode));
     G->allocated += 1;
   }
   (*G).vertices[(*G).vexnum].D = v;
+  (*G).vertices[(*G).vexnum].s = s;
   (*G).vertices[(*G).vexnum].id = (*G).vexnum;
   (*G).vertices[(*G).vexnum].firstarc=NULL;
   (*G).vexnum++; /* 图G的顶点数加1 */
@@ -279,7 +281,7 @@ bool Visitor::VisitVarDecl (VarDecl *D)
       sp->type = "IndexSplit";
       sh->setSplit(sp);
       if (-1 == LocateVex(sh->G, curVarDecl)) {
-        sp->v = GetVex (sh->G, InsertVex (sh->G, curVarDecl));
+        sp->v = GetVex (sh->G, InsertVex (sh->G, curVarDecl, sp));
       }
       break;
     }
@@ -309,7 +311,7 @@ bool Visitor::VisitVarDecl (VarDecl *D)
       sp->type = "RegularSplit";
       sh->setSplit(sp);
       if (-1 == LocateVex (sh->G, curVarDecl)) {
-        sp->v = GetVex (sh->G, InsertVex (sh->G, curVarDecl));
+        sp->v = GetVex (sh->G, InsertVex (sh->G, curVarDecl, sp));
       }
       break;
     }
@@ -353,12 +355,8 @@ bool Visitor::VisitVarDecl (VarDecl *D)
               dacppTranslator::getNode<DeclRefExpr>(astExprs[i])->getDecl());
 
           if (vd->getType().getAsString().compare("dacpp::RegularSplit") == 0) {
-            dacppTranslator::RegularSplit *sp =
-                new dacppTranslator::RegularSplit();
-            sp->type = "RegularSplit";
-            sp->setId(dacppTranslator::getNode<StringLiteral>(vd->getInit())
-                          ->getString()
-                          .str());
+            dacppTranslator::RegularSplit *sp ;
+            sp = (dacppTranslator::RegularSplit *) GetVex(sh->G, LocateVex (sh->G, vd))->s;
             sp->setDimIdx(i);
             CXXConstructExpr *CCE =
                 dacppTranslator::getNode<CXXConstructExpr>(vd->getInit());
@@ -392,11 +390,8 @@ bool Visitor::VisitVarDecl (VarDecl *D)
             }
             shellParam->setSplit(sp);
           } else if (vd->getType().getAsString().compare("dacpp::Index") == 0) {
-            dacppTranslator::IndexSplit *sp = new dacppTranslator::IndexSplit();
-            sp->type = "IndexSplit";
-            sp->setId(dacppTranslator::getNode<StringLiteral>(vd->getInit())
-                          ->getString()
-                          .str());
+            dacppTranslator::IndexSplit *sp ;
+            sp = (dacppTranslator::IndexSplit *) GetVex(sh->G, LocateVex (sh->G, vd))->s;
             sp->setDimIdx(i);
             sp->setSplitNumber(shellParam->getShape(i));
             for (int m = 0; m < sh->getNumSplits(); m++) {
