@@ -65,6 +65,7 @@ public:
 
     void parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes);
     void GetBindInfo(std::vector<BINDINFO> *pbindInfo) ;
+    dacppTranslator::Split *search_symbol(VNode *v);
 
     ALGraph *G;
 };
