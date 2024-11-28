@@ -20,6 +20,7 @@ add_executable(packingTest5 DataReconstructorTest5.cpp)
 add_executable(packingTest6 DataReconstructorTest6.cpp)
 add_executable(vecMulScalarTest vecMulScalarTest.cpp)
 add_executable(bindIndexInitTest bindIndexInitTest.cpp)
+add_executable(bindIndexInitTest2 bindIndexInitTest2.cpp)
 add_executable(matmul2Test matmul2Test.cpp)
 
 
@@ -59,6 +60,9 @@ set_target_properties(vecMulScalarTest PROPERTIES
 set_target_properties(bindIndexInitTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
+set_target_properties(bindIndexInitTest2 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
 set_target_properties(matmul2Test PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
@@ -75,4 +79,5 @@ target_link_libraries(packingTest5 DacppLib RewriterLib)
 target_link_libraries(packingTest6 DacppLib RewriterLib)
 target_link_libraries(vecMulScalarTest DacppLib RewriterLib)
 target_link_libraries(bindIndexInitTest DacppLib RewriterLib)
+target_link_libraries(bindIndexInitTest2 DacppLib RewriterLib)
 target_link_libraries(matmul2Test DacppLib RewriterLib)
