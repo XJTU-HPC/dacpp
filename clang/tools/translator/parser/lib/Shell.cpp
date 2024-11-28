@@ -429,13 +429,21 @@ void dacppTranslator::Shell::GetBindInfo(
   std::string parent;
   int icls = 0;
   ArcNode *p;
+  int *refs;
 
   pbindInfo->clear();
   visited = (bool *)malloc(sizeof(bool) * G->vexnum);
   memset(visited, 0, sizeof(bool) * G->vexnum);
+  refs = (int *)malloc(sizeof(int) * G->vexnum);
+  memset(refs, 0, sizeof(int) * G->vexnum);
+
+  for(v=0;v<G->vexnum;v++) /* 如果是连通图,只v=0就遍历全图 */
+    for (p = G->vertices[v].firstarc; p; p = p->nextarc)
+      refs[p->adjvex]++;
+
   for(v=0;v<G->vexnum;v++) /* 如果是连通图,只v=0就遍历全图 */
   {
-    if(!visited[v]) /* v尚未访问 */
+    if(!visited[v] && !refs[v]) /* v尚未访问 */
     {
       icls++;
       visited[v]=true;
@@ -464,6 +472,7 @@ void dacppTranslator::Shell::GetBindInfo(
       }
     }
   }
+  free(refs);
   free(visited);
 }
 
@@ -521,4 +530,7 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
     // 获取shell函数体
     Stmt* shellFuncBody = shellFunc->getBody();
     V.TraverseStmt (shellFuncBody);
+
+    std::vector<BINDINFO> bindInfo;
+    GetBindInfo (&bindInfo);
 }
