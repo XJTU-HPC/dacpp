@@ -19,6 +19,26 @@ void dacppTranslator::Rewriter::setDacppFile(DacppFile* dacppFile) {
     this->dacppFile = dacppFile;
 }
 
+std::string dacppTranslator::Rewriter::generateCalc(Calc* calc) {
+    std::string code = "";
+    for (int blockIdx = 0, idx = 0, exprIdx = 0; blockIdx < calc->blocks.size(); blockIdx++) {
+        if (calc->blocks[blockIdx].compare("@Expression;") == 0) {
+            code += generateCalc(calc->getExpr(exprIdx++)->getCalc());
+            continue;
+        }
+        code += "void " + calc->getName() + "_" + std::to_string(idx++) + "(";
+        for(int count = 0; count < calc->getNumParams(); count++) {
+            code += calc->getParam(count)->getBasicType() + "* " + calc->getParam(count)->getName();
+            if(count != calc->getNumParams() - 1) {
+                code += ", ";
+            }
+        }
+        code += ") {\n";
+        code += calc->blocks[blockIdx] + "\n}\n";
+    }
+    return code;
+}
+
 /**
  * 获得数据关联计算表达式的所有算子（包含嵌套）
  * @param shapes 最顶层数据关联计算表达式dacpplist参数形状
@@ -757,18 +777,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
         Shell* shell = expr->getShell();
         Calc* calc = expr->getCalc();
 
-        // TODO: 计算结构拆分
-        code += "void " + calc->getName() + "(";
-        for(int count = 0; count < calc->getNumParams(); count++) {
-            code += calc->getParam(count)->getBasicType() + "* " + calc->getParam(count)->getName();
-            if(count != calc->getNumParams() - 1) {
-                code += ", ";
-            }
-        }
-        code += ") \n";
-        for(int count = 0; count < calc->getNumBody(); count++) {
-            code += calc->getBody(count) + "\n";
-        }
+        code += generateCalc(calc);
 
         code += generateSyclFunc(expr) + "\n\n";
 

@@ -58,6 +58,8 @@ public:
 
     void setDacppFile(DacppFile* dacppFile);
 
+    std::string generateCalc(Calc* calc);
+
     void addSplit(std::vector<std::vector<int>>& shapes, std::vector<std::vector<Split*>>& splits,
                   Expression* expr);
     

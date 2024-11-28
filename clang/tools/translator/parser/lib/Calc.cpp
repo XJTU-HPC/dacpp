@@ -1,18 +1,16 @@
-#include <string>
-
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
-
-
 #include "ASTParse.h"
 #include "Calc.h"
 #include "DacppStructure.h"
 #include "Param.h"
 #include "Shell.h"
 
+#include <string>
+#include <iostream>
 
 //===----------------------------------------------------------------------===//
 // StmtPrinter Visitor
@@ -4559,4 +4557,15 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
         setParam(param);
     }
     setBody(calcFunc->getBody());
+
+    std::string functionBody = this->body[0];
+    functionBody = functionBody.substr(functionBody.find("{") + 1, functionBody.find("}") - 1);
+    int end = functionBody.find("@Expression;");
+    while (end != -1) {
+      this->blocks.push_back(functionBody.substr(0, end));
+      this->blocks.push_back("@Expression;");
+      functionBody.erase(functionBody.begin(), functionBody.begin() + end + 12);
+      end = functionBody.find("@Expression");
+    }
+    this->blocks.push_back(functionBody);
 }
