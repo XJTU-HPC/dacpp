@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <fstream>
 #include <queue>
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
+
+#include "/data/zjx/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
 
 using dacpp::Tensor;
 
@@ -44,7 +44,7 @@ double exact(double x, double t) {
 
 
 #include <sycl/sycl.hpp>
-#include "DataReconstructor.h"
+#include "/data/zjx/dacpp/clang/tools/translator/dpcppLib/include/DataReconstructor.h"
 
 using namespace sycl;
 
@@ -53,10 +53,6 @@ void pde(double* u_kin, double* u_kout, double* r)
     u_kout[0] = r[0] * u_kin[0] + (1 - 2 * r[0]) * u_kin[1] + r[0] * u_kin[2];
 }
 
-
- IndexInit: 
-            const auto idx1=item_id/4%4;
-            const auto S1=item_id%4;
 
 // 生成函数调用
 void PDE(const dacpp::Tensor<int> u_kin, dacpp::Tensor<int> & u_kout, const dacpp::Tensor<int> r) { 
@@ -128,11 +124,11 @@ void PDE(const dacpp::Tensor<int> u_kin, dacpp::Tensor<int> & u_kout, const dacp
             const auto item_id = item.get_local_id(2);
             // 索引初始化
 			
-            const auto idx1=item_id/4%4;
-            const auto S1=item_id%4;
+            const auto idx1=(item_id+(0)+4)%4;
+            const auto S1=(item_id+(0)+4)%4;
             // 嵌入计算
 			
-            pde(d_u_kin+(S1*303),d_u_kout+(idx1*1),d_r+());
+            pde(d_u_kin+(S1*303),d_u_kout+(idx1*1),d_r);
         });
     }).wait();
     
