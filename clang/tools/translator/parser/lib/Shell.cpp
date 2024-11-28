@@ -468,6 +468,11 @@ void dacppTranslator::Shell::GetBindInfo(
   free(visited);
 }
 
+dacppTranslator::Split *dacppTranslator::Shell::search_symbol(VNode *v) {
+  return v->s;
+}
+
+
 // 解析Shell节点，将解析到的信息存储到Shell类中
 void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes) {
   std::string Msg;
