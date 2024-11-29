@@ -44,7 +44,7 @@ double exact(double x, double t) {
 
 
 #include <sycl/sycl.hpp>
-#include "/data/zjx/dacpp/clang/tools/translator/dpcppLib/include/DataReconstructor.h"
+#include "DataReconstructor.h"
 
 using namespace sycl;
 
