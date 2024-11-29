@@ -1,9 +1,6 @@
 #include <string>
 #include <vector>
 
-#include "clang/AST/AST.h"
-
-#include "Param.h"
 #include "ASTParse.h"
 
 using namespace clang;

@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <fstream>
 #include <queue>
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
+
+#include "/data/zjx/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
 
 using dacpp::Tensor;
 
@@ -39,16 +39,112 @@ double exact(double x, double t) {
 
 //同样的问题，划分时，一个待计算数据和三个计算数据，一共四个数据要划分到一起
 
-shell dacpp::list PDE(const dacpp::Tensor<int> u_kin, dacpp::Tensor<int> & u_kout,const dacpp::Tensor<int> r) {
-    dacpp::Index idx1;
-    dacpp::RegularSplit S1(3,1);
-    binding(idx1,S1);
-    dacpp::list dataList{u_kin[{S1}][{}], u_kout[{idx1}],r[{}]};
-    return dataList;
+
+
+
+
+#include <sycl/sycl.hpp>
+#include "/data/zjx/dacpp/clang/tools/translator/dpcppLib/include/DataReconstructor.h"
+
+using namespace sycl;
+
+void pde(double* u_kin, double* u_kout, double* r) 
+{
+    u_kout[0] = r[0] * u_kin[0] + (1 - 2 * r[0]) * u_kin[1] + r[0] * u_kin[2];
 }
 
-calc void pde(int u_kin[], int  u_kout[],int r[]) {
-    u_kout[0] = r[0] * u_kin[0] + (1 - 2 * r[0]) * u_kin[1] + r[0] * u_kin[2];
+
+// 生成函数调用
+void PDE(const dacpp::Tensor<int> u_kin, dacpp::Tensor<int> & u_kout, const dacpp::Tensor<int> r) { 
+    // 设备选择
+    auto selector = gpu_selector_v;
+    queue q(selector);
+    // 算子初始化
+    
+    // 降维算子初始化
+    Index idx1 = Index("idx1");
+    idx1.SetSplitSize(4);
+    // 规则分区算子初始化
+    RegularSlice S1 = RegularSlice("S1", 3, 1);
+    S1.SetSplitSize(4);
+    // 数据重组
+    
+    // 数据重组
+    DataReconstructor<int> u_kin_tool;
+    int* r_u_kin=(int*)malloc(sizeof(int)*1212);
+    
+    // 数据算子组初始化
+    Dac_Ops u_kin_ops;
+    
+    u_kin_tool.init(u_kin,u_kin_ops);
+    u_kin_tool.Reconstruct(r_u_kin);
+    // 数据重组
+    DataReconstructor<int> u_kout_tool;
+    int* r_u_kout=(int*)malloc(sizeof(int)*4);
+    
+    // 数据算子组初始化
+    Dac_Ops u_kout_ops;
+    
+    idx1.setDimId(0);
+    idx1.setSplitLength(1);
+    u_kout_ops.push_back(idx1);
+    u_kout_tool.init(u_kout,u_kout_ops);
+    u_kout_tool.Reconstruct(r_u_kout);
+    // 数据重组
+    DataReconstructor<int> r_tool;
+    int* r_r=(int*)malloc(sizeof(int)*4);
+    
+    // 数据算子组初始化
+    Dac_Ops r_ops;
+    
+    r_tool.init(r,r_ops);
+    r_tool.Reconstruct(r_r);
+    // 设备内存分配
+    
+    // 设备内存分配
+    int *d_u_kin=malloc_device<int>(1212,q);
+    // 设备内存分配
+    int *d_u_kout=malloc_device<int>(4,q);
+    // 设备内存分配
+    int *d_r=malloc_device<int>(4,q);
+    // 数据移动
+    
+    // 数据移动
+    q.memcpy(d_u_kin,r_u_kin,1212*sizeof(int)).wait();
+    // 数据移动
+    q.memcpy(d_r,r_r,4*sizeof(int)).wait();   
+    // 内核执行
+    
+    //工作项划分
+    sycl::range<3> local(1, 1, 4);
+    sycl::range<3> global(1, 1, 1);
+    //队列提交命令组
+    q.submit([&](handler &h) {
+        h.parallel_for(sycl::nd_range<3>(global * local, local),[=](sycl::nd_item<3> item) {
+            const auto item_id = item.get_local_id(2);
+            // 索引初始化
+			
+            const auto idx1=(item_id+(0)+4)%4;
+            const auto S1=(item_id+(0)+4)%4;
+            // 嵌入计算
+			
+            pde(d_u_kin+(S1*303),d_u_kout+(idx1*1),d_r);
+        });
+    }).wait();
+    
+    
+    // 归约
+    
+    // 返回计算结果
+    
+    // 归并结果返回
+    q.memcpy(r_u_kout, d_u_kout, 4*sizeof(int)).wait();
+    u_kout = u_kout_tool.UpdateData(r_u_kout);
+    // 内存释放
+    
+    sycl::free(d_u_kin, q);
+    sycl::free(d_u_kout, q);
+    sycl::free(d_r, q);
 }
 
 int main() {
