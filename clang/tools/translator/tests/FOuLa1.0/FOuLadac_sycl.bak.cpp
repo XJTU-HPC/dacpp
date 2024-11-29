@@ -55,7 +55,7 @@ void pde(int* u_kin, int* u_kout, int* r)
 
 
 // 生成函数调用
-void PDE(const dacpp::Tensor<int> & u_kin, dacpp::Tensor<int> & u_kout, const dacpp::Tensor<int> & r) { 
+void PDE(const dacpp::Tensor<int> u_kin, dacpp::Tensor<int> & u_kout, const dacpp::Tensor<int> r) { 
     // 设备选择
     auto selector = gpu_selector_v;
     queue q(selector);
@@ -75,10 +75,7 @@ void PDE(const dacpp::Tensor<int> & u_kin, dacpp::Tensor<int> & u_kout, const da
     
     // 数据算子组初始化
     Dac_Ops u_kin_ops;
-
-    S1.setDimId(0);
-    S1.setSplitLength(303);
-    u_kin_ops.push_back(S1);
+    
     u_kin_tool.init(u_kin,u_kin_ops);
     u_kin_tool.Reconstruct(r_u_kin);
     // 数据重组
@@ -95,7 +92,7 @@ void PDE(const dacpp::Tensor<int> & u_kin, dacpp::Tensor<int> & u_kout, const da
     u_kout_tool.Reconstruct(r_u_kout);
     // 数据重组
     DataReconstructor<int> r_tool;
-    int* r_r=(int*)malloc(sizeof(int)*1);
+    int* r_r=(int*)malloc(sizeof(int)*4);
     
     // 数据算子组初始化
     Dac_Ops r_ops;
@@ -109,13 +106,13 @@ void PDE(const dacpp::Tensor<int> & u_kin, dacpp::Tensor<int> & u_kout, const da
     // 设备内存分配
     int *d_u_kout=malloc_device<int>(4,q);
     // 设备内存分配
-    int *d_r=malloc_device<int>(1,q);
+    int *d_r=malloc_device<int>(4,q);
     // 数据移动
     
     // 数据移动
     q.memcpy(d_u_kin,r_u_kin,1212*sizeof(int)).wait();
     // 数据移动
-    q.memcpy(d_r,r_r,1*sizeof(int)).wait();   
+    q.memcpy(d_r,r_r,4*sizeof(int)).wait();   
     // 内核执行
     
     //工作项划分
@@ -127,11 +124,11 @@ void PDE(const dacpp::Tensor<int> & u_kin, dacpp::Tensor<int> & u_kout, const da
             const auto item_id = item.get_local_id(2);
             // 索引初始化
 			
-            const auto idx1=item_id%4;
-            const auto S1=item_id%4;
+            const auto idx1=(item_id+(0)+4)%4;
+            const auto S1=(item_id+(0)+4)%4;
             // 嵌入计算
 			
-            pde(d_u_kin+(idx1*303),d_u_kout+(idx1*1),d_r);
+            pde(d_u_kin+(S1*303),d_u_kout+(idx1*1),d_r);
         });
     }).wait();
     
@@ -142,7 +139,7 @@ void PDE(const dacpp::Tensor<int> & u_kin, dacpp::Tensor<int> & u_kout, const da
     
     // 归并结果返回
     q.memcpy(r_u_kout, d_u_kout, 4*sizeof(int)).wait();
-	u_kout = u_kout_tool.UpdateData(r_u_kout);
+    u_kout = u_kout_tool.UpdateData(r_u_kout);
     // 内存释放
     
     sycl::free(d_u_kin, q);
@@ -205,14 +202,13 @@ int main() {
         Tensor<int> middle_tensor(middle_points, shape2);
         
         // Tensor<int> u_test1 = u_tensor.slice(1,k);
-        std::vector<int> shape3 = {1, 1};
-        std::vector<int> r_data;
-        r_data.push_back(r);
-        Tensor<int> R(r_data, shape3);
+         std::vector<int> shape3 = {1, 1};
+         std::vector<int> r_data;
+         r_data.push_back(r);
+         Tensor<int> R(r_data, shape3);
 
         Tensor<int> u_test1 = u_tensor.slice(1,k);
-
-        PDE(u_test1, middle_tensor,R);
+         PDE(u_test1, middle_tensor,R);
         
         //计算完毕后，替换第1到4个点
         for (int i = 1; i <= 4; i++) {
@@ -223,11 +219,25 @@ int main() {
 
     // 每个位置需要下，左下，右下，三个位置的元素，串行中从下往上，从左往右遍历计算
     // 那么每一行的元素计算是互不相关的，可以并行执行，所有的行从下往上串行执行
+    int* data = new int[6 * 101];
+    u_tensor.tensor2Array(data);
+
+    // 将一维数组转换为二维 vector
+    std::vector<std::vector<int>> vec2D;
+    vec2D.resize(6, std::vector<int>(101));
+
+    // 将一维数组的数据填充到二维数组中
+    for (int i = 0; i < 6; ++i) {
+        for (int j = 0; j < 101; ++j) {
+            vec2D[i][j] = data[i * 101 + j];
+        }
+    }
+
 
     int j = int(0.2 / tau);
     int number = int(0.4 / h);
     for (int k = j; k <= n; k = k + j) {
-        printf("(x,t)=(%.1f,%.1f), y=%f, exact=%f, err=%.4e.\n",x[number],t[k],u[number][k],exact(x[number],t[k]),std::fabs(u[number][k]-exact(x[number],t[k])));
+        printf("(x,t)=(%.1f,%.1f), y=%d, exact=%f, err=%.4e.\n",x[number],t[k],vec2D[number][k],exact(x[number],t[k]),std::fabs(vec2D[number][k]-exact(x[number],t[k])));
     }
 
     free(x);
