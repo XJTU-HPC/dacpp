@@ -48,8 +48,12 @@ public:
     void setSplitNumber(int splitNumber);
     int getSplitNumber();
 
+    std::string toString(){
+        return "id: " + getId() + "\n" +  // 使用父类的 getter
+               "dimIdx: " + std::to_string(getDimIdx()) + "\n" +
+               "splitNumber: " + std::to_string(splitNumber) + "\n";
+    }
 };
-
 /*
     规则分区划分
 */
@@ -73,6 +77,13 @@ public:
     void setSplitNumber(int splitNumber);
     int getSplitNumber();
 
+    std::string toString(){
+        return "id: " + getId() + "\n" +  // 使用父类的 getter
+               "dimIdx: " + std::to_string(getDimIdx()) + "\n" +
+               "splitSize: " + std::to_string(splitSize) + "\n" +
+               "splitStride: " + std::to_string(splitStride) + "\n" +
+               "splitNumber: " + std::to_string(splitNumber) + "\n";
+    }
 };
 
 }
