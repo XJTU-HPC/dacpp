@@ -40,9 +40,9 @@ double exact(double x, double t) {
 //同样的问题，划分时，一个待计算数据和三个计算数据，一共四个数据要划分到一起
 
 shell dacpp::list PDE(const dacpp::Tensor<int> u_kin, dacpp::Tensor<int> & u_kout,const dacpp::Tensor<int> r) {
-    dacpp::Index idx1("idx1");
-    dacpp::RegularSplit S1("S1",3,1);
-    //这里一一对应，都用S1
+    dacpp::Index idx1;
+    dacpp::RegularSplit S1(3,1);
+    binding(idx1,S1);
     dacpp::list dataList{u_kin[{S1}][{}], u_kout[{idx1}],r[{}]};
     return dataList;
 }
@@ -59,10 +59,7 @@ int main() {
     double h = 1.0 / m; //空间步长
     double tau = 1.0 / n; //时间步长
     double *x,*t,**u;
-    
-    //r=a*tau/(h*h);  //网比
-    //printf("r=%.4f.\n",r);
-    
+    //r=a*tau/(h*h);  //网比    
 
     x = (double*)malloc(sizeof(double)*(m+1));
     for (int i=0;i<=m;i++) {
@@ -114,7 +111,7 @@ int main() {
         
         //计算完毕后，替换第1到4个点
         for (int i = 1; i <= 4; i++) {
-            u_tensor[{i}][k+1] = middle_tensor[i];
+            u_tensor[{i}][k+1] = middle_tensor[i-1];
         }
 
     }

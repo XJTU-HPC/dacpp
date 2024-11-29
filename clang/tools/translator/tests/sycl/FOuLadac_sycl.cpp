@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <fstream>
 #include <queue>
+#include <chrono>
 #include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
 #include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
 
@@ -122,6 +123,7 @@ void PDE(const dacpp::Tensor<int> & u_kin, dacpp::Tensor<int> & u_kout, const da
     sycl::range<3> local(1, 1, 4);
     sycl::range<3> global(1, 1, 1);
     //队列提交命令组
+    auto start_time = std::chrono::high_resolution_clock::now();
     q.submit([&](handler &h) {
         h.parallel_for(sycl::nd_range<3>(global * local, local),[=](sycl::nd_item<3> item) {
             const auto item_id = item.get_local_id(2);
@@ -134,7 +136,11 @@ void PDE(const dacpp::Tensor<int> & u_kin, dacpp::Tensor<int> & u_kout, const da
             pde(d_u_kin+(idx1*303),d_u_kout+(idx1*1),d_r);
         });
     }).wait();
-    
+    auto end_time = std::chrono::high_resolution_clock::now();
+
+    // 转换为微秒
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
+    std::cout << "Program execution time: " << duration << " microseconds" << std::endl;
     
     // 归约
     
@@ -151,6 +157,7 @@ void PDE(const dacpp::Tensor<int> & u_kin, dacpp::Tensor<int> & u_kout, const da
 }
 
 int main() {
+
     int n = 100; //时间域n等分
     int m = 5; //空间域m等分
     int r = 1;
@@ -198,7 +205,7 @@ int main() {
         //输入数据是6个点，3个一组分为四组，输出数据四个点，降维
         //这里再输入之前要把输出那一行初始化为各长度为4的Tensor
         std::vector<int> middle_points;
-        for (int i = 1; i <= 4; i++) {
+        for (int i = 1; i <= m-1; i++) {
           middle_points.push_back(static_cast<int>(u[i][k+1]));
         }
         std::vector<int> shape2 = {4, 1};
@@ -215,7 +222,7 @@ int main() {
         PDE(u_test1, middle_tensor,R);
         
         //计算完毕后，替换第1到4个点
-        for (int i = 1; i <= 4; i++) {
+        for (int i = 1; i <= m-1; i++) {
             u_tensor[{i}][k+1] = middle_tensor[i];
         }
 
@@ -236,6 +243,7 @@ int main() {
         free(u[i]);
     }
     free(u);
+
 
     return 0;
 }
