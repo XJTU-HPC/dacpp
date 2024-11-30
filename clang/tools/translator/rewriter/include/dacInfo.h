@@ -46,6 +46,16 @@ class Dac_Op{
 			得到 算子对应索引的计算表达式。
 		*/
 		std::string getExp();
+
+		std::string toString() {
+        return "name: " + name + "\n" +
+               "split_size: " + std::to_string(split_size) + "\n" +
+               "split_length: " + std::to_string(split_length) + "\n" +
+               "dimId: " + std::to_string(dimId) + "\n" +
+               "expression: " + expression + "\n" +
+               "stride: " + std::to_string(stride) + "\n" +
+               "size: " + std::to_string(size);
+    }
 };
 /*
 	Dac 算子组。

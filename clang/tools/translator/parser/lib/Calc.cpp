@@ -5,22 +5,18 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
-#include "llvm/ADT/StringExtras.h"
 
 
+#include "ASTParse.h"
+#include "Calc.h"
+#include "DacppStructure.h"
 #include "Param.h"
 #include "Shell.h"
-#include "Calc.h"
-#include "ASTParse.h"
-#include "DacppStructure.h"
 
 
-namespace {
 //===----------------------------------------------------------------------===//
 // StmtPrinter Visitor
 //===----------------------------------------------------------------------===//
-
-namespace {
 
 namespace declvisitor {
 /// A simple visitor class that helps create declaration visitors.
@@ -78,6 +74,7 @@ class ConstDeclVisitor
 
     PrinterHelper* Helper;
     std::string NL;
+    dacppTranslator::Calc *calc;
 
     raw_ostream& Indent() { return Indent(Indentation); }
     raw_ostream& Indent(unsigned Indentation);
@@ -180,11 +177,11 @@ class ConstDeclVisitor
 
   virtual ~DeclPrinter() = default;
 
-    DeclPrinter(raw_ostream &Out, PrinterHelper *helper, const PrintingPolicy &Policy,
+    DeclPrinter(dacppTranslator::Calc *calc, raw_ostream &Out, PrinterHelper *helper, const PrintingPolicy &Policy,
                 const ASTContext &Context, unsigned Indentation = 0,StringRef NL = "\n", 
                 bool PrintInstantiation = false)
         : Policy(Policy), Context(Context), Indentation(Indentation),
-          PrintInstantiation(PrintInstantiation), Helper(helper), NL(NL), Out(Out) {}
+          PrintInstantiation(PrintInstantiation), Helper(helper), NL(NL), calc(calc) , Out(Out){}
 
     virtual void VisitDeclContext(DeclContext *DC, bool Indent = true);
 
@@ -250,37 +247,48 @@ class ConstDeclVisitor
                           AttrPosAsWritten Pos = AttrPosAsWritten::Default);
     virtual void prettyPrintPragmas(Decl *D);
     virtual void printDeclType(QualType T, StringRef DeclName, bool Pack = false);
+
+    bool isImplicitThis(const Expr *E);
+    void printPretty(const Stmt* S, raw_ostream &Out, PrinterHelper *Helper,
+                           const PrintingPolicy &Policy, unsigned Indentation,
+                           StringRef NL, const ASTContext *Context) ;
+    void printPrettyControlled(Stmt* S, raw_ostream &Out, PrinterHelper *Helper,
+                                     const PrintingPolicy &Policy,
+                                     unsigned Indentation, StringRef NL,
+                                     const ASTContext *Context) ;
+    void print(Decl *D, raw_ostream &Out, const PrintingPolicy &Policy,
+                     unsigned Indentation, bool PrintInstantiation) ;
+    QualType GetBaseType(QualType T) ;
+    QualType getDeclType(Decl* D) ;
+    void printGroup(Decl** Begin, unsigned NumDecls,
+                          raw_ostream &Out, const PrintingPolicy &Policy,
+                          unsigned Indentation) ;
+    void printExplicitSpecifier(ExplicitSpecifier ES, llvm::raw_ostream &Out,
+                                       PrintingPolicy &Policy, unsigned Indentation,
+                                       const ASTContext &Context) ;
   };
 
-void printPretty(const Stmt* S, raw_ostream &Out, PrinterHelper *Helper,
+
+void DeclPrinter::printPretty(const Stmt* S, raw_ostream &Out, PrinterHelper *Helper,
                        const PrintingPolicy &Policy, unsigned Indentation,
                        StringRef NL, const ASTContext *Context) {
-  DeclPrinter P(Out, Helper, Policy, *Context, Indentation, NL);
-  P.Visit(const_cast<Stmt *>(S));
+  this->Visit(const_cast<Stmt *>(S));
 }
 
-void printPrettyControlled(Stmt* S, raw_ostream &Out, PrinterHelper *Helper,
+void DeclPrinter::printPrettyControlled(Stmt* S, raw_ostream &Out, PrinterHelper *Helper,
                                  const PrintingPolicy &Policy,
                                  unsigned Indentation, StringRef NL,
                                  const ASTContext *Context) {
-  DeclPrinter P(Out, Helper, Policy, *Context, Indentation, NL);
-  P.PrintControlledStmt(const_cast<Stmt *>(S));
+  this->PrintControlledStmt(const_cast<Stmt *>(S));
 }
 
-void print(Decl *D, raw_ostream &Out, const PrintingPolicy &Policy,
+void DeclPrinter::print(Decl *D, raw_ostream &Out, const PrintingPolicy &Policy,
                  unsigned Indentation, bool PrintInstantiation) {
-  DeclPrinter Printer(Out, nullptr, Policy, D->getASTContext(), Indentation,"\n", 
-                      PrintInstantiation);
-  Printer.Base::Visit(const_cast<Decl*>(D));
-}
-
-void print(Decl *D, raw_ostream &Out, unsigned Indentation,
-                 bool PrintInstantiation) {
-  print(D, Out, D->getASTContext().getPrintingPolicy(), Indentation, PrintInstantiation);
+  this->Base::Visit(const_cast<Decl*>(D));
 }
 
 
-static QualType GetBaseType(QualType T) {
+QualType DeclPrinter::GetBaseType(QualType T) {
   // FIXME: This should be on the Type class!
   QualType BaseType = T;
   while (!BaseType->isSpecifierType()) {
@@ -310,7 +318,7 @@ static QualType GetBaseType(QualType T) {
   return BaseType;
 }
 
-static QualType getDeclType(Decl* D) {
+QualType DeclPrinter::getDeclType(Decl* D) {
   if (TypedefNameDecl* TDD = dyn_cast<TypedefNameDecl>(D))
     return TDD->getUnderlyingType();
   if (ValueDecl* VD = dyn_cast<ValueDecl>(D))
@@ -318,7 +326,7 @@ static QualType getDeclType(Decl* D) {
   return QualType();
 }
 
-void printGroup(Decl** Begin, unsigned NumDecls,
+void DeclPrinter::printGroup(Decl** Begin, unsigned NumDecls,
                       raw_ostream &Out, const PrintingPolicy &Policy,
                       unsigned Indentation) {
   if (NumDecls == 1) {
@@ -735,7 +743,7 @@ void DeclPrinter::VisitEnumConstantDecl(EnumConstantDecl *D) {
   }
 }
 
-static void printExplicitSpecifier(ExplicitSpecifier ES, llvm::raw_ostream &Out,
+void DeclPrinter::printExplicitSpecifier(ExplicitSpecifier ES, llvm::raw_ostream &Out,
                                    PrintingPolicy &Policy, unsigned Indentation,
                                    const ASTContext &Context) {
   std::string Proto = "explicit";
@@ -820,13 +828,12 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     Proto = GuideDecl->getDeducedTemplate()->getDeclName().getAsString();
   if (D->isFunctionTemplateSpecialization()) {
     llvm::raw_string_ostream POut(Proto);
-    DeclPrinter TArgPrinter(POut, nullptr, SubPolicy, Context, Indentation);
     const auto *TArgAsWritten = D->getTemplateSpecializationArgsAsWritten();
     if (TArgAsWritten && !Policy.PrintCanonicalTypes)
-      TArgPrinter.printTemplateArguments(TArgAsWritten->arguments(), nullptr);
+      printTemplateArguments(TArgAsWritten->arguments(), nullptr);
     else if (const TemplateArgumentList *TArgs =
                  D->getTemplateSpecializationArgs())
-      TArgPrinter.printTemplateArguments(TArgs->asArray(), nullptr);
+      printTemplateArguments(TArgs->asArray(), nullptr);
   }
 
   QualType Ty = D->getType();
@@ -843,10 +850,9 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     Proto += "(";
     if (FT) {
       llvm::raw_string_ostream POut(Proto);
-      DeclPrinter ParamPrinter(POut, nullptr, SubPolicy, Context, Indentation);
       for (unsigned i = 0, e = D->getNumParams(); i != e; ++i) {
         if (i) POut << ", ";
-        ParamPrinter.VisitParmVarDecl(D->getParamDecl(i));
+        VisitParmVarDecl(D->getParamDecl(i));
       }
 
       if (FT->isVariadic()) {
@@ -953,11 +959,10 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
         // This is a K&R function definition, so we need to print the
         // parameters.
         Out << '\n';
-        DeclPrinter ParamPrinter(Out, nullptr, SubPolicy, Context, Indentation);
         Indentation += Policy.Indentation;
         for (unsigned i = 0, e = D->getNumParams(); i != e; ++i) {
           Indent();
-          ParamPrinter.VisitParmVarDecl(D->getParamDecl(i));
+          VisitParmVarDecl(D->getParamDecl(i));
           Out << ";\n";
         }
         Indentation -= Policy.Indentation;
@@ -1180,7 +1185,7 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   if (D->getIdentifier()) {
     Out << ' ' << *D;
 
-    if (auto S = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+    if (auto *S = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
       ArrayRef<TemplateArgument> Args = S->getTemplateArgs().asArray();
       if (!Policy.PrintCanonicalTypes)
         if (const auto* TSI = S->getTypeAsWritten())
@@ -1961,7 +1966,6 @@ void DeclPrinter::VisitNonTypeTemplateParmDecl(
     NTTP->getDefaultArgument()->printPretty(Out, nullptr, Policy, Indentation);
   }
 }
-} // namespace
 
 //===----------------------------------------------------------------------===//
 //  Stmt printing methods.
@@ -1988,7 +1992,7 @@ void DeclPrinter::PrintRawDecl(Decl *D) {
 
 void DeclPrinter::PrintRawDeclStmt(const DeclStmt *S) {
   SmallVector<Decl *, 2> Decls(S->decls());
-  Decl::printGroup(Decls.data(), Decls.size(), Out, Policy, Indentation);
+  printGroup(Decls.data(), Decls.size(), Out, Policy, Indentation);
 }
 
 void DeclPrinter::VisitNullStmt(NullStmt *Node) {
@@ -3217,7 +3221,7 @@ void DeclPrinter::VisitCallExpr(CallExpr *Call) {
   Out << ")";
 }
 
-static bool isImplicitThis(const Expr *E) {
+bool DeclPrinter::isImplicitThis(const Expr *E) {
   if (const auto *TE = dyn_cast<CXXThisExpr>(E))
     return TE->isImplicit();
   return false;
@@ -3288,6 +3292,21 @@ void DeclPrinter::VisitImplicitCastExpr(ImplicitCastExpr *Node) {
 }
 
 void DeclPrinter::VisitBinaryOperator(BinaryOperator *Node) {
+/****************************************************************************/
+  if (Node->getOpcode() == BO_LMG) {
+    calc->body.push_back("Expression");
+    std::vector<std::vector<int>> shapes(calc->getNumParams(),
+                                         std::vector<int>());
+    for (int paramCount = 0; paramCount < calc->getNumParams(); paramCount++) {
+      dacppTranslator::Param *param = calc->getParam(paramCount);
+      for (int dimCount = 0; dimCount < param->getDim(); dimCount++) {
+        shapes[paramCount].push_back(param->getShape(dimCount));
+      }
+    }
+    calc->setExpr(Node, shapes);
+    return;
+  }
+/****************************************************************************/
   PrintExpr(Node->getLHS());
   Out << " " << BinaryOperator::getOpcodeStr(Node->getOpcode()) << " ";
   PrintExpr(Node->getRHS());
@@ -3549,6 +3568,36 @@ void DeclPrinter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *Node) {
 }
 
 void DeclPrinter::VisitCXXMemberCallExpr(CXXMemberCallExpr *Node) {
+/****************************************************************************/
+std::string Msg;
+llvm::raw_string_ostream SS(Msg);
+if (const auto *Call = dyn_cast<CallExpr>(Node)) {
+  if (auto *Callee = Call->getCallee()) {
+    if (auto *ME = dyn_cast<MemberExpr>(Callee)) {
+      if (!isImplicitThis(ME->getBase())) {
+        if (const Expr *Base = ME->getBase()) {
+          if (auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
+            if (strstr(DRE->getDecl()->getType().getAsString().c_str(),
+                       "Tensor") &&
+                !strcmp("getShape",
+                        ME->getMemberNameInfo().getAsString().c_str())) {
+              for (int i = 0; i < calc->getNumParams(); i++) {
+                if (!strcmp(DRE->getNameInfo().getAsString().c_str(),
+                            calc->getParam(i)->getName().c_str())) {
+                  Call->getArg(0)->printPretty(SS, Helper, Policy);
+                  Out << calc->getParam(i)->getShape(atoi(SS.str().c_str()));
+                  break;
+                }
+              }
+              return;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+/****************************************************************************/
   // If we have a conversion operator call only print the argument.
   CXXMethodDecl *MD = Node->getMethodDecl();
   if (isa_and_nonnull<CXXConversionDecl>(MD)) {
@@ -4381,8 +4430,6 @@ void DeclPrinter::VisitAsTypeExpr(AsTypeExpr *Node) {
   Out << ")";
 }
 
-} // namespace
-
 /**
  * 存储计算结构信息类实现
  */
@@ -4409,87 +4456,14 @@ int dacppTranslator::Calc::getNumParams() {
     return params.size();
 }
 
-struct Visitor : DeclPrinter {
-    ASTContext &Context;
-    dacppTranslator::Calc *calc;
-    PrinterHelper *helper;
-    const PrintingPolicy &Policy;
-    raw_ostream &os;
-  
-    Visitor(dacppTranslator::Calc *calc, raw_ostream &os, PrinterHelper *helper,
-                const PrintingPolicy &Policy, unsigned Indentation = 0,
-                StringRef NL = "\n", ASTContext *Context = nullptr)
-        : DeclPrinter(os, helper, Policy, *Context, Indentation, NL), Context(*Context)
-        , calc(calc), helper(helper), Policy(Policy), os(os) {}
-
-    void Visit(Stmt* S) override {
-      bool bHandled = false; /* 是否被处理的标志。  */
-      BinaryOperator* dacExpr;
-        if (isa<ExprWithCleanups>(S) &&
-           (dacExpr = dacppTranslator::getNode<BinaryOperator>(S)) &&
-           dacExpr->getOpcode() == BO_LMG) {
-            calc->body.push_back("Expression");
-            std::vector<std::vector<int>> shapes(calc->getNumParams(), std::vector<int>());
-            for (int paramCount = 0; paramCount < calc->getNumParams(); paramCount++) {
-                dacppTranslator::Param* param = calc->getParam(paramCount);
-                for(int dimCount = 0; dimCount < param->getDim(); dimCount++) {
-                    shapes[paramCount].push_back(param->getShape(dimCount));
-                }
-            }
-            calc->setExpr(dacExpr, shapes);
-            /* 已被处理。  */
-            bHandled = true;
-        }
-      /* 如果未得到处理，则使用默认方法处理它。  */
-      if (!bHandled)
-        DeclPrinter::Visit(S);
-    }
-
-void VisitCXXMemberCallExpr(CXXMemberCallExpr *Node) override {
-  bool bHandled = false; /* 是否被处理的标志。  */
-  std::string Msg;
-  llvm::raw_string_ostream SS(Msg);
-  if (const auto *Call = dyn_cast<CallExpr>(Node)) {
-    if (auto *Callee = Call->getCallee()) {
-      if (auto *ME = dyn_cast<MemberExpr>(Callee)) {
-        if (!isImplicitThis(ME->getBase())) {
-          if (const Expr *Base = ME->getBase()) {
-            if (auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
-              if (strstr (DRE->getDecl()->getType().getAsString().c_str(), "Tensor") &&
-                  ! strcmp ("getShape", ME->getMemberNameInfo().getAsString().c_str())) {
-                /* 已被处理。  */
-                bHandled = true;
-
-                for(int i = 0; i < calc->getNumParams(); i++) {
-                  if (!strcmp (DRE->getNameInfo().getAsString().c_str(), calc->getParam(i)->getName().c_str())) {
-                    Call->getArg(0)->printPretty(SS, helper, Policy);
-                    os << calc->getParam(i)->getShape(atoi(SS.str().c_str()));
-                    break;
-                  }
-                }
-
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  /* 如果未得到处理，则使用默认方法处理它。  */
-  if (!bHandled)
-      DeclPrinter::VisitCXXMemberCallExpr(Node);
-}
-
-} ;
-
-
 void dacppTranslator::Calc::setBody(Stmt* body) {
   std::string Msg;
   llvm::raw_string_ostream SS(Msg);
-    Visitor V (this, SS, nullptr, PrintingPolicy (LangOptions ()), 0, "\n", nullptr);
-    V .Visit (body);
-    this->body.push_back(Msg);
+  const ASTContext *Context = nullptr;
+  DeclPrinter V(this, SS, nullptr, PrintingPolicy(LangOptions()), *Context, 0,
+                "\n", false);
+  V.Visit(body);
+  this->body.push_back(Msg);
 }
 
 std::string dacppTranslator::Calc::getBody(int idx) {
@@ -4568,16 +4542,19 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
         // 设置参数形状
         ShellParam* shellParam = shell->getShellParam(paramsCount);
 
-        for(int i = 0; i < shell->getNumSplits(); i++) {
-            if(shell->getSplit(i)->type.compare("RegularSplit") == 0) {
-                RegularSplit* sp = static_cast<RegularSplit*>(shell->getSplit(i));
-                param->setShape(sp->getSplitSize());
-            }
-            else if(shell->getSplit(i)->type.compare("IndexSplit") == 0) {
-                IndexSplit* sp = static_cast<IndexSplit*>(shell->getSplit(i));
+        for (int i = 0; i < shellParam->getNumSplit(); i++) {
+            Split* sp = shellParam->getSplit(i);
+            if(sp->type.compare("RegularSplit") == 0) {
+                RegularSplit* rsp = static_cast<RegularSplit*>(sp);
+                param->setShape(rsp->getSplitSize());
+            } else if(sp->type.compare("IndexSplit") == 0) {
+                IndexSplit* isp = static_cast<IndexSplit*>(sp);
             } else {
                 param->setShape(shellParam->getShape(i));
             }
+        }
+        if (param->getDim() == 0) {
+          param->setShape(1);
         }
         setParam(param);
     }

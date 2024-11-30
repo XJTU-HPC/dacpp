@@ -8,23 +8,24 @@ void debug(int x) {
     std::cout << "ok" << x << std::endl;
 }
 void calc1_0(int* matA, int* matB, int* matC) {
+    int a = 0;
     
 }
 
 void calc1_1(int* matA, int* matB, int* matC) {
-    
+    int b = 0;
 }
 
 void calc2_0(int* vecA, int* vecB, int* dotProduct) {
-    
+    int c = 0;
 }
 
 void calc2_1(int* vecA, int* vecB, int* dotProduct) {
-    
+    int d = 0;
 }
 
 void calc3(int* a, int* b, int* c) {
-    c[0]=a[0]*b[0];
+    c[0] = a[0] * b[0];
 }
 void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp::Tensor<int> &matC)
 {
@@ -40,11 +41,11 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     int *reduction_matC = malloc_device<int>(16*2,q);
 
     // 算子初始化
-    RegularSlice si = RegularSlice("idx1", 2, 2);
+    RegularSlice si = RegularSlice("si", 2, 2);
 	si.SetSplitSize(2);
-	RegularSlice sj = RegularSlice("idx2", 2, 2);
+	RegularSlice sj = RegularSlice("sj", 2, 2);
 	sj.SetSplitSize(2);
-    RegularSlice sk = RegularSlice("idx3", 2, 2);
+    RegularSlice sk = RegularSlice("sk", 2, 2);
 	sk.SetSplitSize(2);
 
     // 数据划分重组
@@ -60,6 +61,7 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     matA_tool.init(matA,matA_ops);
     matA_tool.Reconstruct(r_matA);
 
+    /*
     std::cout <<  "matA重组结果:\n";
     for(int i=0;i<4;i++){
         for(int j=0;j<4;j++){
@@ -67,6 +69,7 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
         }
         std::cout<<std::endl;
     }
+    */
 
     DataReconstructor<int> matB_tool;
     int* r_matB=(int*)malloc(sizeof(int)*16);
@@ -80,6 +83,7 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     matB_tool.init(matB,matB_ops);
     matB_tool.Reconstruct(r_matB);
 
+    /*
     std::cout <<  "matB重组结果:\n";
     for(int i=0;i<4;i++){
         for(int j=0;j<4;j++){
@@ -87,6 +91,7 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
         }
         std::cout<<std::endl;
     }
+    */
 
     DataReconstructor<int> matC_tool;
     int* r_matC=(int*)malloc(sizeof(int)*16*2*2);
@@ -100,6 +105,7 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     matC_tool.init(matC,matC_ops);
     matC_tool.Reconstruct(r_matC);
 
+    /*
     std::cout <<  "matC重组结果:\n";
     for(int i=0;i<4;i++){
         for(int j=0;j<4;j++){
@@ -107,61 +113,63 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
         }
         std::cout<<std::endl;
     }
+    */
 
     // 如果嵌入计算的函数不存在，则不需要下面的数据移动、内核执行、归并归约
     // 数据移动
-    // q.memcpy(d_matA,r_matA,16*sizeof(int)).wait();
-    // q.memcpy(d_matB,r_matB,16*sizeof(int)).wait();
-    // q.memcpy(d_matC,r_matC,16*2*2*sizeof(int)).wait();
+    q.memcpy(d_matA,r_matA,16*sizeof(int)).wait();
+    q.memcpy(d_matB,r_matB,16*sizeof(int)).wait();
+    q.memcpy(d_matC,r_matC,16*2*2*sizeof(int)).wait();
 
-    // // 内核执行
-    // sycl::range<3> local(1, 1, 8);
-    // sycl::range<3> global(1, 1, 1);
-    // q.submit([&](handler &h) {
-    //     h.parallel_for(sycl::nd_range<3>(global * local, local),[=](sycl::nd_item<3> item) {
-    //         const auto item_id = item.get_local_id(2);
-    //         // 索引初始化
-    //         const auto si=item_id/2/2%2;
-    //         const auto sj=item_id/2%2;
-    //         const auto sk=item_id%2;
+    // 内核执行
+    sycl::range<3> local(1, 1, 8);
+    sycl::range<3> global(1, 1, 1);
+    q.submit([&](handler &h) {
+        h.parallel_for(sycl::nd_range<3>(global * local, local),[=](sycl::nd_item<3> item) {
+            const auto item_id = item.get_local_id(2);
+            // 索引初始化
+            const auto si=item_id/2/2%2;
+            const auto sj=item_id/2%2;
+            const auto sk=item_id%2;
 
-    //         // 嵌入计算
-    //         calc1_0(d_matA+(si*8+sk*4),d_matB+(sk*8+sj*4),d_matC+(si*16+sj*8+sk*4));
-    //     });
-    // }).wait();
+            // 嵌入计算
+            calc1_0(d_matA+(si*8+sk*4),d_matB+(sk*8+sj*4),d_matC+(si*16+sj*8+sk*4));
+        });
+    }).wait();
 
-    // std::cout<<std::endl;
-    // std::cout <<  "归约前计算结果:\n";
-    // q.memcpy(r_matC, d_matC, 32*sizeof(int)).wait();
-    // for(int i=0;i<32;i++) std::cout<<r_matC[i]<<" ";
-    // std::cout<<std::endl;
+    std::cout<<std::endl;
+    std::cout <<  "归约前计算结果:\n";
+    q.memcpy(r_matC, d_matC, 32*sizeof(int)).wait();
+    for(int i=0;i<32;i++) std::cout<<r_matC[i]<<" ";
+    std::cout<<std::endl;
 
-    // // 归约归并
-    // int *reduction_matC = malloc_device<int>(16,q);
-    // q.submit([&](handler &h) {
-    // 	h.parallel_for(
-    //     range<1>(8 * 4),
-    //     reduction(span<int,16>(reduction_matC,16), 
-    //     sycl::plus<>(),
-    //     property::reduction::initialize_to_identity()),
-    //     [=](id<1> i,auto &reducer) {
-    //         	reducer[i % 4+i/8*4].combine(d_matC[i]);
-    //  	});
-    // }).wait();
-    // q.memcpy(r_matC,reduction_matC, 16*sizeof(int)).wait();
-    // std::cout <<  "归约后计算结果(未归并):\n";
-    // for(int i=0;i<16;i++) {
-    //     std::cout << r_matC[i] << " ";
-    //     if(i%4==3) std::cout<<"\n";
-    // }
-    // matC = matC_tool.UpdateData(r_matC);
-    // std::cout <<  "归约后计算结果(归并):\n";
-    // matC.print();
+    // 归约归并
+    int *reduction_matC = malloc_device<int>(16,q);
+    q.submit([&](handler &h) {
+    	h.parallel_for(
+        range<1>(8 * 4),
+        reduction(span<int,16>(reduction_matC,16), 
+        sycl::plus<>(),
+        property::reduction::initialize_to_identity()),
+        [=](id<1> i,auto &reducer) {
+            	reducer[i % 4+i/8*4].combine(d_matC[i]);
+     	});
+    }).wait();
+    q.memcpy(r_matC,reduction_matC, 16*sizeof(int)).wait();
+    std::cout <<  "归约后计算结果(未归并):\n";
+    for(int i=0;i<16;i++) {
+        std::cout << r_matC[i] << " ";
+        if(i%4==3) std::cout<<"\n";
+    }
+    matC = matC_tool.UpdateData(r_matC);
+    std::cout <<  "归约后计算结果(归并):\n";
+    matC.print();
 
     // 算子初始化
-    Index i = Index("idx4");
+    Index i = Index("i");
+    Index i = Index("i");
 	i.SetSplitSize(2);
-	Index j = Index("idx5");
+	Index j = Index("j");
 	j.SetSplitSize(2);
     
     // 数据划分重组
@@ -260,7 +268,7 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     // matC.print();
 
     // 算子初始化
-    Index k = Index("idx6");
+    Index k = Index("k");
 	k.SetSplitSize(2);
 
     // 数据划分重组

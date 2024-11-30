@@ -8,8 +8,8 @@ typedef std::vector<std::any> list;
 using dacpp::Tensor;
 
 shell dacpp::list split(const Tensor<int>& matA, const Tensor<int>& matB, Tensor<int>& matC) {
-    dacpp::RegularSplit s1("i", 2, 2);
-    dacpp::RegularSplit s2("j", 2, 2);
+    dacpp::RegularSplit s1("s1", 2, 2);
+    dacpp::RegularSplit s2("s2", 2, 2);
     dacpp::list dataList{matA[s1][{}], matB[{}][s2], matC[s1][s2]};
     return dataList;
 }

@@ -7,9 +7,8 @@
 
 #include "clang/AST/AST.h"
 
-#include "Split.h"
 #include "Param.h"
-
+#include "Split.h"
 
 using namespace clang;
 
@@ -19,6 +18,12 @@ namespace dacppTranslator {
 
 class Expression;
 
+typedef struct _tagBINDINFO
+    {
+    int icls;
+    VNode *v;
+    std::string offset;
+    } 	BINDINFO;
 
 /**
  * 存储划分结构信息
@@ -35,6 +40,7 @@ private:
 
 public:
     Shell();
+    ~Shell();
 
     void setName(std::string name);
     std::string getName();
@@ -58,9 +64,13 @@ public:
     FunctionDecl* getShellLoc();
 
     void parseShell(const BinaryOperator* dacExpr, std::vector<std::vector<int>> shapes);
+    void GetBindInfo(std::vector<BINDINFO> *pbindInfo) ;
+    dacppTranslator::Split *search_symbol(VNode *v);
+
+    ALGraph *G;
 };
 
 
-}
+} // namespace dacppTranslator
 
 #endif

@@ -5,6 +5,8 @@
 #include<iostream>
 #include<fstream>
 #include<vector>
+#include <unordered_map>
+#include <set>
 #include"dacInfo.h"
 
 /*
@@ -18,6 +20,11 @@ void replaceTextInString(std::string& text, const std::string &find, const std::
 */
 std::string templateString(std::string templ, std::vector<std::pair<std::string, std::string>> replacements);
 
+std::string CodeGen_DataAssocComp(std::string dataRecon, std::string H2DMemMove, std::string kernelExecute, std::string reduction, std::string D2HMemMove);
+
+std::string CodeGen_DAC2SYCL(std::string dacShellName, std::string dacShellParams, std::string deviceMemAlloc, std::string opInit, std::string dataAssocComp, std::string memFree);
+
+// aborted
 std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams,std::string opInit,std::string dataRecon,
 	std::string deviceMemAlloc,std::string H2DMemMove,std::string kernelExecute,std::string reduction,std::string D2HMemMove,std::string memFree);
 
@@ -47,7 +54,10 @@ std::string CodeGen_H2DMemMov(std::string type,std::string name,std::string size
 
 std::string CodeGen_KernelExecute(std::string SplitSize,std::string IndexInit,std::string CalcEmbed);
 
+//aborted
 std::string CodeGen_IndexInit(Dac_Ops ops);
+
+std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vector<std::string> offsets);
 
 std::string CodeGen_CalcEmbed(std::string Name,Args args);
 

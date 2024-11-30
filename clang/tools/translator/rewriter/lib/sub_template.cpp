@@ -28,6 +28,54 @@ std::vector<std::pair<std::string, std::string>> replacements){
 	return templ;
 }
 
+const char *DATA_ASSOC_COMP_Template = R"~~~(
+    {{DATA_RECON}}
+    {{H2D_MEM_MOV}}
+	{{KERNEL_EXECUTE}}
+	{{REDUCTION}}
+	{{D2H_MEM_MOV}}
+)~~~";
+
+std::string CodeGen_DataAssocComp(std::string dataRecon, std::string H2DMemMove, std::string kernelExecute, std::string reduction, std::string D2HMemMove){
+    return templateString(DATA_ASSOC_COMP_Template,
+	{
+        {"{{DATA_RECON}}",        dataRecon},
+        {"{{H2D_MEM_MOV}}",       H2DMemMove},
+        {"{{KERNEL_EXECUTE}}",    kernelExecute},
+		{"{{REDUCTION}}",         reduction},
+        {"{{D2H_MEM_MOV}}",       D2HMemMove}
+	});
+}
+
+const char *DAC2SYCL_Template_1 = R"~~~(
+// 生成函数调用
+void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) { 
+    // 设备选择
+    auto selector = gpu_selector_v;
+    queue q(selector);
+    // 设备内存分配
+    {{DEVICE_MEM_ALLOC}}
+    // 算子初始化
+    {{OP_INIT}}
+    // 数据关联计算
+    {{DATA_ASSOC_COMP}}
+    // 内存释放
+    {{MEM_FREE}}
+})~~~";
+
+std::string CodeGen_DAC2SYCL(std::string dacShellName, std::string dacShellParams, std::string deviceMemAlloc, std::string opInit, std::string dataAssocComp, std::string memFree){
+    return templateString(DAC2SYCL_Template_1,
+	{
+		{"{{DAC_SHELL_NAME}}",    dacShellName},
+		{"{{DAC_SHELL_PARAMS}}",  dacShellParams},
+		{"{{OP_INIT}}",           opInit},
+		{"{{DEVICE_MEM_ALLOC}}",  deviceMemAlloc},
+		{"{{DATA_ASSOC_COMP}}",   dataAssocComp},
+        {"{{MEM_FREE}}",          memFree}
+	});
+}
+
+// aborted
 const char *DAC2SYCL_Template = R"~~~(
 // 生成函数调用
 void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) { 
@@ -52,6 +100,7 @@ void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) {
     {{MEM_FREE}}
 })~~~";
 
+// aborted
 std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams,std::string opInit,std::string dataRecon,
 	std::string deviceMemAlloc,std::string H2DMemMove,std::string kernelExecute,std::string reduction,std::string D2HMemMove,std::string memFree){
     return templateString(DAC2SYCL_Template,
@@ -164,7 +213,7 @@ const char *DATA_RECON_OP_PUSH_Template = R"~~~(
     {{NAME}}_tool.Reconstruct(r_{{NAME}});)~~~";
 
 std::string CodeGen_DataReconstructOpPush(std::string name,std::string opPushBack2Tool){
-    return templateString(DATA_RECON_Template,
+    return templateString(DATA_RECON_OP_PUSH_Template,
 	{
 		{"{{NAME}}",       name},
 		{"{{OP_PUSH_BACK2TOOL}}", opPushBack2Tool}
@@ -186,7 +235,7 @@ const char *DATA_RECON_OP_POP_Template = R"~~~(
     {{NAME}}_tool.Reconstruct(r_{{NAME}});)~~~";
 
 std::string CodeGen_DataReconstructOpPop(std::string name,std::string opPopFromTool){
-    return templateString(DATA_RECON_Template,
+    return templateString(DATA_RECON_OP_POP_Template,
 	{
 		{"{{NAME}}",       name},
 		{"{{OP_POP_FROM_TOOL}}", opPopFromTool}
@@ -208,7 +257,7 @@ std::string CodeGen_DeviceMemAlloc(std::string type,std::string name,std::string
 
 const char *DEVICE_MEM_ALLOC_REDUCTION_Template = R"~~~(
     // 归约设备内存分配
-	{{TYPE}} *reduction_{{NAME}} = malloc_device<{{TYPE}}>({{SIZE}},q);)~~~";
+    {{TYPE}} *reduction_{{NAME}} = malloc_device<{{TYPE}}>({{SIZE}},q);)~~~";
 
 std::string CodeGen_DeviceMemAllocReduction(std::string  type,std::string name,std::string size){
 	return templateString(DEVICE_MEM_ALLOC_REDUCTION_Template,
@@ -261,7 +310,9 @@ std::string CodeGen_KernelExecute(std::string SplitSize,std::string IndexInit,st
 const char *INDEX_INIT_Template = R"~~~(
             const auto {{NAME}}={{EXPRESSION}};)~~~";
 
-std::string CodeGen_IndexInit(Dac_Ops ops){
+//aborted
+std::string CodeGen_IndexInit(Dac_Ops ops)
+{
 	int len = ops.size;
 	for(int i=0;i<len;i++){
 		std::string sub_expression = "item_id";
@@ -284,6 +335,56 @@ std::string CodeGen_IndexInit(Dac_Ops ops){
 	return expression;
 }
 
+std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vector<std::string> offsets)//sets表示每个算子属于的集合的名字 offsets表示每个算子相对于集合的偏移量
+{ 
+    std::set<std::string> sets_map;//用于辅助找到不同的集合的个数
+    std::vector<std::string> sets_order;//记录了不同的集合出现的顺序，储存集合的名字： idx idy idz
+    std::vector<int> sets_split;//记录了不同集合对应的划分数，与集合名相对应： idx的划分数 idy的划分数 idz的划分数 
+    for (int i = 0; i < sets.size(); ++i) 
+    {
+        if (sets_map.find(sets[i]) == sets_map.end())//如果容器里没有
+        {
+            sets_map.insert(sets[i]);//将集合插入容器
+            sets_order.push_back(sets[i]);//将集合放入到集合的数组中
+            sets_split.push_back(ops[i].split_size);//将集合对应的划分数放入数组中
+        }
+    }
+    
+    int sets_size = sets_map.size();//得到各类集合总个数
+    std::unordered_map<std::string,std::string> sets_sub_expression;//<集合的名称，集合对应的索引表达式>
+
+    for(int i = 0;i < sets_size; i++)//有几个集合就循环几次
+    {
+		std::string sub_expression = "item_id";
+		for(int j = i + 1;j < sets_size;j ++){
+			sub_expression = sub_expression + "/" + std::to_string(sets_split[j]);
+		}
+		//sub_expression = sub_expression + "%" + std::to_string(sets_split[i]);//取模操作应该在偏移之后
+        sets_sub_expression[sets_order[i]] = sub_expression;//将子表达式和集合的名字进行关联
+	}
+
+    //下面根据偏移量来计算各个算子对应的索引
+    int len = ops.size;
+    for(int i = 0;i < len;i ++)
+    {
+        std::string index_expression = "(";
+        index_expression = index_expression + sets_sub_expression[sets[i]];//得到集合的索引
+        index_expression = index_expression + "+" + "(" + offsets[i] + ")" + "+" + std::to_string(ops[i].split_size) + ")";//加上偏移量和划分数 防止出现负数
+		index_expression = index_expression + "%" + std::to_string(ops[i].split_size);//偏移之后再取模
+        ops[i].setExp(index_expression);
+    }
+
+	std::string expression = "";
+	for(int i=0;i<len;i++){
+		expression = expression + templateString(INDEX_INIT_Template,
+		{
+			{"{{NAME}}", ops[i].name},
+			{"{{EXPRESSION}}", ops[i].getExp()}
+		});
+	}
+	return expression;
+}
+
 const char *CALC_EMBED_Template = R"~~~(
             {{DAC_CALC_NAME}}{{DAC_CALC_ARGS}})~~~";
 
@@ -297,7 +398,13 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 			if(j!=args[i].ops.size-1) IndexComb+="+";
 		}
 		IndexComb+=")";
-		DacCalcArgs+=args[i].name + "+" + IndexComb;
+		if(IndexComb == "()")
+		{
+			DacCalcArgs+=args[i].name;
+		}
+		else{
+			DacCalcArgs+=args[i].name + "+" + IndexComb;
+		}		
 		if(i==len-1){
 			DacCalcArgs+=");";
 		}
@@ -343,10 +450,10 @@ const char *REDUCTION_Template_Span = R"~~~(
         {{REDUCTION_RULE}},
         property::reduction::initialize_to_identity()),
         [=](id<1> i,auto &reducer) {
-            	reducer[i % {{SPLIT_LENGTH}} + i/({{SPLIT_LENGTH}}*{{SPLIT_SIZE}})*{{SPLIT_LENGTH}}].combine(d_{{NAME}}[i]);
+            reducer[i % {{SPLIT_LENGTH}} + i/({{SPLIT_LENGTH}}*{{SPLIT_SIZE}})*{{SPLIT_LENGTH}}].combine(d_{{NAME}}[i]);
      	});
  }).wait();
-	q.memcpy(d_{{NAME}},reduction_{{NAME}}, {{SPAN_SIZE}}*sizeof({{TYPE}})).wait();
+    q.memcpy(d_{{NAME}},reduction_{{NAME}}, {{SPAN_SIZE}}*sizeof({{TYPE}})).wait();
 )~~~";
 
 std::string CodeGen_Reduction_Span(std::string SpanSize,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule) {
@@ -364,12 +471,12 @@ std::string CodeGen_Reduction_Span(std::string SpanSize,std::string SplitSize,st
 const char *D2H_MEM_MOV_1_Template = R"~~~(
     // 归并结果返回
     q.memcpy(r_{{NAME}}, d_{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();
-	{{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}});)~~~";
+    {{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}});)~~~";
 
 const char *D2H_MEM_MOV_2_Template = R"~~~(
     // 归约结果返回
     q.memcpy(r_{{NAME}},d__{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();
-	{{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}});)~~~";
+    {{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}});)~~~";
 
 std::string CodeGen_D2HMemMov(std::string Name,std::string Type,std::string Size,bool isReduction){
     if(isReduction){
