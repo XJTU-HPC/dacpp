@@ -13,6 +13,3 @@ add_subdirectory(src)
 # 指定用于 DPC++ 代码的编译器
 # set(CMAKE_C_COMPILER "/data/qinian/share/intel/oneapi/compiler/2024.0/bin/icpx")
 # set(CMAKE_CXX_COMPILER "/data/qinian/share/intel/oneapi/compiler/2024.0/bin/icpx")
-
-# 添加第二个子文件夹（DPC++ 代码）
-add_subdirectory(sycl)

@@ -125,6 +125,28 @@ const char *KERNEL_EXECUTE_Template = R"~~~(
     
 )~~~";
 
+string CodeGen_KernelExecute_ArrayList(string SplitSize, string IndexInit, string CalcEmbed, std::initializer_list<string> values){
+    
+    std::string USE_ACCESSOR_List="";
+    std::string USE_ACCESSOR_POINTER_LIST="";
+    for(string value : values){
+        USE_ACCESSOR_List += templateString(BUFFER_ACCESSOR_Template,{
+            {"{{NAME}}", value}
+        });
+        USE_ACCESSOR_POINTER_LIST += templateString(ACCESSOR_POINTER_Template,{
+            {"{{NAME}}", value}
+        });
+    }    
+    return templateString(KERNEL_EXECUTE_Template,
+    {
+        {"{{SPLIT_SIZE}}",    SplitSize},
+        {"{{INDEX_INIT}}",    IndexInit},
+        {"{{CALC_EMBED}}",    CalcEmbed},
+        {"{{ACCESSOR_LIST}}",   USE_ACCESSOR_List},
+        {"{{ACCESSOR_POINTER_LIST}}",   USE_ACCESSOR_POINTER_LIST}
+    });
+}
+
 std::string CodeGen_KernelExecute(std::string SplitSize,std::string IndexInit,std::string CalcEmbed){
     return templateString(KERNEL_EXECUTE_Template,
 	{
