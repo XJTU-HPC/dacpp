@@ -34,6 +34,7 @@ void dacppTranslator::Rewriter::setDacppFile(DacppFile* dacppFile) {
     this->dacppFile = dacppFile;
 }
 
+
 void dacppTranslator::Rewriter::rewriteDac() {
 
     std::string code = "";
@@ -56,23 +57,29 @@ void dacppTranslator::Rewriter::rewriteDac() {
         Shell* shell = expr->getShell();
         Calc* calc = expr->getCalc();
 
-        // 计算输入和输出划分数量
-        
+        std::vector<BINDINFO> info;
+        shell->GetBindInfo(&info);//获取binding信息
+
         int countIn = 1;
         int countOut = 1;
+
+        std::string set;
         std::set<std::string> setIn;
         std::set<std::string> setOut;
+
         for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
             ShellParam* shellParam = shell->getShellParam(shellParamIdx);
             if(shellParam->getRw() == 1) {
-
                 for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
                     Split* split = shellParam->getSplit(splitIdx);
-                    if(setOut.count(split->getId()) == 1) {
+                    for(int i = 0; i < info.size(); i++){
+                        if(shell->search_symbol(info[i].v)->getId() == split->getId())
+                            set = std::to_string(info[i].icls);
+                    }
+                    if(setOut.count(set) == 1 ) {
                         continue;
                     }
-                    setOut.insert(split->getId());
-
+                    setOut.insert(set);   
                     if(split->type.compare("RegularSplit") == 0) {
                         RegularSplit* sp = static_cast<RegularSplit*>(split);
                         countOut *= sp->getSplitNumber();
@@ -85,10 +92,14 @@ void dacppTranslator::Rewriter::rewriteDac() {
             } else {
                 for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
                     Split* split = shellParam->getSplit(splitIdx);
-                    if(setIn.count(split->getId()) == 1) {
+                    for(int i = 0; i < info.size(); i++){
+                        if(shell->search_symbol(info[i].v)->getId() == split->getId())
+                            set = std::to_string(info[i].icls);
+                    }
+                    if(setIn.count(set) == 1) {
                         continue;
                     }
-                    setIn.insert(split->getId());
+                    setIn.insert(set);
                     if(split->type.compare("RegularSplit") == 0) {
                         RegularSplit* sp = static_cast<RegularSplit*>(split);
                         countIn *= sp->getSplitNumber();
@@ -117,13 +128,17 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 if(shellParam->getRw() == 1) {
                     for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
                         Split* split = shellParam->getSplit(splitIdx);
-                        if(setOut.count(split->getId()) == 1) {
+                        for(int i = 0; i < info.size(); i++){
+                            if(shell->search_symbol(info[i].v)->getId() == split->getId())
+                                set = std::to_string(info[i].icls);//寻找改节点的划分信息
+                        }
+                        if(setOut.count(set) == 1) {//同一个划分的节点视为同名
                             continue;
                         }
                         Dac_Op op = Dac_Op(split->getId(), split->getDimIdx(), splitIdx);//要改的
                         difop.push_back(op);//存储算子列表
                         difsize++;
-                        setOut.insert(split->getId());
+                        setOut.insert(set);
                     }
                 }
             }
@@ -132,7 +147,11 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 if(shellParam->getRw() == 0) {
                     for (int splitIdx = 0; splitIdx < shellParam->getNumSplit(); splitIdx++) {
                         Split* split = shellParam->getSplit(splitIdx);
-                        if(setOut.count(split->getId()) == 1) {
+                        for(int i = 0; i < info.size(); i++){
+                            if(shell->search_symbol(info[i].v)->getId() == split->getId())
+                                set = std::to_string(info[i].icls);
+                        }
+                        if(setOut.count(set) == 1) {
                             continue;
                         }
                         Dac_Op op = Dac_Op(split->getId(), split->getDimIdx(), splitIdx);// 中间的getDimIdx应该是有问题的，但是着一步并不需要考虑算子的划分信息
@@ -141,12 +160,14 @@ void dacppTranslator::Rewriter::rewriteDac() {
                         ExOps.push_back(op);
                         difop.push_back(op);//存储算子列表
                         difsize++;
-                        setOut.insert(split->getId());
+                        setOut.insert(set);
                         CountExOp++;
                     }
                 }
             }
         }
+
+
 
         std::vector<std::vector<int>> offset(shell->getNumShellParams(), std::vector<int>());
         for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
@@ -302,8 +323,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
         std::vector<std::string> bindoffset;  // 存储每个节点相对于其连通分量代表节点的偏移
         int componentID = 1;                               // 连通分量的编号
         std::string s;                                     // 用于存储 GetBindInfo 的偏移量字符串
-        std::vector<BINDINFO> info;
-        shell->GetBindInfo(&info);
+
         
         for(int i = 0; i < info.size(); i++){
             // std::cout << shell->search_symbol(info[i].v)->getId() << std::endl;
@@ -312,8 +332,6 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 info[i].offset = "0"; 
             // std::cout << info[i].offset << std::endl;
         }
-
-
         for(int i = 0; i < info.size(); i++){
             if(shell->search_symbol(info[i].v)->type.compare("IndexSplit") == 0) {
                 dacppTranslator::IndexSplit* index = static_cast<dacppTranslator::IndexSplit*>(shell->search_symbol(info[i].v));
@@ -333,8 +351,6 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 bindoffset.push_back(info[i].offset);
             }
         }
-
-
         std::string IndexInit = CodeGen_IndexInit(ops,sets,bindoffset);
         
         // for (int i = 0; i < shell->getNumSplits(); i++) {
@@ -357,9 +373,11 @@ void dacppTranslator::Rewriter::rewriteDac() {
         //         }
         //     }
         // }
-
         // std::string IndexInit = CodeGen_IndexInit(ops);
         // std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vector<int> offsets)//sets表示每个算子属于的集合的名字 offsets表示每个算子相对于集合的偏移量
+
+        // 计算输入和输出划分数量        
+        
 
         // 嵌入计算
         Args args = Args();
@@ -369,13 +387,6 @@ void dacppTranslator::Rewriter::rewriteDac() {
             for(int k = 0; k < shellParam->getNumSplit(); k++) {
                 if(shellParam->getSplit(k)->getId() == "void") { continue;}
                 Dac_Op op = Dac_Op(shellParam->getSplit(k)->getId(), shellParam->getSplit(k)->getDimIdx(), k);
-                /*
-                int length = 1;
-                for(int idx = 0; idx < shellParam->getDim(); idx++) {
-                    if(idx == k) continue;
-                    length *= shellParam->getShape(idx);
-                }
-                */
                 if(shellParam->getRw() == 1 && exop == 1){
                     op.setSplitLength(offset[j][k] * countIn / countOut);
                 }else{
@@ -384,8 +395,6 @@ void dacppTranslator::Rewriter::rewriteDac() {
 
                 ops.push_back(op);
             }
-            // code += "\ncountOut = " + std::to_string(countOut) + "\n";
-            // code += "\ncountIn = " + std::to_string(countIn) + "\n";
             if(exop == 1 && shellParam->getRw() == 1 ){
                 for(int i = 0; i < ExOps.size; i++)
                 ops.push_back(ExOps[i]);
