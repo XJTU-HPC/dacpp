@@ -7,6 +7,8 @@
 #include<vector>
 #include"dacInfo.h"
 
+using std::string;
+
 namespace BUFFER_TEMPLATE {
     extern const char *DAC2SYCL_Template;
     extern const char *BUFFER_ACCESSOR_Template;
@@ -29,6 +31,8 @@ namespace BUFFER_TEMPLATE {
     std::string CodeGen_DeviceMemAlloc(std::string type,std::string name,std::string size);
 
     std::string CodeGen_H2DMemMov(std::string type,std::string name,std::string size);
+
+    string CodeGen_KernelExecute_ArrayList(string SplitSize, string IndexInit, string CalcEmbed, std::initializer_list<string> values);
 
     std::string CodeGen_KernelExecute(std::string SplitSize,std::string IndexInit,std::string CalcEmbed);
 

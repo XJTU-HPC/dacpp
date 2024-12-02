@@ -382,7 +382,6 @@ std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vec
 			{"{{EXPRESSION}}", ops[i].getExp()}
 		});
 	}
-
 	return expression;
 }
 
