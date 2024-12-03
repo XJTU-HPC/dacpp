@@ -313,7 +313,7 @@ public:
         this->dim_ = 1;
         this->shape_ = shape.get()[0];
     }
-    ImplType operator[](int idx) const {
+    ImplType& operator[](int idx) const {
         return this->data_[idx];
     }
     std::vector<ImplType>& getData(){
