@@ -119,6 +119,7 @@ public:
         rewriter->setRewriter(clangRewriter);
         rewriter->setDacppFile(dacppFile);
         //dacppTranslator::printDacppFileInfo(dacppFile);
+        //rewriter->rewriteDac();
         rewriter->rewriteDac_buffer();
 
         /*
