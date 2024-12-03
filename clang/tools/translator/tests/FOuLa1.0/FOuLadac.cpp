@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <fstream>
 #include <queue>
-
-#include "/data/zjx/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
+#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
+#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
 
 using dacpp::Tensor;
 
@@ -39,10 +39,9 @@ double exact(double x, double t) {
 
 //同样的问题，划分时，一个待计算数据和三个计算数据，一共四个数据要划分到一起
 
-shell dacpp::list PDE(const dacpp::Tensor<int> u_kin, dacpp::Tensor<int> & u_kout,const dacpp::Tensor<int> r) {
+shell dacpp::list PDE(const dacpp::Tensor<int> & u_kin, dacpp::Tensor<int> & u_kout,const dacpp::Tensor<int> & r) {
     dacpp::Index idx1("idx1");
     dacpp::RegularSplit S1("S1",3,1);
-    //这里一 一对应，都用S1
     binding(idx1,S1);
     dacpp::list dataList{u_kin[{S1}][{}], u_kout[{idx1}],r[{}]};
     return dataList;
@@ -111,6 +110,8 @@ int main() {
          std::vector<int> r_data;
          r_data.push_back(r);
          Tensor<int> R(r_data, shape3);
+
+        //  Tensor<int> u_test1 = u_tensor.slice(1,k);
          PDE(u_tensor[{}][{k}], middle_tensor,R) <-> pde;
         
         //计算完毕后，替换第1到4个点
@@ -122,11 +123,25 @@ int main() {
 
     // 每个位置需要下，左下，右下，三个位置的元素，串行中从下往上，从左往右遍历计算
     // 那么每一行的元素计算是互不相关的，可以并行执行，所有的行从下往上串行执行
+    int* data = new int[6 * 101];
+    u_tensor.tensor2Array(data);
+
+    // 将一维数组转换为二维 vector
+    std::vector<std::vector<int>> vec2D;
+    vec2D.resize(6, std::vector<int>(101));
+
+    // 将一维数组的数据填充到二维数组中
+    for (int i = 0; i < 6; ++i) {
+        for (int j = 0; j < 101; ++j) {
+            vec2D[i][j] = data[i * 101 + j];
+        }
+    }
+
 
     int j = int(0.2 / tau);
     int number = int(0.4 / h);
     for (int k = j; k <= n; k = k + j) {
-        printf("(x,t)=(%.1f,%.1f), y=%f, exact=%f, err=%.4e.\n",x[number],t[k],u[number][k],exact(x[number],t[k]),std::fabs(u[number][k]-exact(x[number],t[k])));
+        printf("(x,t)=(%.1f,%.1f), y=%d, exact=%f, err=%.4e.\n",x[number],t[k],vec2D[number][k],exact(x[number],t[k]),std::fabs(vec2D[number][k]-exact(x[number],t[k])));
     }
 
     free(x);
