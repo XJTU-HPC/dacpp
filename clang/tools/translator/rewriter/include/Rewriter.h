@@ -63,6 +63,8 @@ public:
 
     void rewriteDac();
 
+    void rewriteDac_buffer();
+
     void rewriteMain();
 };
 
