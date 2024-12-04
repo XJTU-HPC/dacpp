@@ -63,19 +63,6 @@ public:
         recursivePrint(indices, 0);
         std::cout << "\n";
     }
-    /**
-     * 修改 Tensor 中的值
-     * 
-     * @param value: 新值
-     * @param pos: 值的坐标
-     */
-    void reviseValue(ImplType value, std::vector<int> pos) {
-        int idx = offset_;
-        for(int i = 0; i < pos.size(); i++) {
-            idx += pos[i] * stride_.get()[i];
-        }
-        data_.get()[idx] = value;
-    }
 protected:
     void recursiveTake(ImplType* data, int& idx, std::vector<int>& indices, int dimIdx) const {
         if(dimIdx == this->dim_) {
