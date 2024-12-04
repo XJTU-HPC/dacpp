@@ -27,6 +27,5 @@ void testTensorConstructors() {
 
 int main() {
     testTensorConstructors();
-    // test_matrix_multiplication();
     return 0;
 }
