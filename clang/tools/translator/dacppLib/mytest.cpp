@@ -8,7 +8,7 @@ void testTensorConstructors() {
 
     int data1[] = {1, 2, 3, 4, 5, 6};
 
-    dacpp::Tensor<int, 2> ({2, 3}, data1, 6);
+    dacpp::Tensor<int, 2> ({2, 3}, data1);
     std::cout << "Tensor constructed successfully with pointer and size." << std::endl;
 
     // 正常情况：使用向量构造 Tensor
@@ -16,6 +16,9 @@ void testTensorConstructors() {
 
     dacpp::Tensor<int, 2> tensor2({2,3}, dataVec);
     std::cout << "Tensor constructed successfully with vector." << std::endl;
+
+    dacpp::Tensor<int, 1> tensor3(6, data1);
+    std::cout << "Tensor constructed successfully with pointer." << std::endl;
 
     // 测试无效参数，预期抛出异常
     // std::vector<int> invalidShape1 = {2, 2}; // 期望大小 4
