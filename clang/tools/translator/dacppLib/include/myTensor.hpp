@@ -431,6 +431,8 @@ public:
 
 template <class T>
 using Vector = Tensor<T, 1>;
+template <class T>
+using Matrix = Tensor<T, 2>;
 
 };
 
