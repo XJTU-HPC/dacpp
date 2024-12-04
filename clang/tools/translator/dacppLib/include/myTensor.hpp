@@ -1,0 +1,373 @@
+#ifndef MYTENSOR_HPP
+#define MYTENSOR_HPP
+
+#include <memory>
+#include <vector>
+#include <iostream>
+#include <algorithm>
+#include <stdexcept>
+#include "Slice.h"
+
+namespace dacpp {
+
+template<class ImplType>
+class TensorBase{
+public:
+    TensorBase(){}
+    ~TensorBase(){}
+    std::shared_ptr<ImplType> getDataPtr() const {
+        return this->data_;
+    }
+    int getOffset() const {
+        return this->offset_;
+    }
+    int getDim() const {
+        return this->dim_;
+    }
+    std::shared_ptr<int> getShapePtr() const {
+        return this->shape_;
+    }
+    std::shared_ptr<int> getStridePtr() const {
+        return this->stride_;
+    }
+    int getShape(int dimIdx) const {
+        return this->shape_.get()[dimIdx]; 
+    }
+    int getStride(int dimIdx) const {
+        return this->stride_.get()[dimIdx];
+    }
+    int getSize() const {
+        int size = 1;
+        for(int dimIdx = 0; dimIdx < getDim(); dimIdx++) {
+            size *= this->shape_.get()[dimIdx];
+        }
+        return size;
+    }
+    // 获取 Tensor 中的数据，用基本类型数组保存
+    // data：基本类型数组
+    void tensor2Array(ImplType* data) const {
+        std::vector<int> indices;
+        int idx = 0;
+        recursiveTake(data, idx, indices, 0);
+    }
+    // 改变 Tensor 中的数据
+    // data：基本类型数组
+    void array2Tensor(ImplType* data) {
+        std::vector<int> indices;
+        int idx = 0;
+        recursiveBring(data, idx, indices, 0);
+    }
+
+    void print() const {
+        std::vector<int> indices;
+        recursivePrint(indices, 0);
+        std::cout << "\n";
+    }
+protected:
+    void recursiveTake(ImplType* data, int& idx, std::vector<int>& indices, int dimIdx) const {
+        if(dimIdx == this->dim_) {
+            int index = this->offset_;
+            for(int i = 0; i < this->dim_; i++) {
+                index += indices[i] * this->stride_.get()[i];
+            }
+            data[idx++] = this->data_.get()[index];
+            return;
+        }
+        for(int i = 0; i < this->shape_.get()[dimIdx]; i++) {
+            indices.push_back(i);
+            recursiveTake(data, idx, indices, dimIdx + 1);
+            indices.pop_back();
+        }
+    }
+
+    void recursiveBring(ImplType* data, int& idx, std::vector<int>& indices, int dimIdx) {
+        if(dimIdx == this->dim_) {
+            int index = this->offset_;
+            for(int i = 0; i < this->dim_; i++) {
+                index += indices[i] * this->stride_.get()[i];
+            }
+            this->data_.get()[index] = data[idx++];
+            return;
+        }
+        for(int i = 0; i < this->shape_.get()[dimIdx]; i++) {
+            indices.push_back(i);
+            recursiveBring(data, idx, indices, dimIdx + 1);
+            indices.pop_back();
+        }
+    }
+
+    void recursivePrint(std::vector<int>& indices, int dimIdx) const {
+        if(dimIdx == this->dim_) {
+            int index = this->offset_;
+            for(int i = 0; i < this->dim_; i++) {
+                index += indices[i] * this->stride_.get()[i];
+            }
+            std::cout << this->data_.get()[index];
+            return;
+        }
+        std::cout << "{";
+        for(int i = 0; i < this->shape_.get()[dimIdx]; i++) {
+            indices.push_back(i);
+            recursivePrint(indices, dimIdx + 1);
+            if(i != this->shape_.get()[dimIdx] - 1) std::cout << ", ";
+            indices.pop_back();
+        }
+        std::cout << "}";
+    }
+    std::shared_ptr<ImplType> data_;
+    int offset_;
+    int dim_;
+    std::shared_ptr<int> shape_;
+    std::shared_ptr<int> stride_;
+};
+
+template<class ImplType, int N>
+class Tensor: public TensorBase <ImplType>{
+public:
+    Tensor() {}
+    Tensor(const std::initializer_list<int> values, const ImplType* data, int len){
+        if(N != values.size())
+            throw std::invalid_argument("N must be equal to the size of list.");
+        int ElementSize = 1;
+        for(auto value : values)    ElementSize *= value;
+        if(len != ElementSize)
+            throw std::invalid_argument("The size of array must be equal to the product of list");
+        this->data_ = std::shared_ptr<ImplType>
+            (new ImplType[ElementSize], std::default_delete<ImplType[]>());
+        for(int i = 0; i < ElementSize; i++)
+            this->data_.get()[i] = data[i];
+        this->offset_ = 0;
+        this->dim_ = values.size();
+        this->shape_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
+        this->stride_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
+        auto it = values.end();
+        it--;
+        for(int idx = this->dim_ - 1; idx >= 0; idx--) {
+            this->shape_.get()[idx] = *it;
+            if(idx == this->dim_ - 1) 
+                this->stride_.get()[idx] = 1;
+            else 
+                this->stride_.get()[idx] = this->stride_.get()[idx + 1] * this->shape_.get()[idx + 1];
+            it--;
+        }
+    }
+    Tensor(const std::initializer_list<int> values, const std::vector<ImplType> data){
+        if(N != values.size())
+            throw std::invalid_argument("N must be equal to the size of list.");
+        int ElementSize = 1;
+        for(auto value : values)    ElementSize *= value;
+        if(data.size() != ElementSize)
+            throw std::invalid_argument("The size of vector must be equal to the product of list");
+        this->data_ = std::shared_ptr<ImplType>
+            (new ImplType[data.size()], std::default_delete<ImplType[]>());
+        for(int i = 0; i < data.size(); i++)
+            this->data_.get()[i] = data[i];
+        this->offset_ = 0;
+        this->dim_ = values.size();
+        this->shape_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
+        this->stride_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
+        auto it = values.end();
+        it--;
+        for(int idx = this->dim_ - 1; idx >= 0; idx--) {
+            this->shape_.get()[idx] = *it;
+            if(idx == this->dim_ - 1) 
+                this->stride_.get()[idx] = 1;
+            else 
+                this->stride_.get()[idx] = this->stride_.get()[idx + 1] * this->shape_.get()[idx + 1];
+            it--;
+        }
+    }
+    Tensor(const std::initializer_list<int> values, ImplType data = 0){
+        if(N != values.size())
+            throw std::invalid_argument("N must be equal to the size of list.");
+        int ElementSize = 1;
+        for(auto value : values)    ElementSize *= value;
+        this->data_ = std::shared_ptr<ImplType>
+            (new ImplType[ElementSize], std::default_delete<ImplType[]>());
+        for(int i = 0; i < ElementSize; i++)
+            this->data_.get()[i] = data;
+        this->offset_ = 0;
+        this->dim_ = values.size();
+        this->shape_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
+        this->stride_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
+        auto it = values.end();
+        it--;
+        for(int idx = this->dim_ - 1; idx >= 0; idx--) {
+            this->shape_.get()[idx] = *it;
+            if(idx == this->dim_ - 1) 
+                this->stride_.get()[idx] = 1;
+            else 
+                this->stride_.get()[idx] = this->stride_.get()[idx + 1] * this->shape_.get()[idx + 1];
+            it--;
+        }
+    }
+    Tensor(std::shared_ptr<ImplType> data, int offset, int dim, std::shared_ptr<int> shape, std::shared_ptr<int> stride) {
+        this->data_ = data;
+        this->offset_ = offset;
+        this->dim_ = dim;
+        this->shape_ = shape;
+        this->stride_ = stride;
+    }
+    ~Tensor() {}
+    void operator=(const Tensor<ImplType, N>& operand) {
+        this->data_ = operand.getDataPtr();
+        this->offset_ = operand.getOffset();
+        this->dim_ = operand.getDim();
+        this->shape_ = operand.getShapePtr();
+        this->stride_ = operand.getStridePtr();
+    }
+    Tensor<ImplType, N-1> operator[](int idx) const {
+        return slice(0, idx);
+    }
+    // Tensor 切片操作
+    // dimIdx：进行切片的维度
+    // idx：索引
+    Tensor<ImplType, N-1> slice(int dimIdx, int idx) const {
+        // 参数检查
+        // if(dimIdx >= this->dim_ || idx >= this->shape_.get()[dimIdx]) {}
+
+        int offset = this->offset_ + idx * this->stride_.get()[dimIdx];
+        int dim = this->dim_ - 1;
+        std::shared_ptr<int> shape(new int[dim], std::default_delete<int[]>());
+        std::shared_ptr<int> stride(new int[dim], std::default_delete<int[]>());
+        for(int idx = 0; idx < dim; idx++) {
+            if(idx < dimIdx) {
+                shape.get()[idx] = this->shape_.get()[idx];
+                stride.get()[idx] = this->stride_.get()[idx];
+            }
+            else {
+                shape.get()[idx] = this->shape_.get()[idx + 1];
+                stride.get()[idx] = this->stride_.get()[idx + 1];
+            }
+        }
+        return Tensor<ImplType, N - 1>(this->data_, offset, dim, shape, stride);
+    }
+    Tensor<ImplType, N> operator+(const Tensor<ImplType, N>& operand) const {
+
+    }
+    Tensor<ImplType, N> operator-(const Tensor<ImplType, N>& operand) const {
+
+    }
+    Tensor<ImplType, N> operator*(const Tensor<ImplType, N>& operand) const {
+
+    }
+    Tensor<ImplType, N> operator/(const Tensor<ImplType, N>& operand) const {
+
+    }
+    Tensor<ImplType, N> operator%(const Tensor<ImplType, N>& operand) const {
+
+    }
+    void operator+=(const Tensor<ImplType, N>& operand) {
+
+    }
+    void operator-=(const Tensor<ImplType, N>& operand) {
+
+    }
+    void operator*=(const Tensor<ImplType, N>& operand) {
+
+    }
+    void operator/=(const Tensor<ImplType, N>& operand) {
+
+    }
+    void operator%=(const Tensor<ImplType, N>& operand) {
+
+    }
+};
+
+template<class ImplType>
+class Tensor <ImplType, 1> : public TensorBase<ImplType>{//todo :this->data_ -> shared_ptr
+private:
+    template <class InputIt>
+    void initialize(InputIt first, InputIt last) {
+        size_t size = std::distance(first, last);
+
+        this->data_ = std::shared_ptr<ImplType>
+            (new ImplType[size], std::default_delete<ImplType[]>());
+
+        std::copy(first, last, this->data_.get());
+
+        this->offset_ = 0;
+        this->dim_ = 1;
+        this->shape_ = std::shared_ptr<int>
+            (new int[this->dim_], std::default_delete<int[]>());
+        this->stride_ = std::shared_ptr<int>
+            (new int[this->dim_], std::default_delete<int[]>());
+        this->shape_.get()[0] = size;
+        this->stride_.get()[0] = 1;
+    }
+public:
+    Tensor(){}
+    ~Tensor(){}
+    Tensor(std::vector<ImplType> init){
+        initialize(init.begin(), init.end());
+    }
+    Tensor(std::initializer_list<ImplType> init){
+        initialize(init.begin(), init.end());
+    }
+    Tensor(std::shared_ptr<ImplType> data, int offset, int dim, std::shared_ptr<int> shape, std::shared_ptr<int> stride) {
+        this->data_ = data;
+        this->offset_ = offset;
+        this->dim_ = dim;
+        this->shape_ = shape;
+        this->stride_ = stride;
+    }
+    void operator=(const Tensor<ImplType, 1>& operand) {
+        this->data_ = operand.getDataPtr();
+        this->offset_ = operand.getOffset();
+        this->dim_ = operand.getDim();
+        this->shape_ = operand.getShapePtr();
+        this->stride_ = operand.getStridePtr();
+    }
+    ImplType& operator[](int idx) const {
+        return slice(0, idx);
+    }
+    ImplType& slice(int dimIdx, int idx) const {
+        int offset = this->offset_ + idx * this->stride_.get()[dimIdx];
+        return this->data_.get()[offset];
+    }
+
+    Tensor<ImplType, 1> operator+(const Tensor<ImplType, 1>& operand) const {
+
+    }
+
+    Tensor<ImplType, 1> operator-(const Tensor<ImplType, 1>& operand) const {
+
+    }
+
+    Tensor<ImplType, 1> operator*(const Tensor<ImplType, 1>& operand) const {
+
+    }
+
+    Tensor<ImplType, 1> operator/(const Tensor<ImplType, 1>& operand) const {
+
+    }
+
+    Tensor<ImplType, 1> operator%(const Tensor<ImplType, 1>& operand) const {
+
+    }
+
+    void operator+=(const Tensor<ImplType, 1>& operand) {
+
+    }
+
+    void operator-=(const Tensor<ImplType, 1>& operand) {
+
+    }
+
+    void operator*=(const Tensor<ImplType, 1>& operand) {
+
+    }
+
+    void operator/=(const Tensor<ImplType, 1>& operand) {
+
+    }
+
+    void operator%=(const Tensor<ImplType, 1>& operand) {
+
+    }
+};
+
+
+} // namespace dacpp
+
+#endif
