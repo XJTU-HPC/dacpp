@@ -125,13 +125,11 @@ template<class ImplType, int N>
 class Tensor: public TensorBase <ImplType>{
 public:
     Tensor() {}
-    Tensor(const std::initializer_list<int> values, const ImplType* data, int len){
+    Tensor(const std::initializer_list<int> values, const ImplType* data){
         if(N != values.size())
             throw std::invalid_argument("N must be equal to the size of list.");
         int ElementSize = 1;
         for(auto value : values)    ElementSize *= value;
-        if(len != ElementSize)
-            throw std::invalid_argument("The size of array must be equal to the product of list");
         this->data_ = std::shared_ptr<ImplType>
             (new ImplType[ElementSize], std::default_delete<ImplType[]>());
         for(int i = 0; i < ElementSize; i++)
@@ -219,6 +217,15 @@ public:
     Tensor<ImplType, N-1> operator[](int idx) const {
         return slice(0, idx);
     }
+    Tensor<ImplType, N> operator[](Slice slc) const {
+        return slice(0, slc.start_, slc.end_, slc.stride_);
+    }
+    Tensor<ImplType, N> operator[](RegularSplit sp) const {
+        return *this;
+    }
+    Tensor<ImplType, N - 1> operator[](Index sp) const {
+        return Tensor<ImplType, N-1>();
+    }
     // Tensor 切片操作
     // dimIdx：进行切片的维度
     // idx：索引
@@ -241,6 +248,22 @@ public:
             }
         }
         return Tensor<ImplType, N - 1>(this->data_, offset, dim, shape, stride);
+    }
+    Tensor<ImplType, N> slice(int dimIdx, int start, int end, int sliceStride = 1) const {
+        // 参数检查
+        // if(dimIdx >= dim_ || start >= shape_.get()[dimIdx] || end > shape_.get()[dimIdx]) {}
+
+        int offset = start * this->stride_.get()[dimIdx];
+        int dim = this->dim_;
+        std::shared_ptr<int> shape(new int[dim], std::default_delete<int[]>());
+        std::shared_ptr<int> stride(new int[dim], std::default_delete<int[]>());
+        for(int i = 0; i < dim; i++) {
+            shape.get()[i] = this->shape_.get()[i];
+            stride.get()[i] = this->stride_.get()[i];
+        }
+        shape.get()[dimIdx] = (end - start - 1) / sliceStride + 1;
+        stride.get()[dimIdx] = this->stride_.get()[dimIdx] * sliceStride;
+        return Tensor<ImplType, N>(this->data_, offset, dim, shape, stride);
     }
     Tensor<ImplType, N> operator+(const Tensor<ImplType, N>& operand) const {
 
@@ -304,6 +327,21 @@ public:
     Tensor(std::initializer_list<ImplType> init){
         initialize(init.begin(), init.end());
     }
+    Tensor(int len, const ImplType *init){
+        this->data_ = std::shared_ptr<ImplType>
+            (new ImplType[len], std::default_delete<ImplType[]>());
+
+        std::copy_n(init, len, this->data_.get());
+
+        this->offset_ = 0;
+        this->dim_ = 1;
+        this->shape_ = std::shared_ptr<int>
+            (new int[this->dim_], std::default_delete<int[]>());
+        this->stride_ = std::shared_ptr<int>
+            (new int[this->dim_], std::default_delete<int[]>());
+        this->shape_.get()[0] = len;
+        this->stride_.get()[0] = 1;
+    }
     Tensor(std::shared_ptr<ImplType> data, int offset, int dim, std::shared_ptr<int> shape, std::shared_ptr<int> stride) {
         this->data_ = data;
         this->offset_ = offset;
@@ -321,11 +359,35 @@ public:
     ImplType& operator[](int idx) const {
         return slice(0, idx);
     }
+    Tensor<ImplType, 1> operator[](Slice slc) const {
+        return slice(0, slc.start_, slc.end_, slc.stride_);
+    }
+    Tensor<ImplType, 1> operator[](RegularSplit sp) const {
+        return *this;
+    }
+    ImplType& operator[](Index sp) const {
+        return 0;
+    }
     ImplType& slice(int dimIdx, int idx) const {
         int offset = this->offset_ + idx * this->stride_.get()[dimIdx];
         return this->data_.get()[offset];
     }
+    Tensor<ImplType, 1> slice(int dimIdx, int start, int end, int sliceStride = 1) const {
+        // 参数检查
+        // if(dimIdx >= dim_ || start >= shape_.get()[dimIdx] || end > shape_.get()[dimIdx]) {}
 
+        int offset = start * this->stride_.get()[dimIdx];
+        int dim = this->dim_;
+        std::shared_ptr<int> shape(new int[dim], std::default_delete<int[]>());
+        std::shared_ptr<int> stride(new int[dim], std::default_delete<int[]>());
+        for(int i = 0; i < dim; i++) {
+            shape.get()[i] = this->shape_.get()[i];
+            stride.get()[i] = this->stride_.get()[i];
+        }
+        shape.get()[dimIdx] = (end - start - 1) / sliceStride + 1;
+        stride.get()[dimIdx] = this->stride_.get()[dimIdx] * sliceStride;
+        return Tensor<ImplType, 1>(this->data_, offset, dim, shape, stride);
+    }
     Tensor<ImplType, 1> operator+(const Tensor<ImplType, 1>& operand) const {
 
     }
@@ -367,7 +429,9 @@ public:
     }
 };
 
+template <class T>
+using Vector = Tensor<T, 1>;
 
-} // namespace dacpp
+};
 
 #endif
