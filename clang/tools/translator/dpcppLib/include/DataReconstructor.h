@@ -99,7 +99,7 @@ class DataReconstructor{
                 int now_end = region[op.dimId].end;
                 number.push_back(i);
                 region[op.dimId].start = now_start + i * op.stride;
-                region[op.dimId].end = now_start + i * op.stride; +  op.size;
+                region[op.dimId].end = now_start + i * op.stride +  op.size;
                 RecursiveTraversal(number, pos, region, now + 1);
                 region[op.dimId].end = now_end;
                 region[op.dimId].start = now_start;
