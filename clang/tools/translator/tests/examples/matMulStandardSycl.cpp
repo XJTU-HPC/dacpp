@@ -20,7 +20,7 @@ using namespace sycl;
 void matMul(int* vecA, int* vecB, int* dotProduct) 
 {
     for (int i = 0; i < 5; i++) {
-        dotProduct += vecA[i] * vecB[i];
+        dotProduct[0] += vecA[i] * vecB[i];
     }
 }
 

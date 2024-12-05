@@ -20,7 +20,7 @@ using namespace sycl;
 void matMul(int* vecA, int* vecB, int* dotProduct) 
 {
     for (int i = 0; i < 5; i++) {
-        dotProduct += vecA[i] * vecB[i];
+        dotProduct[0] += vecA[i] * vecB[i];
     }
 }
 
@@ -87,6 +87,13 @@ void matMulSplit(const Tensor<int> & matA, const Tensor<int> & matB, Tensor<int>
     int *d_matB=malloc_device<int>(20,q);
     // 设备内存分配
     int *d_matC=malloc_device<int>(16,q);
+    
+    // for(int i=0;i<20;i++) std::cout<<r_matA[i]<<" ";
+    // std::cout<<std::endl;
+
+    // for(int i=0;i<20;i++) std::cout<<r_matB[i]<<" ";
+    // std::cout<<std::endl;
+    
     // 数据移动
     
     // 数据移动
@@ -119,6 +126,8 @@ void matMulSplit(const Tensor<int> & matA, const Tensor<int> & matB, Tensor<int>
     
     // 归并结果返回
     q.memcpy(r_matC, d_matC, 16*sizeof(int)).wait();
+    // for(int i=0;i<16;i++) std::cout<<r_matC[i]<<" ";
+    // std::cout<<std::endl;
     matC = matC_tool.UpdateData(r_matC);
     // 内存释放
     
