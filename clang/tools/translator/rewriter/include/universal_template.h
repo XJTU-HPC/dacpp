@@ -17,7 +17,6 @@ namespace UNIVERSAL_TEMPLATE{
     extern const char *INDEX_INIT_Template;
     extern const char *CALC_EMBED_Template;
 
-
     void replaceTextInString(std::string& text, const std::string &find, const std::string &replace);
     
     std::string templateString(std::string templ, std::vector<std::pair<std::string, std::string>> replacements);
