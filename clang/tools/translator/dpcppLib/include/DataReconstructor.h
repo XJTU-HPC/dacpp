@@ -57,6 +57,12 @@ class DataReconstructor{
                 r.end = this->myTensor.getShape(i);
                 region.push_back(r);
             }
+            // if(pos[0]==2&&pos[1]==2) {
+            //     for (int i = 0; i < dimNum; i++) {
+            //         std::cout<<i<<" "<<region[i].start<<" "<<region[i].end<<std::endl;
+            //     }
+            // }
+            
             // std::cout<<pos[0]<<" "<<pos[1]<<std::endl;
             std::vector<int> number;   // 存数据索引的中间变量
             RecursiveTraversal(number, pos, region, 0);
@@ -66,6 +72,9 @@ class DataReconstructor{
         */
         void RecursiveTraversal(std::vector<int> &number,std::vector<int> &pos, std::vector<Range> &region, int now) {
             if (now == ops.size) {
+                // if(pos[0]==2&&pos[1]==2) {
+                //     std::cout<<region[0].start<<" "<<region[0].end<<" "<<region[1].start<<" "<<region[1].end<<std::endl;
+                // }
                 // std::cout<<pos[0]<<" "<<pos[1]<<std::endl;
                 PosNumber posNum;
                 posNum.number = number;
@@ -83,13 +92,17 @@ class DataReconstructor{
             int r = (region[op.dimId].start+(id&(-op.stride))+op.size<region[op.dimId].end) ? (id&(-op.stride))/op.stride : (region[op.dimId].end-op.size-region[op.dimId].start)/op.stride;
             // while (region[op.dimId].start + r * op.stride > id) r--;
             // std::cout<<pos[0]<<" "<<pos[1]<<" "<<op.dimId<<" "<<id<<" "<<l<<" "<<r<<std::endl;
+            // if(pos[0]==2&&pos[1]==2) std::cout<<now<<" "<<id<<" "<<l<<" "<<r<<" "<<op.dimId<<" "<<region[op.dimId].end<<std::endl;
             for(int i = l; i <= r; i++) {
+                // if(pos[0]==2&&pos[1]==2) std::cout<<"ok"<<i<<"\n";
+                int now_start = region[op.dimId].start;
+                int now_end = region[op.dimId].end;
                 number.push_back(i);
-                region[op.dimId].start = region[op.dimId].start + i * op.stride;
-                region[op.dimId].end = region[op.dimId].start + (i * op.stride + op.size);
+                region[op.dimId].start = now_start + i * op.stride;
+                region[op.dimId].end = now_start + i * op.stride +  op.size;
                 RecursiveTraversal(number, pos, region, now + 1);
-                region[op.dimId].end = region[op.dimId].start - (i * op.stride + op.size);
-                region[op.dimId].start = region[op.dimId].start - i * op.stride;
+                region[op.dimId].end = now_end;
+                region[op.dimId].start = now_start;
                 number.pop_back();
             }
         }
@@ -99,6 +112,7 @@ class DataReconstructor{
         */
         void WriteRes(int &cnt, ImplType* res, std::vector<int> pos) {
             res[cnt++]=this->myTensor.getElement(pos);
+            // std::cout<<cnt<<" "<<"pos: "<<pos[0]<<" "<<pos[1]<<" "<<res[cnt-1]<<std::endl;
             // std::cout<<this->myTensor.getDim()<<" "<<pos.size()<<std::endl;
             // std::cout<<pos[0]<<" "<<pos[1]<<std::endl;
         }
@@ -123,6 +137,12 @@ class DataReconstructor{
             this->ops=ops;
             std::vector<int> pos; // 存位置的中间变量
             GetPos(pos, ops, 0);
+            
+            // std::sort(this->posNumberList.begin(),this->posNumberList.end(),[](PosNumber a,PosNumber b){return (a.pos==b.pos)?a.number<b.number:a.pos<b.pos;});
+            // std::cout<<this->posNumberList.size()<<std::endl;
+            // for (int i=0; i<this->posNumberList.size(); i++) {
+            //     std::cout<<"("<<this->posNumberList[i].pos[0]<<","<<this->posNumberList[i].pos[1]<<"): ("<<this->posNumberList[i].number[0]<<","<<this->posNumberList[i].number[1]<<") "<<this->posNumberList[i].region[0].start<<" "<<this->posNumberList[i].region[0].end<<" "<<this->posNumberList[i].region[1].start<<" "<<this->posNumberList[i].region[1].end<<std::endl;
+            // }
             std::sort(this->posNumberList.begin(),this->posNumberList.end(),[](PosNumber a,PosNumber b){return (a.number==b.number)?a.pos<b.pos:a.number<b.number;});
         }
 

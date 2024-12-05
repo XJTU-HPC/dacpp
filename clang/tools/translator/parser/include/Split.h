@@ -19,9 +19,9 @@ private:
 
 public:
     std::string type;
-    Split(Split *parent);
+    Split();
     virtual ~Split() {}
-    Split(Split *parent, std::string id, int dimIdx);
+    Split(std::string id, int dimIdx);
 
     void setId(std::string id);
     std::string getId();
@@ -30,7 +30,6 @@ public:
     int getDimIdx();
 
     VNode *v;
-    Split *parent;
 
 };
 
@@ -43,8 +42,8 @@ private:
     int splitNumber; // 划分总份数
 
 public:
-    IndexSplit(Split *parent);
-    IndexSplit(Split *parent, std::string id, int dimIdx, int splitNumber);
+    IndexSplit();
+    IndexSplit(std::string id, int dimIdx, int splitNumber);
 
     void setSplitNumber(int splitNumber);
     int getSplitNumber();
@@ -66,8 +65,8 @@ private:
     int splitNumber; // 划分总份数
 
 public:
-    RegularSplit(Split *parent);
-    RegularSplit(Split *parent, std::string id, int dimIdx, int splitSize, int splitStride, int splitNumber);
+    RegularSplit();
+    RegularSplit(std::string id, int dimIdx, int splitSize, int splitStride, int splitNumber);
 
     void setSplitSize(int splitSize);
     int getSplitSize();

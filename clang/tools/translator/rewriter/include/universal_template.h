@@ -32,8 +32,6 @@ namespace UNIVERSAL_TEMPLATE{
     std::string CodeGen_DataReconstruct(std::string type,std::string name,std::string size,std::string dataOpsInit);
 
     std::string CodeGen_IndexInit(Dac_Ops ops);
-    
-    std::string CodeGen_IndexInit(Dac_Ops ops, std::vector<std::string> sets, std::vector<std::string> offsets);
 
     std::string CodeGen_CalcEmbed(std::string Name,Args args);
 }

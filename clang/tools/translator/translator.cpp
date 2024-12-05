@@ -119,8 +119,12 @@ public:
         rewriter->setRewriter(clangRewriter);
         rewriter->setDacppFile(dacppFile);
         //dacppTranslator::printDacppFileInfo(dacppFile);
+<<<<<<< HEAD
         //rewriter->rewriteDac();
         rewriter->rewriteDac_usm();
+=======
+        rewriter->rewriteDac();
+>>>>>>> e875cc81f09f3fae0766ed7dc091ba78fb299422
 
         /*
         this will output to screen as what you got.

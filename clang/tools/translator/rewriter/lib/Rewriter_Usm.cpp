@@ -9,12 +9,12 @@
 #include "dacInfo.h"
 // #include "sub_template.h"
 #include "universal_template.h"
-// #include "usm_template.h"
-#include "buffer_template.h"
+#include "usm_template.h"
+// #include "buffer_template.h"
 #include "test.h"
 
 
-void dacppTranslator::Rewriter::rewriteDac_buffer() {
+void dacppTranslator::Rewriter::rewriteDac_usm() {
 
     std::string code = "";
 
@@ -268,9 +268,9 @@ void dacppTranslator::Rewriter::rewriteDac_buffer() {
         for(int count = 0; count < shell->getNumShellParams(); count++) {
             ShellParam* shellParam = shell->getShellParam(count);
             if (shellParam->getRw() == 1) {
-                deviceMemAlloc += BUFFER_TEMPLATE::CodeGen_DeviceMemAlloc(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[count] * countIn / countOut));
+                deviceMemAlloc += USM_TEMPLATE::CodeGen_DeviceMemAlloc(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[count] * countIn / countOut));
             } else {
-                deviceMemAlloc += BUFFER_TEMPLATE::CodeGen_DeviceMemAlloc(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[count]));
+                deviceMemAlloc += USM_TEMPLATE::CodeGen_DeviceMemAlloc(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[count]));
             }
         }
 
@@ -278,7 +278,7 @@ void dacppTranslator::Rewriter::rewriteDac_buffer() {
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam* shellParam = shell->getShellParam(j);
             if (shellParam->getRw() == 0) {
-                H2DMemMove += BUFFER_TEMPLATE::CodeGen_H2DMemMov(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[j]));
+                H2DMemMove += USM_TEMPLATE::CodeGen_H2DMemMov(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[j]));
             }
         }
         // 索引初始化
@@ -349,7 +349,7 @@ void dacppTranslator::Rewriter::rewriteDac_buffer() {
         std::string CalcEmbed = UNIVERSAL_TEMPLATE::CodeGen_CalcEmbed(calc->getName(), args);
 
         // 内核执行
-        std::string kernelExecute = BUFFER_TEMPLATE::CodeGen_KernelExecute(std::to_string(countIn), IndexInit, CalcEmbed);
+        std::string kernelExecute = USM_TEMPLATE::CodeGen_KernelExecute(std::to_string(countIn), IndexInit, CalcEmbed);
 
         // 归约结果返回
         std::string reduction = "";
@@ -357,7 +357,7 @@ void dacppTranslator::Rewriter::rewriteDac_buffer() {
             ShellParam* shellParam = shell->getShellParam(j);
             if(shellParam->getRw() == 1 && countIn != countOut) {
                 std::string ReductionRule = "sycl::plus<>()";
-                reduction += BUFFER_TEMPLATE::CodeGen_Reduction_Span(std::to_string(mem[j]), std::to_string(countIn / countOut),
+                reduction += USM_TEMPLATE::CodeGen_Reduction_Span(std::to_string(mem[j]), std::to_string(countIn / countOut),
                                                     std::to_string(countIn), shellParam->getName(), 
                                                     shellParam->getBasicType(), ReductionRule);
             }
@@ -367,7 +367,7 @@ void dacppTranslator::Rewriter::rewriteDac_buffer() {
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam* shellParam = shell->getShellParam(j);
             if(shellParam->getRw() == 1) {
-                D2HMemMove += BUFFER_TEMPLATE::CodeGen_D2HMemMov(shellParam->getName(), shellParam->getBasicType(), std::to_string(mem[j]), false);
+                D2HMemMove += USM_TEMPLATE::CodeGen_D2HMemMov(shellParam->getName(), shellParam->getBasicType(), std::to_string(mem[j]), false);
             }
         }
 
@@ -378,7 +378,7 @@ void dacppTranslator::Rewriter::rewriteDac_buffer() {
         //     memFree += CodeGen_MemFree(shellParam->getName());
         // }
         
-        code += BUFFER_TEMPLATE::CodeGen_DAC2SYCL(dacShellName, dacShellParams, opInit, dataRecon, deviceMemAlloc, H2DMemMove, kernelExecute, reduction, D2HMemMove);
+        code += USM_TEMPLATE::CodeGen_DAC2SYCL(dacShellName, dacShellParams, opInit, dataRecon, deviceMemAlloc, H2DMemMove, kernelExecute, reduction, D2HMemMove);
         code += "\n\n";
         rewriter->RemoveText(shell->getShellLoc()->getSourceRange());
         rewriter->RemoveText(calc->getCalcLoc()->getSourceRange());
