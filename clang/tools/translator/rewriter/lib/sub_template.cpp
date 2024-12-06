@@ -507,6 +507,53 @@ std::string CodeGen_MemFree(std::string Name){
 	});
 }
 
+
+//下面这些还没有往头文件里面写
+//参数生成的总模板
+const char *PARA_GENE_Template = R"~~~(
+    // 参数生成 提前计算后面需要用到的参数
+	ParameterGeneration<int> para_gene_tool;
+	{{RegularSliceOperatorSpilitNumberGeneration}} //生成规则分区算子的划分份数
+	{{OperatorSpilitNumberGeneration}} //生成降维算子划分份数
+)~~~";
+
+std::string CodeGen_ParameterGenerate(std::string RegularSliceOperatorSpilitNumberGeneration,std::string OperatorSpilitNumberGeneration){
+    return templateString(PARA_GENE_Template,
+	{
+		{"{{RegularSliceOperatorSpilitNumberGeneration}}",       RegularSliceOperatorSpilitNumberGeneration},//算子的划分数 注意只是最后一个不需要逗号
+		{"{{OperatorSpilitNumberGeneration}}",       OperatorSpilitNumberGeneration}
+	});
+}
+
+//生成分区算子划分数的模板
+const char *RegularSlice_SPILIT_NUMBER_Generate_Template = R"~~~(
+	//生成分区算子的划分数
+    int {{OP_NAME}}_spilit_number = para_gene_tool.init_regularslice_operetor_splitnumber({{OP_NAME}},{{NAME}});
+)~~~";
+
+std::string CodeGen_RegularSliceOpSpilitNumberGenerate(std::string op_name, std::string name){
+    return templateString(RegularSlice_SPILIT_NUMBER_Generate_Template,
+	{
+        {"{{OP_NAME}}",        op_name}, //算子的名字 注意这里有一个逗号
+		{"{{NAME}}",              name} //存数据的tensor的名字
+	});
+}
+
+//生成降维算子划分数的模板
+const char *OP_SPILIT_NUMBER_Generate_Template = R"~~~(
+	//生成降维算子的划分数
+    int {{OP_NAME}}_spilit_number = para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{NAME}});
+)~~~";
+
+std::string CodeGen_OpSpilitNumberGenerate(std::string op_name, std::string name){
+    return templateString(RegularSlice_SPILIT_NUMBER_Generate_Template,
+	{
+        {"{{OP_NAME}}",        op_name}, //算子的名字 注意这里有一个逗号
+		{"{{NAME}}",              name} //存数据的tensor的名字
+	});
+}
+
+
 // int main(){
 // 	std::cout<<"******************dac2sycl CodeGen test******************\n\n";
 // 	Dac_Op i = Dac_Op("i",3,0);
