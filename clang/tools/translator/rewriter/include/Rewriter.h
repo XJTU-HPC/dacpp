@@ -63,13 +63,10 @@ public:
 
     void rewriteDac();
 
-<<<<<<< HEAD
     void rewriteDac_buffer();
 
-    void rewriteDac_Usm();
+    void rewriteDac_usm();
 
-=======
->>>>>>> e875cc81f09f3fae0766ed7dc091ba78fb299422
     void rewriteMain();
 };
 

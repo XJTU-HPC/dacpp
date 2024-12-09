@@ -371,14 +371,14 @@ void dacppTranslator::Rewriter::rewriteDac_usm() {
             }
         }
 
-        // // 内存释放
-        // std::string memFree = "";
-        // for(int j = 0; j < shell->getNumParams(); j++) {
-        //     ShellParam* shellParam = shell->getShellParam(j);
-        //     memFree += CodeGen_MemFree(shellParam->getName());
-        // }
+        // 内存释放
+        std::string memFree = "";
+        for(int j = 0; j < shell->getNumParams(); j++) {
+            ShellParam* shellParam = shell->getShellParam(j);
+            memFree += USM_TEMPLATE::CodeGen_MemFree(shellParam->getName());
+        }
         
-        code += USM_TEMPLATE::CodeGen_DAC2SYCL(dacShellName, dacShellParams, opInit, dataRecon, deviceMemAlloc, H2DMemMove, kernelExecute, reduction, D2HMemMove);
+        code += USM_TEMPLATE::CodeGen_DAC2SYCL(dacShellName, dacShellParams, opInit, dataRecon, deviceMemAlloc, H2DMemMove, kernelExecute, reduction, D2HMemMove, memFree);
         code += "\n\n";
         rewriter->RemoveText(shell->getShellLoc()->getSourceRange());
         rewriter->RemoveText(calc->getCalcLoc()->getSourceRange());
