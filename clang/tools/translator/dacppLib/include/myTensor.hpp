@@ -1,11 +1,11 @@
 #ifndef MYTENSOR_HPP
 #define MYTENSOR_HPP
 
+#include <algorithm>
+#include <iostream>
 #include <memory>
 #include <vector>
-#include <iostream>
-#include <algorithm>
-#include <stdexcept>
+
 #include "Slice.h"
 
 namespace dacpp {
@@ -126,8 +126,6 @@ class Tensor: public TensorBase <ImplType>{
 public:
     Tensor() {}
     Tensor(const std::initializer_list<int> values, const ImplType* data){
-        if(N != values.size())
-            throw std::invalid_argument("N must be equal to the size of list.");
         int ElementSize = 1;
         for(auto value : values)    ElementSize *= value;
         this->data_ = std::shared_ptr<ImplType>
@@ -138,7 +136,7 @@ public:
         this->dim_ = values.size();
         this->shape_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
         this->stride_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
-        auto it = values.end();
+        const auto *it = values.end();
         it--;
         for(int idx = this->dim_ - 1; idx >= 0; idx--) {
             this->shape_.get()[idx] = *it;
@@ -150,21 +148,15 @@ public:
         }
     }
     Tensor(const std::initializer_list<int> values, const std::vector<ImplType> data){
-        if(N != values.size())
-            throw std::invalid_argument("N must be equal to the size of list.");
-        int ElementSize = 1;
-        for(auto value : values)    ElementSize *= value;
-        if(data.size() != ElementSize)
-            throw std::invalid_argument("The size of vector must be equal to the product of list");
         this->data_ = std::shared_ptr<ImplType>
             (new ImplType[data.size()], std::default_delete<ImplType[]>());
-        for(int i = 0; i < data.size(); i++)
+        for(size_t i = 0; i < data.size(); i++)
             this->data_.get()[i] = data[i];
         this->offset_ = 0;
         this->dim_ = values.size();
         this->shape_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
         this->stride_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
-        auto it = values.end();
+        const auto *it = values.end();
         it--;
         for(int idx = this->dim_ - 1; idx >= 0; idx--) {
             this->shape_.get()[idx] = *it;
@@ -176,8 +168,6 @@ public:
         }
     }
     Tensor(const std::initializer_list<int> values, ImplType data = 0){
-        if(N != values.size())
-            throw std::invalid_argument("N must be equal to the size of list.");
         int ElementSize = 1;
         for(auto value : values)    ElementSize *= value;
         this->data_ = std::shared_ptr<ImplType>
@@ -188,7 +178,7 @@ public:
         this->dim_ = values.size();
         this->shape_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
         this->stride_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
-        auto it = values.end();
+        const auto *it = values.end();
         it--;
         for(int idx = this->dim_ - 1; idx >= 0; idx--) {
             this->shape_.get()[idx] = *it;
@@ -207,12 +197,13 @@ public:
         this->stride_ = stride;
     }
     ~Tensor() {}
-    void operator=(const Tensor<ImplType, N>& operand) {
+    Tensor& operator=(const Tensor<ImplType, N>& operand) {
         this->data_ = operand.getDataPtr();
         this->offset_ = operand.getOffset();
         this->dim_ = operand.getDim();
         this->shape_ = operand.getShapePtr();
         this->stride_ = operand.getStridePtr();
+        return *this;
     }
     Tensor<ImplType, N-1> operator[](int idx) const {
         return slice(0, idx);
@@ -349,12 +340,13 @@ public:
         this->shape_ = shape;
         this->stride_ = stride;
     }
-    void operator=(const Tensor<ImplType, 1>& operand) {
+    Tensor& operator=(const Tensor<ImplType, 1>& operand) {
         this->data_ = operand.getDataPtr();
         this->offset_ = operand.getOffset();
         this->dim_ = operand.getDim();
         this->shape_ = operand.getShapePtr();
         this->stride_ = operand.getStridePtr();
+        return *this;
     }
     ImplType& operator[](int idx) const {
         return slice(0, idx);
@@ -434,6 +426,6 @@ using Vector = Tensor<T, 1>;
 template <class T>
 using Matrix = Tensor<T, 2>;
 
-};
+} // namespace dacpp
 
 #endif
