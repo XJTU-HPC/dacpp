@@ -539,4 +539,7 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
     // 获取shell函数体
     Stmt* shellFuncBody = shellFunc->getBody();
     V.TraverseStmt (shellFuncBody);
+
+    std::vector<BINDINFO> bindInfo;
+    GetBindInfo (&bindInfo);
 }

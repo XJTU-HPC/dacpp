@@ -144,7 +144,6 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     std::cout<<std::endl;
 
     // 归约归并
-    int *reduction_matC = malloc_device<int>(16,q);
     q.submit([&](handler &h) {
     	h.parallel_for(
         range<1>(8 * 4),
@@ -166,7 +165,6 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     matC.print();
 
     // 算子初始化
-    Index i = Index("i");
     Index i = Index("i");
 	i.SetSplitSize(2);
 	Index j = Index("j");
@@ -277,13 +275,13 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     matA_tool.push_back(k);
     matA_tool.Reconstruct(r_matA);
 
-    std::cout <<  "matA重组结果:\n";
-    for(int i=0;i<4;i++){
-        for(int j=0;j<4;j++){
-            std::cout<<r_matA[i*4+j*1]<<" ";
-        }
-        std::cout<<std::endl;
-    }
+    // std::cout <<  "matA重组结果:\n";
+    // for(int i=0;i<4;i++){
+    //     for(int j=0;j<4;j++){
+    //         std::cout<<r_matA[i*4+j*1]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
 
     k.setDimId(1);
     k.setSplitLength(1);
@@ -314,10 +312,10 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     q.memcpy(d_matC,r_matC,32*sizeof(int)).wait();
 
     // 内核执行
-    sycl::range<3> local(1, 1, 64);
-    sycl::range<3> global(1, 1, 1);
+    sycl::range<3> local1(1, 1, 64);
+    sycl::range<3> global1(1, 1, 1);
     q.submit([&](handler &h) {
-        h.parallel_for(sycl::nd_range<3>(global * local, local),[=](sycl::nd_item<3> item) {
+        h.parallel_for(sycl::nd_range<3>(global1 * local1, local1),[=](sycl::nd_item<3> item) {
             const auto item_id = item.get_local_id(2);
             // 索引初始化
             const auto si=item_id/2/2/2/2/2%2;
