@@ -357,9 +357,7 @@ public:
     Tensor<ImplType, 1> operator[](RegularSplit sp) const {
         return *this;
     }
-    ImplType& operator[](Index sp) const {
-        return 0;
-    }
+    ImplType& operator[](Index sp) const ;
     ImplType& slice(int dimIdx, int idx) const {
         int offset = this->offset_ + idx * this->stride_.get()[dimIdx];
         return this->data_.get()[offset];
