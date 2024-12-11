@@ -104,8 +104,6 @@ int main() {
         }
         std::vector<int> shape2 = {4, 1};
         Tensor<int> middle_tensor(middle_points, shape2);
-        
-        // Tensor<int> u_test1 = u_tensor.slice(1,k);
          std::vector<int> shape3 = {1, 1};
          std::vector<int> r_data;
          r_data.push_back(r);

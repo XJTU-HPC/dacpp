@@ -679,7 +679,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   # crash if LLVM is built with GCC and LTO enabled (#57740).  Until
   # these bugs are fixed, we need to disable dead store eliminations
   # based on object lifetime.
-  append("-fno-lifetime-dse" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  # append("-fno-lifetime-dse" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif ()
 
 # Modules enablement for GCC-compatible compilers:
