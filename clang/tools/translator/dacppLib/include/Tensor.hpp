@@ -512,6 +512,11 @@ public:
         return temp.getDataPtr().get()[temp.getOffset()];
     }
 
+    ImplType getValue() {
+        ImplType a;
+        return a;
+    }
+
     // 获取 Tensor 中的数据，用基本类型数组保存
     // data：基本类型数组
     void tensor2Array(ImplType* data) const {

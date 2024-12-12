@@ -29,6 +29,14 @@ int dacppTranslator::Split::getDimIdx() {
     return dimIdx;
 }
 
+void dacppTranslator::Split::setSplitNumber(int splitNumber) {
+    this->splitNumber = splitNumber;
+}
+
+int dacppTranslator::Split::getSplitNumber() {
+    return splitNumber;
+}
+
 /*
     降维划分
 */

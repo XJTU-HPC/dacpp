@@ -16,6 +16,7 @@ class Split {
 private:
     std::string id; // 划分标识
     int dimIdx; // 划分作用维度
+    int splitNumber;
 
 public:
     std::string type;
@@ -28,6 +29,9 @@ public:
 
     void setDimIdx(int dimIdx);
     int getDimIdx();
+
+    void setSplitNumber(int splitNumber);
+    int getSplitNumber();
 
     VNode *v;
 
