@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fvisibility hidden -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
+// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fvisibility=hidden -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
 // For clang, "internal" is just an alias for "hidden". We could use it for some
 // optimization purposes on 32-bit x86, but it's not worth it.
-// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fvisibility internal -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
+// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fvisibility=internal -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
 
 #define HIDDEN __attribute__((visibility("hidden")))
 #define PROTECTED __attribute__((visibility("protected")))
@@ -18,7 +18,7 @@ namespace test30 {
   };
   H DEFAULT a;
   X<&a> b;
-  // CHECK: _ZN6test301bE = dso_local global
+  // CHECK: _ZN6test301bE = global
   // CHECK-HIDDEN: _ZN6test301bE = hidden global
 }
 
@@ -33,7 +33,7 @@ namespace test25 {
   class DEFAULT A { };
 
   X<int>::definition<A> a;
-  // CHECK: @_ZN6test251aE = dso_local global
+  // CHECK: @_ZN6test251aE = global
   // CHECK-HIDDEN: @_ZN6test251aE = hidden global
 }
 
@@ -41,7 +41,7 @@ namespace test28 {
   class DEFAULT foo {
   };
   foo myvec;
-  // CHECK: @_ZN6test285myvecE = dso_local global
+  // CHECK: @_ZN6test285myvecE = global
   // CHECK-HIDDEN: @_ZN6test285myvecE = hidden global
 }
 
@@ -53,8 +53,8 @@ namespace test29 {
   DEFAULT extern RECT data_rect;
   RECT data_rect = { -1};
 #pragma GCC visibility pop
-  // CHECK: @_ZN6test299data_rectE = dso_local global
-  // CHECK-HIDDEN: @_ZN6test299data_rectE = dso_local global
+  // CHECK: @_ZN6test299data_rectE = global
+  // CHECK-HIDDEN: @_ZN6test299data_rectE = global
 }
 
 namespace test40 {
@@ -101,23 +101,80 @@ namespace test48 {
   // CHECK-HIDDEN: _ZN6test481yE = hidden global
 }
 
+namespace test72 {
+  template <class T>
+  struct foo {
+    HIDDEN static int var1;
+    template <class U> HIDDEN static U var2;
+  };
+  template <class T> template <class U>
+  U foo<T>::var2;
+
+  extern template struct DEFAULT foo<int>;
+
+  int use() {
+    foo<int> o;
+    foo<long> p;
+    return o.var1 + o.var2<int> + p.var1 + p.var2<int>;
+  }
+  // CHECK:      @_ZN6test723fooIiE4var1E = external hidden global i32
+  // CHECK-NEXT: @_ZN6test723fooIiE4var2IiEE = linkonce_odr global i32 0
+  // CHECK-NEXT: @_ZN6test723fooIlE4var1E = external hidden global i32
+  // CHECK-NEXT: @_ZN6test723fooIlE4var2IiEE = linkonce_odr global i32 0
+}
+
+namespace test73 {
+  struct HIDDEN foo {};
+  DEFAULT foo da, db, dc, dd;
+  HIDDEN foo ha, hb, hc, hd;
+  template<foo *z> DEFAULT int var;
+
+  template int var<&da>;
+  template int DEFAULT var<&db>;
+  template int HIDDEN var<&dc>;
+  template int var<&ha>;
+  template int DEFAULT var<&hb>;
+  template int HIDDEN var<&hc>;
+
+  int use() { return var<&dd> + var<&hd>; }
+  // CHECK:      @_ZN6test733varIXadL_ZNS_2daEEEEE = weak_odr hidden global i32 0
+  // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2dbEEEEE = weak_odr global i32 0
+  // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2dcEEEEE = weak_odr hidden global i32 0
+  // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2haEEEEE = weak_odr hidden global i32 0
+  // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2hbEEEEE = weak_odr global i32 0
+  // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2hcEEEEE = weak_odr hidden global i32 0
+  // CHECK:      @_ZN6test733varIXadL_ZNS_2ddEEEEE = linkonce_odr hidden global i32 0
+  // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2hdEEEEE = linkonce_odr hidden global i32 0
+
+  // CHECK-HIDDEN:      @_ZN6test733varIXadL_ZNS_2daEEEEE = weak_odr hidden global i32 0
+  // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2dbEEEEE = weak_odr global i32 0
+  // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2dcEEEEE = weak_odr hidden global i32 0
+  // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2haEEEEE = weak_odr hidden global i32 0
+  // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2hbEEEEE = weak_odr global i32 0
+  // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2hcEEEEE = weak_odr hidden global i32 0
+  // CHECK-HIDDEN:      @_ZN6test733varIXadL_ZNS_2ddEEEEE = linkonce_odr hidden global i32 0
+  // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2hdEEEEE = linkonce_odr hidden global i32 0
+}
+
 // CHECK: @_ZN5Test425VariableInHiddenNamespaceE = hidden global i32 10
 // CHECK: @_ZN5Test71aE = hidden global
-// CHECK: @_ZN5Test71bE = dso_local global
-// CHECK: @test9_var = dso_local global
-// CHECK-HIDDEN: @test9_var = dso_local global
+// CHECK: @_ZN5Test71bE = global
+// CHECK: @test9_var = global
+// CHECK-HIDDEN: @test9_var = global
 // CHECK: @_ZN6Test121A6hiddenE = external hidden global
 // CHECK: @_ZN6Test121A7visibleE = external global
 // CHECK-HIDDEN: @_ZN6Test121A6hiddenE = external hidden global
 // CHECK-HIDDEN: @_ZN6Test121A7visibleE = external global
 // CHECK: @_ZN6Test131B1aE = hidden global
-// CHECK: @_ZN6Test131C1aE = dso_local global
+// CHECK: @_ZN6Test131C1aE = global
 // CHECK-HIDDEN: @_ZN6Test131B1aE = hidden global
-// CHECK-HIDDEN: @_ZN6Test131C1aE = dso_local global
+// CHECK-HIDDEN: @_ZN6Test131C1aE = global
 // CHECK: @_ZN6Test143varE = external global
 // CHECK-HIDDEN: @_ZN6Test143varE = external global
 // CHECK: @_ZN6Test154TempINS_1AEE5Inner6bufferE = external global [0 x i8]
 // CHECK-HIDDEN: @_ZN6Test154TempINS_1AEE5Inner6bufferE = external global [0 x i8]
+// CHECK: @_ZTVN6test701BE = external hidden unnamed_addr constant { [5 x ptr] }, align 8
+// CHECK: @_ZTTN6test701BE = external hidden unnamed_addr constant [2 x ptr], align 8
 
 namespace test27 {
   template<typename T>
@@ -134,8 +191,8 @@ namespace test27 {
 
   void C<int>::D::g() {
   }
-  // CHECK: _ZTVN6test271CIiE1DE = dso_local unnamed_addr constant
-  // CHECK-HIDDEN: _ZTVN6test271CIiE1DE = dso_local unnamed_addr constant
+  // CHECK: _ZTVN6test271CIiE1DE = unnamed_addr constant
+  // CHECK-HIDDEN: _ZTVN6test271CIiE1DE = unnamed_addr constant
 }
 
 // CHECK: @_ZTVN5Test63fooE = linkonce_odr hidden unnamed_addr constant
@@ -148,6 +205,9 @@ namespace test27 {
 
 // CHECK: @_ZGVZN6test681fC1EvE4test = linkonce_odr global
 // CHECK-HIDDEN: @_ZGVZN6test681fC1EvE4test = linkonce_odr hidden global
+
+// CHECK-HIDDEN: @_ZTVN6test701DE = linkonce_odr hidden unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZTIN6test701DE] }, align 8
+// CHECK-HIDDEN: @_ZTTN6test701DE = linkonce_odr hidden unnamed_addr constant [1 x ptr] [ptr getelementptr inbounds inrange(-24, 0) ({ [3 x ptr] }, ptr @_ZTVN6test701DE, i32 0, i32 0, i32 3)], align 8
 
 // CHECK: @_ZZN6Test193fooIiEEvvE1a = linkonce_odr global
 // CHECK-HIDDEN: @_ZZN6Test193fooIiEEvvE1a = linkonce_odr hidden global
@@ -195,7 +255,7 @@ namespace Test4 HIDDEN {
   };
   
   // A has default visibility.
-  // CHECK-LABEL: define dso_local void @_ZN5Test41A1fEv
+  // CHECK-LABEL: define void @_ZN5Test41A1fEv
   void A::f() { } 
 }
 
@@ -209,12 +269,11 @@ namespace Test5 {
   
   namespace NS {
     // g is in NS, but this NS decl is not hidden.
-    // CHECK-LABEL: define dso_local void @_ZN5Test52NS1gEv
+    // CHECK-LABEL: define void @_ZN5Test52NS1gEv
     void g() { }
   }
 }
 
-// <rdar://problem/8091955>
 namespace Test6 {
   struct HIDDEN foo {
     foo() { }
@@ -268,8 +327,8 @@ namespace Test9 {
     void DEFAULT test9_fun(struct A *a) { }
     struct A DEFAULT test9_var; // above
   }
-  // CHECK-LABEL: define dso_local void @test9_fun(
-  // CHECK-HIDDEN-LABEL: define dso_local void @test9_fun(
+  // CHECK-LABEL: define void @test9_fun(
+  // CHECK-HIDDEN-LABEL: define void @test9_fun(
 
   void test() {
     A a = test9_var;
@@ -285,8 +344,8 @@ namespace Test10 {
     void foo(A*);
   };
 
-  // CHECK-LABEL: define dso_local void @_ZN6Test101B3fooEPNS_1AE(
-  // CHECK-HIDDEN-LABEL: define dso_local void @_ZN6Test101B3fooEPNS_1AE(
+  // CHECK-LABEL: define void @_ZN6Test101B3fooEPNS_1AE(
+  // CHECK-HIDDEN-LABEL: define void @_ZN6Test101B3fooEPNS_1AE(
   void B::foo(A*) {}
 }
 
@@ -352,7 +411,6 @@ namespace Test14 {
   struct A *test() { return var; }
 }
 
-// rdar://problem/8613093
 namespace Test15 {
   struct A {};
   template <class T> struct Temp {
@@ -507,7 +565,7 @@ namespace Test20 {
     static void test3();
   };
 
-  // CHECK-LABEL: define dso_local void @_ZN6Test201AILj1EE5test2Ev()
+  // CHECK-LABEL: define void @_ZN6Test201AILj1EE5test2Ev()
   void A<1>::test2() {}
 
   // CHECK: declare void @_ZN6Test201AILj1EE5test3Ev()
@@ -515,7 +573,6 @@ namespace Test20 {
     A<1>::test3();
   }
 
-  // <rdar://problem/8778497>
   // But we should assume that an unknown specialization has the
   // explicit visibility settings of the template.
   template <class T> struct B {
@@ -545,7 +602,6 @@ namespace test21 {
   template void A<en>::foo();
 }
 
-// rdar://problem/9616154
 // Visibility on explicit specializations should take precedence.
 namespace test22 {
   class A1 {};
@@ -684,8 +740,8 @@ namespace test26 {
   template<>
   void C<int>::f() { }
 
-  // CHECK-LABEL: define dso_local void @_ZN6test261CIiE1fEv
-  // CHECK-HIDDEN-LABEL: define dso_local void @_ZN6test261CIiE1fEv
+  // CHECK-LABEL: define void @_ZN6test261CIiE1fEv
+  // CHECK-HIDDEN-LABEL: define void @_ZN6test261CIiE1fEv
 }
 
 namespace test31 {
@@ -709,8 +765,8 @@ namespace test32 {
   };
   void A::B::baz() {
   }
-  // CHECK-LABEL: define dso_local void @_ZN6test321A1B3bazEv
-  // CHECK-HIDDEN-LABEL: define dso_local void @_ZN6test321A1B3bazEv
+  // CHECK-LABEL: define void @_ZN6test321A1B3bazEv
+  // CHECK-HIDDEN-LABEL: define void @_ZN6test321A1B3bazEv
 }
 
 namespace test33 {
@@ -829,8 +885,8 @@ namespace test42 {
   };
   void bar<foo>::zed() {
   }
-  // CHECK-LABEL: define dso_local void @_ZN6test423barINS_3fooEE3zedEv
-  // CHECK-HIDDEN-LABEL: define dso_local void @_ZN6test423barINS_3fooEE3zedEv
+  // CHECK-LABEL: define void @_ZN6test423barINS_3fooEE3zedEv
+  // CHECK-HIDDEN-LABEL: define void @_ZN6test423barINS_3fooEE3zedEv
 }
 
 namespace test43 {
@@ -842,8 +898,8 @@ namespace test43 {
   template <>
   DEFAULT void bar<foo>() {
   }
-  // CHECK-LABEL: define dso_local void @_ZN6test433barINS_3fooEEEvv
-  // CHECK-HIDDEN-LABEL: define dso_local void @_ZN6test433barINS_3fooEEEvv
+  // CHECK-LABEL: define void @_ZN6test433barINS_3fooEEEvv
+  // CHECK-HIDDEN-LABEL: define void @_ZN6test433barINS_3fooEEEvv
 }
 
 namespace test44 {
@@ -953,15 +1009,56 @@ namespace test51 {
   // template. Note that is a case where we disagree with gcc, it produces
   // a default symbol.
 
-  struct HIDDEN foo {
-  };
-  DEFAULT foo x;
+  struct HIDDEN foo {};
+  DEFAULT foo da, db, dc, dd, de, df;
+  HIDDEN foo ha, hb, hc, hd, he, hf;
   template<foo *z>
   void DEFAULT zed() {
   }
-  template void zed<&x>();
-  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_1xEEEEEvv
-  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_1xEEEEEvv
+  template void zed<&da>();
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2daEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2daEEEEEvv(
+
+  template void DEFAULT zed<&db>();
+  // CHECK-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2dbEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2dbEEEEEvv(
+
+  template void HIDDEN zed<&dc>();
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2dcEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2dcEEEEEvv(
+
+  template void zed<&ha>();
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2haEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2haEEEEEvv(
+
+  template void DEFAULT zed<&hb>();
+  // CHECK-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2hbEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2hbEEEEEvv(
+
+  template void HIDDEN zed<&hc>();
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hcEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hcEEEEEvv(
+
+#pragma GCC visibility push(hidden)
+  template void zed<&dd>();
+  template void zed<&hd>();
+  template void DEFAULT zed<&he>();
+#pragma GCC visibility pop
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
+  // CHECK-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2heEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2heEEEEEvv(
+
+  void use() {
+    zed<&df>();
+    zed<&hf>();
+  }
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2dfEEEEEvv(
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hfEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2dfEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hfEEEEEvv(
 }
 
 namespace test52 {
@@ -1208,10 +1305,10 @@ namespace test65 {
     static void foo() {}
   };
 
-  // CHECK-LABEL: define dso_local void @_ZN6test651BINS_1AEE4funcEv()
+  // CHECK-LABEL: define void @_ZN6test651BINS_1AEE4funcEv()
   template <> DEFAULT void B<A>::func() {}
 
-  // CHECK-LABEL: define dso_local void @_ZN6test651BINS_1AEE6funcT2IS1_EEvv()
+  // CHECK-LABEL: define void @_ZN6test651BINS_1AEE6funcT2IS1_EEvv()
   template <> template <> DEFAULT void B<A>::funcT2<A>() {}
 
   // CHECK-LABEL: define linkonce_odr void @_ZN6test651BINS_1AEE6funcT1IiEEvv()
@@ -1314,6 +1411,55 @@ namespace test69 {
   }
   namespace foo __attribute__((visibility("hidden"))) {
   }
-  // CHECK-LABEL: define dso_local void @_ZN6test693foo1fEv
+  // CHECK-LABEL: define void @_ZN6test693foo1fEv
   // CHECK-HIDDEN-LABEL: define hidden void @_ZN6test693foo1fEv
+}
+
+namespace test70 {
+  // Make sure both the vtable and VTT declarations are marked "hidden"
+  class HIDDEN A {
+    virtual void a();
+  };
+  class HIDDEN B : virtual A {
+    void a() override;
+    ~B();
+  };
+  B::~B() {}
+
+  // Make sure both the vtable and VTT declarations are marked "hidden"
+  // when "-fvisibilty=hidden" is in use.
+  class C {};
+  class D : virtual C {};
+  D d;
+  // Check lines at top of file.
+}
+
+// https://github.com/llvm/llvm-project/issues/31462
+namespace test71 {
+  template <class T>
+  struct foo {
+    static HIDDEN T zed();
+    template <class U> HIDDEN U bar();
+  };
+  template <class T>
+  T foo<T>::zed() { return {}; }
+  template <class T> template <class U>
+  U foo<T>::bar() { return {}; }
+
+  extern template struct DEFAULT foo<int>;
+
+  int use() {
+    foo<int> o;
+    foo<long> p;
+    return o.zed() + o.bar<int>() + p.zed() + p.bar<int>();
+  }
+  /// FIXME: foo<int>::bar is hidden in GCC w/ or w/o -fvisibility=hidden.
+  // CHECK-LABEL: declare hidden noundef i32 @_ZN6test713fooIiE3zedEv(
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN6test713fooIiE3barIiEET_v(
+  // CHECK-LABEL: define linkonce_odr hidden noundef i64 @_ZN6test713fooIlE3zedEv(
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN6test713fooIlE3barIiEET_v(
+  // CHECK-HIDDEN-LABEL: declare hidden noundef i32 @_ZN6test713fooIiE3zedEv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr noundef i32 @_ZN6test713fooIiE3barIiEET_v(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden noundef i64 @_ZN6test713fooIlE3zedEv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden noundef i32 @_ZN6test713fooIlE3barIiEET_v(
 }

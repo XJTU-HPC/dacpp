@@ -17,6 +17,7 @@
 #include "lldb/Target/RegisterContextUnwind.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb;
@@ -101,7 +102,7 @@ bool UnwindLLDB::AddFirstFrame() {
   return true;
 
 unwind_done:
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
   if (log) {
     LLDB_LOGF(log, "th%d Unwind of this thread is complete.",
               m_thread.GetIndexID());
@@ -119,7 +120,7 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
   if (m_unwind_complete)
     return nullptr;
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
 
   CursorSP prev_frame = m_frames.back();
   uint32_t cur_idx = m_frames.size();
@@ -260,7 +261,12 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
               cur_idx < 100 ? cur_idx : 100, "", cur_idx);
     return nullptr;
   }
-  if (abi && !abi->CodeAddressIsValid(cursor_sp->start_pc)) {
+
+  // Invalid code addresses should not appear on the stack *unless* we're
+  // directly below a trap handler frame (in this case, the invalid address is
+  // likely the cause of the trap).
+  if (abi && !abi->CodeAddressIsValid(cursor_sp->start_pc) &&
+      !prev_frame->reg_ctx_lldb_sp->IsTrapHandlerFrame()) {
     // If the RegisterContextUnwind has a fallback UnwindPlan, it will switch to
     // that and return true.  Subsequent calls to TryFallbackUnwindPlan() will
     // return false.
@@ -312,11 +318,10 @@ void UnwindLLDB::UpdateUnwindPlanForFirstFrameIfInvalid(ABI *abi) {
   // Restore status after calling AddOneMoreFrame
   m_unwind_complete = old_m_unwind_complete;
   m_candidate_frame = old_m_candidate_frame;
-  return;
 }
 
 bool UnwindLLDB::AddOneMoreFrame(ABI *abi) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
 
   // Frame zero is a little different
   if (m_frames.empty())
@@ -419,6 +424,8 @@ bool UnwindLLDB::DoGetFrameInfoAtIndex(uint32_t idx, addr_t &cfa, addr_t &pc,
       // in the return address slot of the frame below, so this
       // too behaves like the zeroth frame (i.e. the pc might not
       // be pointing just past a call in it)
+      behaves_like_zeroth_frame = true;
+    } else if (m_frames[idx]->reg_ctx_lldb_sp->BehavesLikeZerothFrame()) {
       behaves_like_zeroth_frame = true;
     } else {
       behaves_like_zeroth_frame = false;

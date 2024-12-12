@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++2a
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // type_traits
 
-// is_scoped_enum // C++2b
+// is_scoped_enum // C++23
 
 #include <type_traits>
 #include <cstddef> // for std::nullptr_t

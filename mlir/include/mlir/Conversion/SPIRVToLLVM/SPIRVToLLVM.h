@@ -15,6 +15,8 @@
 
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
+
 namespace mlir {
 class LLVMTypeConverter;
 class MLIRContext;
@@ -25,7 +27,7 @@ class SPIRVToLLVMConversion : public OpConversionPattern<SPIRVOp> {
 public:
   SPIRVToLLVMConversion(MLIRContext *context, LLVMTypeConverter &typeConverter,
                         PatternBenefit benefit = 1)
-      : OpConversionPattern<SPIRVOp>(context, benefit),
+      : OpConversionPattern<SPIRVOp>(typeConverter, context, benefit),
         typeConverter(typeConverter) {}
 
 protected:
@@ -37,23 +39,25 @@ protected:
 void encodeBindAttribute(ModuleOp module);
 
 /// Populates type conversions with additional SPIR-V types.
-void populateSPIRVToLLVMTypeConversion(LLVMTypeConverter &typeConverter);
+void populateSPIRVToLLVMTypeConversion(
+    LLVMTypeConverter &typeConverter,
+    spirv::ClientAPI clientAPIForAddressSpaceMapping =
+        spirv::ClientAPI::Unknown);
 
 /// Populates the given list with patterns that convert from SPIR-V to LLVM.
-void populateSPIRVToLLVMConversionPatterns(MLIRContext *context,
-                                           LLVMTypeConverter &typeConverter,
-                                           OwningRewritePatternList &patterns);
+void populateSPIRVToLLVMConversionPatterns(
+    LLVMTypeConverter &typeConverter, RewritePatternSet &patterns,
+    spirv::ClientAPI clientAPIForAddressSpaceMapping =
+        spirv::ClientAPI::Unknown);
 
 /// Populates the given list with patterns for function conversion from SPIR-V
 /// to LLVM.
 void populateSPIRVToLLVMFunctionConversionPatterns(
-    MLIRContext *context, LLVMTypeConverter &typeConverter,
-    OwningRewritePatternList &patterns);
+    LLVMTypeConverter &typeConverter, RewritePatternSet &patterns);
 
 /// Populates the given patterns for module conversion from SPIR-V to LLVM.
 void populateSPIRVToLLVMModuleConversionPatterns(
-    MLIRContext *context, LLVMTypeConverter &typeConverter,
-    OwningRewritePatternList &patterns);
+    LLVMTypeConverter &typeConverter, RewritePatternSet &patterns);
 
 } // namespace mlir
 

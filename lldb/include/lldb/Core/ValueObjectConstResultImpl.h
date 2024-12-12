@@ -15,8 +15,8 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 namespace lldb_private {
 class CompilerType;
 class DataExtractor;
@@ -26,9 +26,9 @@ class ValueObject;
 
 namespace lldb_private {
 
-// A class wrapping common implementation details for operations in
-// ValueObjectConstResult ( & Child ) that may need to jump from the host
-// memory space into the target's memory space
+/// A class wrapping common implementation details for operations in
+/// ValueObjectConstResult ( & Child ) that may need to jump from the host
+/// memory space into the target's memory space.
 class ValueObjectConstResultImpl {
 public:
   ValueObjectConstResultImpl(ValueObject *valobj,
@@ -38,8 +38,8 @@ public:
 
   lldb::ValueObjectSP Dereference(Status &error);
 
-  ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
-                                  int32_t synthetic_index);
+  ValueObject *CreateChildAtIndex(size_t idx);
+  ValueObject *CreateSyntheticArrayMember(size_t idx);
 
   lldb::ValueObjectSP
   GetSyntheticChildAtOffset(uint32_t offset, const CompilerType &type,
@@ -68,7 +68,6 @@ private:
   ValueObject *m_impl_backend;
   lldb::addr_t m_live_address;
   AddressType m_live_address_type;
-  lldb::ValueObjectSP m_load_addr_backend;
   lldb::ValueObjectSP m_address_of_backend;
 
   ValueObjectConstResultImpl(const ValueObjectConstResultImpl &) = delete;
