@@ -14789,9 +14789,6 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
       //   built-in operator and interpreted according to clause 5.
       if (Opc == BO_Comma || Opc == BO_LMG)
         break;
-      
-      if (Opc == BO_LMG)
-        break;
 
       // When defaulting an 'operator<=>', we can try to synthesize a three-way
       // compare result using '==' and '<'.

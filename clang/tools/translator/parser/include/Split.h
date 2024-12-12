@@ -87,6 +87,6 @@ public:
     }
 };
 
-} // namespace dacppTranslator
+}
 
 #endif

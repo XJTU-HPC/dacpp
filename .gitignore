@@ -74,3 +74,5 @@ pythonenv*
 # install dir
 /test/*
 clang/tools/translator/tests/src/CMakeLists.txt
+
+clang/tools/translator/tests/tmp/
