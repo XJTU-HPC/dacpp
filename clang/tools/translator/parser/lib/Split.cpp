@@ -5,12 +5,14 @@
 /*
     划分父类
 */
-dacppTranslator::Split::Split() {
+dacppTranslator::Split::Split(Split *parent) {
+    this->parent = parent;
 }
 
-dacppTranslator::Split::Split(std::string id, int dimIdx) {
+dacppTranslator::Split::Split(Split *parent, std::string id, int dimIdx) {
     this->id = id;
     this->dimIdx = dimIdx;
+    this->parent = parent;
 }
 
 void dacppTranslator::Split::setId(std::string id) {
@@ -40,10 +42,10 @@ int dacppTranslator::Split::getSplitNumber() {
 /*
     降维划分
 */
-dacppTranslator::IndexSplit::IndexSplit() {
+dacppTranslator::IndexSplit::IndexSplit(Split *parent): Split(parent) {
 }
 
-dacppTranslator::IndexSplit::IndexSplit(std::string id, int dimIdx, int splitNumber) : Split(id, dimIdx) {
+dacppTranslator::IndexSplit::IndexSplit(Split *parent, std::string id, int dimIdx, int splitNumber) : Split(parent, id, dimIdx) {
     this->splitNumber = splitNumber;
 }
 
@@ -58,10 +60,10 @@ int dacppTranslator::IndexSplit::getSplitNumber() {
 /*
     规则分区划分
 */
-dacppTranslator::RegularSplit::RegularSplit() {
+dacppTranslator::RegularSplit::RegularSplit(Split *parent): Split(parent) {
 }
 
-dacppTranslator::RegularSplit::RegularSplit(std::string id, int dimIdx, int splitSize, int splitStride, int splitNumber) : Split(id, dimIdx) {
+dacppTranslator::RegularSplit::RegularSplit(Split *parent, std::string id, int dimIdx, int splitSize, int splitStride, int splitNumber) : Split(parent, id, dimIdx) {
     this->splitSize = splitSize;
     this->splitStride = splitStride;
     this->splitNumber = splitNumber;

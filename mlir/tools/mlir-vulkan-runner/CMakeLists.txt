@@ -5,19 +5,15 @@ set(LLVM_OPTIONAL_SOURCES
   VulkanRuntime.h
   )
 
-if (MLIR_VULKAN_RUNNER_ENABLED)
+if (MLIR_ENABLE_VULKAN_RUNNER)
   message(STATUS "Building the Vulkan runner")
 
-  # At first try "FindVulkan" from:
-  # https://cmake.org/cmake/help/v3.7/module/FindVulkan.html
-  if (NOT CMAKE_VERSION VERSION_LESS 3.7.0)
-    find_package(Vulkan)
-  endif()
+  find_package(Vulkan)
 
   # If Vulkan is not found try a path specified by VULKAN_SDK.
   if (NOT Vulkan_FOUND)
     if ("$ENV{VULKAN_SDK}" STREQUAL "")
-      message(FATAL_ERROR "Please use at least CMAKE 3.7.0 or provide "
+      message(FATAL_ERROR "Vulkan not found through CMake; please provide "
                           "VULKAN_SDK path as an environment variable")
     endif()
 
@@ -52,23 +48,31 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
     ${Vulkan_LIBRARY}
   )
 
-  get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
   get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
   set(LIBS
-    ${dialect_libs}
     ${conversion_libs}
     MLIRAnalysis
-    MLIREDSC
+    MLIRArithDialect
+    MLIRBuiltinToLLVMIRTranslation
     MLIRExecutionEngine
+    MLIRFuncDialect
+    MLIRGPUDialect
     MLIRIR
     MLIRJitRunner
-    MLIRLLVMIR
+    MLIRLLVMDialect
+    MLIRLLVMCommonConversion
+    MLIRLLVMToLLVMIRTranslation
+    MLIRMemRefDialect
+    MLIRMemRefToLLVM
     MLIRParser
+    MLIRSPIRVDialect
     MLIRSPIRVTransforms
     MLIRSupport
-    MLIRTargetLLVMIR
+    MLIRTargetLLVMIRExport
     MLIRTransforms
-    MLIRTranslation
+    MLIRTranslateLib
+    MLIRVectorDialect
+    MLIRVectorToLLVMPass
     ${Vulkan_LIBRARY}
   )
 
@@ -83,7 +87,7 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
     LIST(APPEND targets_to_link "LLVM${t}")
   ENDFOREACH(t)
 
-  add_llvm_tool(mlir-vulkan-runner
+  add_mlir_tool(mlir-vulkan-runner
     mlir-vulkan-runner.cpp
 
     DEPENDS

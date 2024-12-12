@@ -19,24 +19,25 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 
-#include <stddef.h>
+#include <cstddef>
 
 namespace lldb_private {
 class Declaration;
 class Status;
 class SyntheticChildrenFrontEnd;
 
-// A ValueObject that obtains its children from some source other than
-// real information
-// This is currently used to implement Python-based children and filters but
-// you can bind it to any source of synthetic information and have it behave
-// accordingly
+/// A ValueObject that obtains its children from some source other than
+/// real information.
+/// This is currently used to implement Python-based children and filters but
+/// you can bind it to any source of synthetic information and have it behave
+/// accordingly.
 class ValueObjectSynthetic : public ValueObject {
 public:
   ~ValueObjectSynthetic() override;
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  std::optional<uint64_t> GetByteSize() override;
 
   ConstString GetTypeName() override;
 
@@ -46,16 +47,17 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t CalculateNumChildren(uint32_t max) override;
+  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   lldb::ValueType GetValueType() const override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx, bool can_create) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx,
+                                      bool can_create = true) override;
 
-  lldb::ValueObjectSP GetChildMemberWithName(ConstString name,
-                                             bool can_create) override;
+  lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
+                                             bool can_create = true) override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  size_t GetIndexOfChildWithName(llvm::StringRef name) override;
 
   lldb::ValueObjectSP
   GetDynamicValue(lldb::DynamicValueType valueType) override;
@@ -79,6 +81,10 @@ public:
   virtual lldb::DynamicValueType GetDynamicValueType() {
     return ((m_parent != nullptr) ? m_parent->GetDynamicValueType()
                                   : lldb::eNoDynamicValues);
+  }
+
+  lldb::VariableSP GetVariable() override {
+    return m_parent != nullptr ? m_parent->GetVariable() : nullptr;
   }
 
   ValueObject *GetParent() override {
@@ -148,9 +154,9 @@ protected:
   /// Guarded by m_child_mutex;
   SyntheticChildrenCache m_synthetic_children_cache;
 
-  uint32_t m_synthetic_children_count; // FIXME use the ValueObject's
-                                       // ChildrenManager instead of a special
-                                       // purpose solution
+  // FIXME: use the ValueObject's  ChildrenManager instead of a special purpose
+  // solution.
+  uint32_t m_synthetic_children_count;
 
   ConstString m_parent_type_name;
 

@@ -13,6 +13,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include <memory>
@@ -25,7 +26,7 @@ Block::Block(lldb::user_id_t uid)
       m_inlineInfoSP(), m_variable_list_sp(), m_parsed_block_info(false),
       m_parsed_block_variables(false), m_parsed_child_blocks(false) {}
 
-Block::~Block() {}
+Block::~Block() = default;
 
 void Block::GetDescription(Stream *s, Function *function,
                            lldb::DescriptionLevel level, Target *target) const {
@@ -120,6 +121,16 @@ Block *Block::FindBlockByID(user_id_t block_id) {
       break;
   }
   return matching_block;
+}
+
+Block *Block::FindInnermostBlockByOffset(const lldb::addr_t offset) {
+  if (!Contains(offset))
+    return nullptr;
+  for (const BlockSP &block_sp : m_children) {
+    if (Block *block = block_sp->FindInnermostBlockByOffset(offset))
+      return block;
+  }
+  return this;
 }
 
 void Block::CalculateSymbolContext(SymbolContext *sc) {
@@ -303,6 +314,22 @@ bool Block::GetRangeAtIndex(uint32_t range_idx, AddressRange &range) {
   return false;
 }
 
+AddressRanges Block::GetRanges() {
+  AddressRanges ranges;
+  Function *function = CalculateSymbolContextFunction();
+  if (!function)
+    return ranges;
+  for (size_t i = 0, e = m_ranges.GetSize(); i < e; ++i) {
+    ranges.emplace_back();
+    auto &range = ranges.back();
+    const Range &vm_range = m_ranges.GetEntryRef(i);
+    range.GetBaseAddress() = function->GetAddressRange().GetBaseAddress();
+    range.GetBaseAddress().Slide(vm_range.GetRangeBase());
+    range.SetByteSize(vm_range.GetByteSize());
+  }
+  return ranges;
+}
+
 bool Block::GetStartAddress(Address &addr) {
   if (m_ranges.IsEmpty())
     return false;
@@ -324,7 +351,7 @@ void Block::FinalizeRanges() {
 void Block::AddRange(const Range &range) {
   Block *parent_block = GetParent();
   if (parent_block && !parent_block->Contains(range)) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
+    Log *log = GetLog(LLDBLog::Symbols);
     if (log) {
       ModuleSP module_sp(m_parent_scope->CalculateSymbolContextModule());
       Function *function = m_parent_scope->CalculateSymbolContextFunction();

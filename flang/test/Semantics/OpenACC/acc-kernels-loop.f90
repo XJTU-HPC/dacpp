@@ -1,4 +1,4 @@
-! RUN: %S/../test_errors.sh %s %t %f18 -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc
 
 ! Check OpenACC clause validity for the following construct and directive:
 !   2.11 Kernels Loop
@@ -21,6 +21,8 @@ program openacc_kernels_loop_validity
   real :: reduction_r
   logical :: reduction_l
   real(8), dimension(N, N) :: aa, bb, cc
+  real(8), dimension(:), allocatable :: dd
+  real(8), pointer :: p
   logical :: ifCondition = .TRUE.
   type(atype) :: t
   type(atype), dimension(10) :: ta
@@ -31,6 +33,18 @@ program openacc_kernels_loop_validity
   do i = 1, N
     a(i) = 3.14
   end do
+
+  !$acc kernels loop
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end kernels loop
+
+  !$acc kernels loop
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end kernels loop
 
   !$acc kernels loop num_gangs(8)
   do i = 1, N
@@ -118,6 +132,11 @@ program openacc_kernels_loop_validity
   end do
 
   !$acc kernels loop wait(wait1, wait2)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !$acc kernels loop wait(wait1) wait(wait2)
   do i = 1, N
     a(i) = 3.14
   end do
@@ -213,7 +232,8 @@ program openacc_kernels_loop_validity
     a(i) = 3.14
   end do
 
-  !$acc kernels loop attach(aa, bb, cc)
+  !ERROR: Argument `aa` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+  !$acc kernels loop attach(aa, dd, p)
   do i = 1, N
     a(i) = 3.14
   end do
@@ -244,12 +264,12 @@ program openacc_kernels_loop_validity
     a(i) = 3.14
   end do
 
-  !$acc kernels loop device_type(1)
+  !$acc kernels loop device_type(multicore)
   do i = 1, N
     a(i) = 3.14
   end do
 
-  !$acc kernels loop device_type(1, 3)
+  !$acc kernels loop device_type(host, multicore)
   do i = 1, N
     a(i) = 3.14
   end do
@@ -268,6 +288,11 @@ program openacc_kernels_loop_validity
   !$acc kernels loop device_type(*) if(.TRUE.)
   do i = 1, N
     a(i) = 3.14
+  end do
+
+  !$acc parallel loop
+  do i = 1, N
+    if(i == 10) cycle
   end do
 
 end program openacc_kernels_loop_validity
