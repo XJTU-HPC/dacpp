@@ -1,9 +1,3 @@
-# LLVM版本更新
-我们将对LLVM的版本进行升级，后续将基于develop分支进行开发。
-
-2024年12月10日14:00（含）之前合并到test分支的所有提交已被全部转移到develop分支上。
-
-mtc 2024年12月10日
 # The LLVM Compiler Infrastructure
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
