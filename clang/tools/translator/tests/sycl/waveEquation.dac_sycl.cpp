@@ -16,7 +16,7 @@ const int NY = 8;    // y方向网格数量
 const float Lx = 10.0f; // x方向长度
 const float Ly = 10.0f; // y方向长度
 const float c = 1.0f;   // 波速
-const int TIME_STEPS = 2; // 时间步数
+const int TIME_STEPS = 1000; // 时间步数
 // 网格步长
 const float dx = Lx / (NX - 1);
 const float dy = Ly / (NY - 1);
@@ -36,11 +36,13 @@ using namespace sycl;
 void waveEq(float* cur, float* prev, float* next) 
 {
     float dt = 0.5 * std::fmin(dx, dy) / c;
-    float u_xx = (cur[(1+1) * 3 + 1] - 2.0f * cur[1 * 3 + 1] + cur[(1-1) * 3 + 1]) / (dx * dx);
-    float u_yy = (cur[1 * 3 + (1+1)] - 2.0f * cur[1 * 3 + 1] + cur[1 * 3 + (1-1)]) / (dy * dy);
-    // next[0] = 2.0f * cur[1 * 3 + 1] - prev[0] + c * c * dt * dt * ((cur[2 * 3 + 1] - 2.0f * cur[1 * 3 + 1] + cur[0 * 3 + 1] / (dx * dx)) + (cur[1 * 3 + 2] - 2.0f * cur[1 * 3 + 1] + cur[1 * 3 + 0] / (dy * dy)));
-    next[0] = 2.0f * cur[1 * 3 + 1] - prev[0] + c * c * dt * dt * (u_xx + u_yy);
-    // next[0]=2*prev[0];
+    // float u_xx = (cur[(1+1) * 3 + 1] - 2.0f * cur[1 * 3 + 1] + cur[(1-1) * 3 + 1]) / (dx * dx);
+    // float u_yy = (cur[1 * 3 + (1+1)] - 2.0f * cur[1 * 3 + 1] + cur[1 * 3 + (1-1)]) / (dy * dy);
+    float u_xx = (cur[(1+1) * 3 + 1] - 2.0f * cur[1 * 3 + 1] + cur[(1-1) * 3 + 1])/ (dx * dx);
+    float u_yy = (cur[1 * 3 + (1+1)] - 2.0f * cur[1 * 3 + 1] + cur[1 * 3 + (1-1)])/ (dy * dy);
+    //next[0] = 2.0f * cur[1 * 3 + 1] - prev[0] + c * c * dt * dt * ((cur[2 * 3 + 1] - 2.0f * cur[1 * 3 + 1] + cur[0 * 3 + 1] / (dx * dx)) + (cur[1 * 3 + 2] - 2.0f * cur[1 * 3 + 1] + cur[1 * 3 + 0] / (dy * dy)));
+    // next[0] = cur[1 * 3 + 1] + 1;
+    next[0]=2.0f*cur[1 * 3 + 1]-prev[0]+(c * c)*dt*dt*(u_xx+u_yy);
 }
 
 
@@ -73,7 +75,7 @@ void waveEqShell(const dacpp::Tensor<float> & matCur, const dacpp::Tensor<float>
     // 数据算子组初始化
     Dac_Ops matCur_ops;
     sp1.setDimId(0);
-    sp1.setSplitLength(24);
+    sp1.setSplitLength(54);
     matCur_ops.push_back(sp1);
     sp2.setDimId(1);
     sp2.setSplitLength(9);
@@ -136,7 +138,9 @@ void waveEqShell(const dacpp::Tensor<float> & matCur, const dacpp::Tensor<float>
     // 数据移动
     q.memcpy(d_matCur,r_matCur,324*sizeof(float)).wait();
     // 数据移动
-    q.memcpy(d_matPrev,r_matPrev,36*sizeof(float)).wait();   
+    q.memcpy(d_matPrev,r_matPrev,36*sizeof(float)).wait();
+    // 数据初始化
+    q.memset(d_matNext,0,36*sizeof(float)).wait();  
     // 内核执行
     
     //工作项划分
@@ -155,7 +159,7 @@ void waveEqShell(const dacpp::Tensor<float> & matCur, const dacpp::Tensor<float>
             // 嵌入计算
 			
 
-            waveEq(d_matCur+(sp1*24+sp2*9),d_matPrev+(idx1*6+idx2*1),d_matNext+(idx1*6+idx2*1));
+            waveEq(d_matCur+(sp1*54+sp2*9),d_matPrev+(idx1*6+idx2*1),d_matNext+(idx1*6+idx2*1));
         });
     }).wait();
     
@@ -200,6 +204,7 @@ int main() {
             float x = i * dx;
             float y = j * dy;
             u_prev[i*NX+j] = std::exp(-((x - Lx/2)*(x - Lx/2) + (y - Ly/2)*(y - Ly/2)) / (2 * sigma * sigma));
+            //u_prev[i*NX+j] = i*NX+j;
         }
     }
 
@@ -242,7 +247,7 @@ int main() {
         }
 
         // u_curr_tensor.print();
-        // u_prev_middle_tensor.print();
+        //u_prev_middle_tensor.print();
         waveEqShell(u_curr_tensor, u_prev_middle_tensor, u_next_middle_tensor);
         // u_next_middle_tensor.print();
 

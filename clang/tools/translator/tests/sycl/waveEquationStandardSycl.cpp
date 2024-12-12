@@ -12,7 +12,7 @@ const int NY = 8;    // y方向网格数量
 const float Lx = 10.0f; // x方向长度
 const float Ly = 10.0f; // y方向长度
 const float c = 1.0f;   // 波速
-const int TIME_STEPS = 2; // 时间步数
+const int TIME_STEPS = 1000; // 时间步数
 
 int main() {
     auto start_time = std::chrono::high_resolution_clock::now(); // 开始时间测量
@@ -36,7 +36,7 @@ int main() {
         for(int j = 0; j < NY; ++j) {
             float x = i * dx;
             float y = j * dy;
-            //u_prev[i * NY + j] = 1;
+            //u_prev[i * NY + j] = i * NY + j;
             u_prev[i * NY + j] = std::exp(-((x - Lx/2)*(x - Lx/2) + (y - Ly/2)*(y - Ly/2)) / (2 * sigma * sigma));
         }
     }
@@ -75,12 +75,13 @@ int main() {
                     int i = idx[0] + 1;
                     int j = idx[1] + 1;
                     // 二阶中心差分
-                    float u_xx = (d_u_curr[(i+1) * NY + j] - 2.0f * d_u_curr[i * NY + j] + d_u_curr[(i-1) * NY + j]) / (dx * dx);
-                    float u_yy = (d_u_curr[i * NY + (j+1)] - 2.0f * d_u_curr[i * NY + j] + d_u_curr[i * NY + (j-1)]) / (dy * dy);
-                    
+                    //float u_xx = (d_u_curr[(i+1) * NY + j] - 2.0f * d_u_curr[i * NY + j] + d_u_curr[(i-1) * NY + j]) / (dx * dx);
+                    //float u_yy = (d_u_curr[i * NY + (j+1)] - 2.0f * d_u_curr[i * NY + j] + d_u_curr[i * NY + (j-1)]) / (dy * dy);
+                    float u_xx = (d_u_curr[(i+1) * NY + j] - 2.0f * d_u_curr[i * NY + j] + d_u_curr[(i-1) * NY + j])/ (dx * dx);
+                    float u_yy = (d_u_curr[i * NY + (j+1)] - 2.0f * d_u_curr[i * NY + j] + d_u_curr[i * NY + (j-1)])/ (dy * dy);
                     // 显式更新公式
-                    d_u_next[i * NY + j] = 2.0f * d_u_curr[i * NY + j] - d_u_prev[i * NY + j] + (c * c) * (u_xx + u_yy) * dt * dt;
-                    // d_u_next[i * NY + j] = 2*d_u_prev[i * NY + j];
+                    //d_u_next[i * NY + j] = 2.0f * d_u_curr[i * NY + j] - d_u_prev[i * NY + j] + (c * c) * (u_xx + u_yy) * dt * dt;
+                    d_u_next[i * NY + j] = 2.0f * d_u_curr[i * NY + j]-d_u_prev[i * NY + j]+(c * c)*dt*dt*(u_xx+u_yy);
                     
                 }
             );
