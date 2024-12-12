@@ -33,11 +33,13 @@ public:
     void setName(std::string name);
     std::string getName();
 
-    void setShape(int size);
-    void setShape(int idx, int size);
-    int getShape(int idx);
-    int getDim();
+    void __attribute__(( unused, deprecated )) setShape(int size) ;
+    void __attribute__(( unused, deprecated )) setShape(int idx, int size);
+    int __attribute__(( unused, deprecated )) getShape(int idx);
+    int __attribute__(( unused, deprecated )) getDim();
 
+    /* 维度：通过tensor的第二个模版参数获取。  */
+    int dim;
 };
 
 

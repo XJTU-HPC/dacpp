@@ -131,7 +131,7 @@ public:
         std::error_code error_code;
         std::string file = getCurrentFile().str();
         file.replace(file.find(".cpp"), 4, "_sycl.cpp");
-        llvm::raw_fd_ostream outFile(file, error_code, llvm::sys::fs::F_None);
+        llvm::raw_fd_ostream outFile(file, error_code, llvm::sys::fs::OF_None);
         // this will write the result to outFile
         clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID()).write(outFile);
         outFile.close();
@@ -144,7 +144,13 @@ static llvm::cl::OptionCategory translator("translator options");
 
 int main(int argc, const char **argv) {
     // 所有命令行 Clang 工具通用的选项解析器
-    CommonOptionsParser op(argc, argv, translator);
+    auto ExpectedParser =
+        CommonOptionsParser::create(argc, argv, translator);
+    if (!ExpectedParser) {
+      llvm::errs() << ExpectedParser.takeError();
+      return 1;
+    }
+    CommonOptionsParser &op = ExpectedParser.get();
 
     // 运行一个前端动作的工具
     ClangTool tool(op.getCompilations(), op.getSourcePathList());

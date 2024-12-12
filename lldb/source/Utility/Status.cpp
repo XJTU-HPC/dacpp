@@ -28,7 +28,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-#include <stdint.h>
+#include <cstdint>
 
 namespace llvm {
 class raw_ostream;
@@ -37,7 +37,7 @@ class raw_ostream;
 using namespace lldb;
 using namespace lldb_private;
 
-Status::Status() : m_code(0), m_type(eErrorTypeInvalid), m_string() {}
+Status::Status() : m_string() {}
 
 Status::Status(ValueType err, ErrorType type)
     : m_code(err), m_type(type), m_string() {}
@@ -51,8 +51,7 @@ Status::Status(std::error_code EC)
                                                       : eErrorTypeGeneric),
       m_string(EC.message()) {}
 
-Status::Status(const char *format, ...)
-    : m_code(0), m_type(eErrorTypeInvalid), m_string() {
+Status::Status(const char *format, ...) : m_string() {
   va_list args;
   va_start(args, format);
   SetErrorToGenericError();
@@ -93,8 +92,7 @@ llvm::Error Status::ToError() const {
   if (m_type == ErrorType::eErrorTypePOSIX)
     return llvm::errorCodeToError(
         std::error_code(m_code, std::generic_category()));
-  return llvm::make_error<llvm::StringError>(AsCString(),
-                                             llvm::inconvertibleErrorCode());
+  return llvm::createStringError(AsCString());
 }
 
 Status::~Status() = default;
@@ -180,14 +178,6 @@ ErrorType Status::GetType() const { return m_type; }
 // Returns true if this object contains a value that describes an error or
 // otherwise non-success result.
 bool Status::Fail() const { return m_code != 0; }
-
-// Set accessor for the error value to "err" and the type to
-// "eErrorTypeMachKernel"
-void Status::SetMachError(uint32_t err) {
-  m_code = err;
-  m_type = eErrorTypeMachKernel;
-  m_string.clear();
-}
 
 void Status::SetExpressionError(lldb::ExpressionResults result,
                                 const char *mssg) {
@@ -286,10 +276,6 @@ int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
 // Returns true if the error code in this object is considered a successful
 // return value.
 bool Status::Success() const { return m_code == 0; }
-
-bool Status::WasInterrupted() const {
-  return (m_type == eErrorTypePOSIX && m_code == EINTR);
-}
 
 void llvm::format_provider<lldb_private::Status>::format(
     const lldb_private::Status &error, llvm::raw_ostream &OS,

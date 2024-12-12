@@ -338,6 +338,8 @@ public:
 
   Block *FindBlockByID(lldb::user_id_t block_id);
 
+  Block *FindInnermostBlockByOffset(const lldb::addr_t offset);
+
   size_t GetNumRanges() const { return m_ranges.GetSize(); }
 
   bool GetRangeContainingOffset(const lldb::addr_t offset, Range &range);
@@ -352,6 +354,8 @@ public:
   // Since blocks might have multiple discontiguous address ranges, we need to
   // be able to get at any of the address ranges in a block.
   bool GetRangeAtIndex(uint32_t range_idx, AddressRange &range);
+
+  AddressRanges GetRanges();
 
   bool GetStartAddress(Address &addr);
 

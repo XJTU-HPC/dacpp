@@ -1,9 +1,5 @@
-; RUN: llc -mtriple=aarch64 -mattr=+sve < %s 2>%t | FileCheck %s --check-prefix=CHECKCG
+; RUN: llc -mtriple=aarch64 -mattr=+sve < %s | FileCheck %s --check-prefix=CHECKCG
 ; RUN: llc -mtriple=aarch64 -mattr=+sve -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CHECKISEL
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
 
 ; CHECKCG-LABEL: foo:
 ; CHECKCG: addvl   sp, sp, #-1
@@ -14,11 +10,11 @@
 ; CHECKISEL-NEXT:  stack-id: scalable-vector
 define i32 @foo(<vscale x 16 x i8> %val) {
   %ptr = alloca <vscale x 16 x i8>
-  %res = call i32 @bar(<vscale x 16 x i8>* %ptr)
+  %res = call i32 @bar(ptr %ptr)
   ret i32 %res
 }
 
-declare i32 @bar(<vscale x 16 x i8>* %ptr);
+declare i32 @bar(ptr %ptr);
 
 ; CHECKCG-LABEL: foo2:
 ; CHECKCG: addvl   sp, sp, #-2
@@ -30,7 +26,7 @@ declare i32 @bar(<vscale x 16 x i8>* %ptr);
 
 define i32 @foo2(<vscale x 32 x i8> %val) {
   %ptr = alloca <vscale x 32 x i8>, align 16
-  %res = call i32 @bar2(<vscale x 32 x i8>* %ptr)
+  %res = call i32 @bar2(ptr %ptr)
   ret i32 %res
 }
-declare i32 @bar2(<vscale x 32 x i8>* %ptr);
+declare i32 @bar2(ptr %ptr);
