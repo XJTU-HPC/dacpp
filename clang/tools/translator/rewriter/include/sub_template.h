@@ -69,10 +69,12 @@ std::string CodeGen_D2HMemMov(std::string Name,std::string Type,std::string Size
 
 std::string CodeGen_MemFree(std::string Name);
 
-std::string CodeGen_ParameterGenerate(std::string RegularSliceOperatorSpilitNumberGeneration,std::string OperatorSpilitNumberGeneration);
-
-std::string CodeGen_RegularSliceOpSpilitNumberGenerate(std::string op_name, std::string name);
+std::string CodeGen_ParameterGenerate(std::string OperatorSpilitNumberGeneration,std::string InitDeviceMemorySize);
 
 std::string CodeGen_OpSpilitNumberGenerate(std::string op_name, std::string name);
+
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME);
+
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME);
 
 #endif

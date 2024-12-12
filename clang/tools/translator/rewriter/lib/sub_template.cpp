@@ -508,51 +508,65 @@ std::string CodeGen_MemFree(std::string Name){
 }
 
 
-//下面这些还没有往头文件里面写
 //参数生成的总模板
 const char *PARA_GENE_Template = R"~~~(
     // 参数生成 提前计算后面需要用到的参数
 	ParameterGeneration<int> para_gene_tool;
-	{{RegularSliceOperatorSpilitNumberGeneration}} //生成规则分区算子的划分份数
-	{{OperatorSpilitNumberGeneration}} //生成降维算子划分份数
+	{{OperatorSpilitNumberGeneration}} //生成算子划分份数
+	{{InitDeviceMemorySize}}//生成内存分配的大小
 )~~~";
 
-std::string CodeGen_ParameterGenerate(std::string RegularSliceOperatorSpilitNumberGeneration,std::string OperatorSpilitNumberGeneration){
+std::string CodeGen_ParameterGenerate(std::string OperatorSpilitNumberGeneration,std::string InitDeviceMemorySize){
     return templateString(PARA_GENE_Template,
 	{
-		{"{{RegularSliceOperatorSpilitNumberGeneration}}",       RegularSliceOperatorSpilitNumberGeneration},//算子的划分数 注意只是最后一个不需要逗号
-		{"{{OperatorSpilitNumberGeneration}}",       OperatorSpilitNumberGeneration}
+		{"{{OperatorSpilitNumberGeneration}}",       OperatorSpilitNumberGeneration},
+		{"{{InitDeviceMemorySize}}", InitDeviceMemorySize}//设备内存的分配大小计算
 	});
 }
 
-//生成分区算子划分数的模板
-const char *RegularSlice_SPILIT_NUMBER_Generate_Template = R"~~~(
-	//生成分区算子的划分数
-    int {{OP_NAME}}_spilit_number = para_gene_tool.init_regularslice_operetor_splitnumber({{OP_NAME}},{{NAME}});
-)~~~";
-
-std::string CodeGen_RegularSliceOpSpilitNumberGenerate(std::string op_name, std::string name){
-    return templateString(RegularSlice_SPILIT_NUMBER_Generate_Template,
-	{
-        {"{{OP_NAME}}",        op_name}, //算子的名字 注意这里有一个逗号
-		{"{{NAME}}",              name} //存数据的tensor的名字
-	});
-}
-
-//生成降维算子划分数的模板
+//生成算子划分数的模板
 const char *OP_SPILIT_NUMBER_Generate_Template = R"~~~(
 	//生成降维算子的划分数
     int {{OP_NAME}}_spilit_number = para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{NAME}});
 )~~~";
 
 std::string CodeGen_OpSpilitNumberGenerate(std::string op_name, std::string name){
-    return templateString(RegularSlice_SPILIT_NUMBER_Generate_Template,
+    return templateString(OP_SPILIT_NUMBER_Generate_Template,
 	{
         {"{{OP_NAME}}",        op_name}, //算子的名字 注意这里有一个逗号
 		{"{{NAME}}",              name} //存数据的tensor的名字
 	});
 }
 
+//生成设备内存分配大小的模板
+const char *DEVICE_MEM_SIZE_Generate_Template1 = R"~~~(
+	//生成设备内存分配大小
+    int {{NAME}}_size = para_gene_tool.init_device_memory_size({{TENSOR_NAME}});
+)~~~";
+
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME){
+    return templateString(DEVICE_MEM_SIZE_Generate_Template1,
+	{
+        {"{{NAME}}",        NAME}, //设备内存的名字
+		{"{{TENSOR_NAME}}",     TENSOR_NAME} //tensor的名字
+	});
+}
+
+//生成设备内存分配的大小
+const char *DEVICE_MEM_SIZE_Generate_Template2 = R"~~~(
+	//生成设备内存分配大小
+    int {{NAME}}_size = para_gene_tool.init_device_memory_size({{TENSOR_NAME}},{{IN_DAC_OPS_NAME}},{{OUT_DAC_OPS_NAME}});
+)~~~";
+
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME){
+    return templateString(DEVICE_MEM_SIZE_Generate_Template2,
+	{
+        {"{{NAME}}",        NAME}, //设备内存的名字
+		{"{{TENSOR_NAME}}",     TENSOR_NAME}, //tensor的名字
+		{"{{IN_DAC_OPS_NAME}}", IN_DAC_OPS_NAME},//输入算子组的名字
+		{"{{OUT_DAC_OPS_NAME}}",OUT_DAC_OPS_NAME}//输出算子组的名字
+	});
+}
 
 // int main(){
 // 	std::cout<<"******************dac2sycl CodeGen test******************\n\n";

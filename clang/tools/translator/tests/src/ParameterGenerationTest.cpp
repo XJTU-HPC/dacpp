@@ -15,11 +15,11 @@ int main()
     sk.setDimId(1); //这个通过分析抽象语法树得到
 
     ParameterGeneration<int> para_gene_tool;
-    int si_spilit_number = para_gene_tool.init_regularslice_operetor_splitnumber(si,myTensor);
+    int si_spilit_number = para_gene_tool.init_operetor_splitnumber(si,myTensor);
     std::cout << "si_spilit_number:" << si_spilit_number << std::endl; //应该输出2
     int sj_spilit_number = para_gene_tool.init_operetor_splitnumber(sj,myTensor);
     std::cout << "sj_spilit_number:" << sj_spilit_number << std::endl; //应该输出5
-    int sk_spilit_number = para_gene_tool.init_regularslice_operetor_splitnumber(sk,myTensor);
+    int sk_spilit_number = para_gene_tool.init_operetor_splitnumber(sk,myTensor);
     std::cout << "sk_spilit_number:" << sk_spilit_number << std::endl; //应该输出3
 
 }
