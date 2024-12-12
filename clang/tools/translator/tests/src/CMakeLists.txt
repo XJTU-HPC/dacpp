@@ -18,9 +18,13 @@ add_executable(packingTest3 DataReconstructorTest3.cpp)
 add_executable(packingTest4 DataReconstructorTest4.cpp)
 add_executable(packingTest5 DataReconstructorTest5.cpp)
 add_executable(packingTest6 DataReconstructorTest6.cpp)
+add_executable(packingTest7 DataReconstructorTest7.cpp)
 add_executable(vecMulScalarTest vecMulScalarTest.cpp)
 add_executable(bindIndexInitTest bindIndexInitTest.cpp)
-
+add_executable(bindIndexInitTest2 bindIndexInitTest2.cpp)
+add_executable(matmul2Test matmul2Test.cpp)
+add_executable(UsmTemplateTest UsmTemplateTest.cpp)
+add_executable(BufferTemplateTest BufferTemplateTest.cpp)
 
 set_target_properties(blockMatMulTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
@@ -52,13 +56,27 @@ set_target_properties(packingTest5 PROPERTIES
 set_target_properties(packingTest6 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
+set_target_properties(packingTest7 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
 set_target_properties(vecMulScalarTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
 set_target_properties(bindIndexInitTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
-
+set_target_properties(bindIndexInitTest2 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+set_target_properties(matmul2Test PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+set_target_properties(UsmTemplateTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+set_target_properties(BufferTemplateTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
 target_link_libraries(blockMatMulTest DacppLib RewriterLib)
 target_link_libraries(blockMatMulTest2 DacppLib RewriterLib)
 target_link_libraries(blockMatMulTest3 DacppLib RewriterLib)
@@ -69,5 +87,10 @@ target_link_libraries(packingTest3 DacppLib RewriterLib)
 target_link_libraries(packingTest4 DacppLib RewriterLib)
 target_link_libraries(packingTest5 DacppLib RewriterLib)
 target_link_libraries(packingTest6 DacppLib RewriterLib)
+target_link_libraries(packingTest7 DacppLib RewriterLib)
 target_link_libraries(vecMulScalarTest DacppLib RewriterLib)
 target_link_libraries(bindIndexInitTest DacppLib RewriterLib)
+target_link_libraries(bindIndexInitTest2 DacppLib RewriterLib)
+target_link_libraries(matmul2Test DacppLib RewriterLib)
+target_link_libraries(UsmTemplateTest DacppLib RewriterLib)
+target_link_libraries(BufferTemplateTest DacppLib RewriterLib)
