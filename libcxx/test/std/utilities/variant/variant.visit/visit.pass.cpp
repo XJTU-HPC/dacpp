@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -9,12 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Throwing bad_variant_access is supported starting in macosx10.13
-// XFAIL: with_system_cxx_lib=macosx10.12 && !no-exceptions
-// XFAIL: with_system_cxx_lib=macosx10.11 && !no-exceptions
-// XFAIL: with_system_cxx_lib=macosx10.10 && !no-exceptions
-// XFAIL: with_system_cxx_lib=macosx10.9 && !no-exceptions
-
 // <variant>
 // template <class Visitor, class... Variants>
 // constexpr see below visit(Visitor&& vis, Variants&&... vars);
@@ -22,6 +15,7 @@
 #include <cassert>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -124,36 +118,6 @@ void test_argument_forwarding() {
     std::visit(obj, std::move(cv));
     assert(Fn::check_call<const int &&>(Val));
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  { // single argument - lvalue reference
-    using V = std::variant<int &>;
-    int x = 42;
-    V v(x);
-    const V &cv = v;
-    std::visit(obj, v);
-    assert(Fn::check_call<int &>(Val));
-    std::visit(obj, cv);
-    assert(Fn::check_call<int &>(Val));
-    std::visit(obj, std::move(v));
-    assert(Fn::check_call<int &>(Val));
-    std::visit(obj, std::move(cv));
-    assert(Fn::check_call<int &>(Val));
-  }
-  { // single argument - rvalue reference
-    using V = std::variant<int &&>;
-    int x = 42;
-    V v(std::move(x));
-    const V &cv = v;
-    std::visit(obj, v);
-    assert(Fn::check_call<int &>(Val));
-    std::visit(obj, cv);
-    assert(Fn::check_call<int &>(Val));
-    std::visit(obj, std::move(v));
-    assert(Fn::check_call<int &&>(Val));
-    std::visit(obj, std::move(cv));
-    assert(Fn::check_call<int &&>(Val));
-  }
-#endif
   { // multi argument - multi variant
     using V = std::variant<int, std::string, long>;
     V v1(42), v2("hello"), v3(43l);
@@ -338,7 +302,7 @@ void test_exceptions() {
 #endif
 }
 
-// See https://bugs.llvm.org/show_bug.cgi?id=31916
+// See https://llvm.org/PR31916
 void test_caller_accepts_nonconst() {
   struct A {};
   struct Visitor {
@@ -348,6 +312,86 @@ void test_caller_accepts_nonconst() {
   std::visit(Visitor{}, v);
 }
 
+struct MyVariant : std::variant<short, long, float> {};
+
+namespace std {
+template <std::size_t Index>
+void get(const MyVariant&) {
+  assert(false);
+}
+} // namespace std
+
+void test_derived_from_variant() {
+  auto v1 = MyVariant{42};
+  const auto cv1 = MyVariant{142};
+  std::visit([](auto x) { assert(x == 42); }, v1);
+  std::visit([](auto x) { assert(x == 142); }, cv1);
+  std::visit([](auto x) { assert(x == -1.25f); }, MyVariant{-1.25f});
+  std::visit([](auto x) { assert(x == 42); }, std::move(v1));
+  std::visit([](auto x) { assert(x == 142); }, std::move(cv1));
+
+  // Check that visit does not take index nor valueless_by_exception members from the base class.
+  struct EvilVariantBase {
+    int index;
+    char valueless_by_exception;
+  };
+
+  struct EvilVariant1 : std::variant<int, long, double>,
+                        std::tuple<int>,
+                        EvilVariantBase {
+    using std::variant<int, long, double>::variant;
+  };
+
+  std::visit([](auto x) { assert(x == 12); }, EvilVariant1{12});
+  std::visit([](auto x) { assert(x == 12.3); }, EvilVariant1{12.3});
+
+  // Check that visit unambiguously picks the variant, even if the other base has __impl member.
+  struct ImplVariantBase {
+    struct Callable {
+      bool operator()() const { assert(false); return false; }
+    };
+
+    Callable __impl;
+  };
+
+  struct EvilVariant2 : std::variant<int, long, double>, ImplVariantBase {
+    using std::variant<int, long, double>::variant;
+  };
+
+  std::visit([](auto x) { assert(x == 12); }, EvilVariant2{12});
+  std::visit([](auto x) { assert(x == 12.3); }, EvilVariant2{12.3});
+}
+
+struct any_visitor {
+  template <typename T>
+  void operator()(const T&) const {}
+};
+
+template <typename T, typename = decltype(std::visit(
+                          std::declval<any_visitor&>(), std::declval<T>()))>
+constexpr bool has_visit(int) {
+  return true;
+}
+
+template <typename T>
+constexpr bool has_visit(...) {
+  return false;
+}
+
+void test_sfinae() {
+  struct BadVariant : std::variant<short>, std::variant<long, float> {};
+  struct BadVariant2 : private std::variant<long, float> {};
+  struct GoodVariant : std::variant<long, float> {};
+  struct GoodVariant2 : GoodVariant {};
+
+  static_assert(!has_visit<int>(0));
+  static_assert(!has_visit<BadVariant>(0));
+  static_assert(!has_visit<BadVariant2>(0));
+  static_assert(has_visit<std::variant<int>>(0));
+  static_assert(has_visit<GoodVariant>(0));
+  static_assert(has_visit<GoodVariant2>(0));
+}
+
 int main(int, char**) {
   test_call_operator_forwarding();
   test_argument_forwarding();
@@ -355,6 +399,8 @@ int main(int, char**) {
   test_constexpr();
   test_exceptions();
   test_caller_accepts_nonconst();
+  test_derived_from_variant();
+  test_sfinae();
 
   return 0;
 }

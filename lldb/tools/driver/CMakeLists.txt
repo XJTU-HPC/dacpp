@@ -23,16 +23,10 @@ add_lldb_tool(lldb
     Support
   )
 
-if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
-  add_definitions( -DIMPORT_LIBLLDB )
-endif()
-
 add_dependencies(lldb
   LLDBOptionsTableGen
   ${tablegen_deps}
 )
-
-set_target_properties(LLDBOptionsTableGen PROPERTIES FOLDER "lldb misc")
 
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.

@@ -16,16 +16,14 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 ReplaceRandomShuffleCheck::ReplaceRandomShuffleCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM)) {
-}
+                                               utils::IncludeSorter::IS_LLVM),
+                      areDiagsSelfContained()) {}
 
 void ReplaceRandomShuffleCheck::registerMatchers(MatchFinder *Finder) {
   const auto Begin = hasArgument(0, expr());
@@ -71,22 +69,21 @@ void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
           MatchedArgumentThree->getSourceRange(),
           "std::mt19937(std::random_device()())");
       return DiagL;
-    } else {
-      auto DiagL = diag(MatchedCallExpr->getBeginLoc(),
-                        "'std::random_shuffle' has been removed in C++17; use "
-                        "'std::shuffle' instead");
-      DiagL << FixItHint::CreateInsertion(
-          MatchedCallExpr->getRParenLoc(),
-          ", std::mt19937(std::random_device()())");
-      return DiagL;
     }
+    auto DiagL = diag(MatchedCallExpr->getBeginLoc(),
+                      "'std::random_shuffle' has been removed in C++17; use "
+                      "'std::shuffle' instead");
+    DiagL << FixItHint::CreateInsertion(
+        MatchedCallExpr->getRParenLoc(),
+        ", std::mt19937(std::random_device()())");
+    return DiagL;
   }();
 
   std::string NewName = "shuffle";
   StringRef ContainerText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(MatchedDecl->getSourceRange()),
       *Result.SourceManager, getLangOpts());
-  if (ContainerText.startswith("std::"))
+  if (ContainerText.starts_with("std::"))
     NewName = "std::" + NewName;
 
   Diag << FixItHint::CreateRemoval(MatchedDecl->getSourceRange());
@@ -97,6 +94,4 @@ void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
       "<random>");
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

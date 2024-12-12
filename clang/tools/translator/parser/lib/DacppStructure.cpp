@@ -1,5 +1,7 @@
 #include <string>
 
+#include "llvm/ADT/StringExtras.h"
+
 #include "DacppStructure.h"
 #include "ASTParse.h"
 
@@ -158,7 +160,7 @@ void dacppTranslator::DacppFile::setExpression(const BinaryOperator* dacExpr) {
             InitListExpr* initListExpr = getNode<InitListExpr>(shapeDecl->getInit());
             for(Stmt::child_iterator it = initListExpr->child_begin(); it != initListExpr->child_end(); it++) {
                 IntegerLiteral* integer = dyn_cast<IntegerLiteral>(*it);
-                shapes[paramsCount].push_back(std::stoi(integer->getValue().toString(10, true)));
+                shapes[paramsCount].push_back(std::stoi(toString(integer->getValue(), 10, true)));
             }
             count++;
         }

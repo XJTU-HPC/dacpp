@@ -13,17 +13,28 @@
 
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/SCF/Utils.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
+#include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Utils/Utils.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/Transforms/LoopUtils.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+
+using llvm::dbgs;
 
 #define DEBUG_TYPE "linalg-hoisting"
 
@@ -32,225 +43,196 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-using llvm::dbgs;
+/// Replace `loop` with a new loop that has a different init operand at
+/// position `index`. The body of this loop is moved over to the new loop.
+///
+/// `newInitOperands` specifies the replacement "init" operands.
+/// `newYieldValue` is the replacement yield value of the loop at position
+/// `index`.
+static scf::ForOp replaceWithDifferentYield(RewriterBase &rewriter,
+                                            scf::ForOp loop,
+                                            Value newInitOperand,
+                                            unsigned index,
+                                            Value newYieldValue) {
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(loop.getOperation());
+  auto inits = llvm::to_vector(loop.getInits());
 
-void mlir::linalg::hoistViewAllocOps(FuncOp func) {
+  // Replace the init value with the new operand.
+  assert(index < inits.size());
+  inits[index] = newInitOperand;
+
+  scf::ForOp newLoop = rewriter.create<scf::ForOp>(
+      loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
+      inits, [](OpBuilder &, Location, Value, ValueRange) {});
+
+  // Generate the new yield with the replaced operand.
+  auto yieldOp = cast<scf::YieldOp>(loop.getBody()->getTerminator());
+  yieldOp.setOperand(index, newYieldValue);
+
+  // Move the loop body to the new op.
+  rewriter.mergeBlocks(loop.getBody(), newLoop.getBody(),
+                       newLoop.getBody()->getArguments());
+
+  // Replace the old loop.
+  rewriter.replaceOp(loop.getOperation(), newLoop->getResults());
+  return newLoop;
+}
+
+// Hoist out a pair of corresponding vector.extract+vector.broadcast
+// operations. This function transforms a loop like this:
+//  %res = scf.for _ = _ to _ step _ iter_args(%iarg = %v) -> (t1) {
+//   %e = vector.extract %iarg : t1 to t2
+//   %u = "some_use"(%e) : (t2) -> t2
+//   %b = vector.broadcast %u : t2 to t1
+//   scf.yield %b : t1
+//  }
+// into the following:
+//  %e = vector.extract %v: t1 to t2
+//  %res' = scf.for _ = _ to _ step _ iter_args(%iarg = %e) -> (t2) {
+//   %u' = "some_use"(%iarg) : (t2) -> t2
+//   scf.yield %u' : t2
+//  }
+//  %res = vector.broadcast %res' : t2 to t1
+void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
+                                                  Operation *root) {
   bool changed = true;
   while (changed) {
     changed = false;
-    func.walk([&changed](Operation *op) {
-      if (!isa<AllocOp, AllocaOp, DeallocOp>(op))
-        return;
+    // First move loop invariant ops outside of their loop. This needs to be
+    // done before as we cannot move ops without interrupting the function walk.
+    root->walk(
+        [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
 
-      LLVM_DEBUG(DBGS() << "Candidate for hoisting: " << *op << "\n");
-      auto loop = dyn_cast<scf::ForOp>(op->getParentOp());
-      LLVM_DEBUG(DBGS() << "Parent op: " << *op->getParentOp() << "\n");
+    root->walk([&](vector::ExtractOp extractOp) {
+      LLVM_DEBUG(DBGS() << "Candidate for hoisting: "
+                        << *extractOp.getOperation() << "\n");
 
-      // Only hoist out of immediately enclosing scf::ForOp.
+      auto loop = dyn_cast<scf::ForOp>(extractOp->getParentOp());
       if (!loop)
-        return;
+        return WalkResult::advance();
 
-      // If any operand is defined inside the loop don't hoist.
-      if (llvm::any_of(op->getOperands(), [&](Value v) {
-            return !loop.isDefinedOutsideOfLoop(v);
-          }))
-        return;
+      // Check that the vector to extract from is a BlockArgument.
+      auto blockArg = dyn_cast<BlockArgument>(extractOp.getVector());
+      if (!blockArg)
+        return WalkResult::advance();
 
-      LLVM_DEBUG(DBGS() << "All operands defined outside \n");
+      // Check that the blockArg is an iter_arg of the loop.
+      OpOperand *initArg = loop.getTiedLoopInit(blockArg);
+      if (!initArg)
+        return WalkResult::advance();
 
-      // If alloc has other uses than ViewLikeOp and DeallocOp don't hoist.
-      Value v;
-      if (op->getNumResults() > 0) {
-        assert(op->getNumResults() == 1 && "Unexpected multi-result alloc");
-        v = op->getResult(0);
-      }
-      if (v && !llvm::all_of(v.getUses(), [&](OpOperand &operand) {
-            return isa<ViewLikeOpInterface, DeallocOp>(operand.getOwner());
-          })) {
-        LLVM_DEBUG(DBGS() << "Found non view-like or dealloc use: bail\n");
-        return;
-      }
+      // If the iter_arg does not have only one use, it won't be possible to
+      // hoist the extractOp out.
+      if (!blockArg.hasOneUse())
+        return WalkResult::advance();
 
-      // Move AllocOp before the loop.
-      if (isa<AllocOp, AllocaOp>(op))
-        loop.moveOutOfLoop({op});
-      else // Move DeallocOp outside of the loop.
-        op->moveAfter(loop);
+      unsigned index = blockArg.getArgNumber() - loop.getNumInductionVars();
+
+      // Check that the loop yields a broadcast that has just one use.
+      Operation *yieldedVal =
+          loop.getTiedLoopYieldedValue(blockArg)->get().getDefiningOp();
+      auto broadcast = dyn_cast<vector::BroadcastOp>(yieldedVal);
+      if (!broadcast || !broadcast.getResult().hasOneUse())
+        return WalkResult::advance();
+
+      LLVM_DEBUG(DBGS() << "Candidate broadcast: " << broadcast << "\n");
+
+      Type broadcastInputType = broadcast.getSourceType();
+      if (broadcastInputType != extractOp.getType())
+        return WalkResult::advance();
+
+      // The position of the extract must be defined outside of the loop if
+      // it is dynamic.
+      for (auto operand : extractOp.getDynamicPosition())
+        if (!loop.isDefinedOutsideOfLoop(operand))
+          return WalkResult::advance();
+
+      rewriter.modifyOpInPlace(broadcast, [&] {
+        extractOp.getVectorMutable().assign(initArg->get());
+      });
+      loop.moveOutOfLoop(extractOp);
+      rewriter.moveOpAfter(broadcast, loop);
+
+      scf::ForOp newLoop = replaceWithDifferentYield(
+          rewriter, loop, extractOp.getResult(), index, broadcast.getSource());
+
+      LLVM_DEBUG(DBGS() << "New loop: " << newLoop << "\n");
+
+      rewriter.replaceAllUsesWith(newLoop.getResult(index), broadcast);
+      rewriter.modifyOpInPlace(
+          broadcast, [&] { broadcast.setOperand(newLoop.getResult(index)); });
+
       changed = true;
+      return WalkResult::interrupt();
     });
   }
 }
 
-/// Look for a transfer_read, in the given tensor uses, accessing the same
-/// offset as the transfer_write.
-static vector::TransferReadOp
-findMatchingTransferRead(vector::TransferWriteOp write, Value srcTensor) {
-  for (Operation *user : srcTensor.getUsers()) {
-    auto read = dyn_cast<vector::TransferReadOp>(user);
-    if (read && read.indices() == write.indices() &&
-        read.getVectorType() == write.getVectorType()) {
-      return read;
+static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
+                                LoopLikeOpInterface loop) {
+  Value source = transferRead.getSource();
+
+  // Skip view-like Ops and retrive the actual soruce Operation
+  while (auto srcOp =
+             dyn_cast_or_null<ViewLikeOpInterface>(source.getDefiningOp()))
+    source = srcOp.getViewSource();
+
+  llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
+                                           source.getUsers().end());
+  llvm::SmallDenseSet<Operation *, 32> processed;
+  while (!users.empty()) {
+    Operation *user = users.pop_back_val();
+    // If the user has already been processed skip.
+    if (!processed.insert(user).second)
+      continue;
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
+      users.append(viewLike->getUsers().begin(), viewLike->getUsers().end());
+      continue;
     }
+    if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
+      continue;
+    if (!loop->isAncestor(user))
+      continue;
+    return false;
   }
-  return nullptr;
+  return true;
 }
 
-/// Check if the chunk of data inserted by the transfer_write in the given
-/// tensor are read by any other op than the read candidate.
-static bool tensorChunkAccessedByUnknownOp(vector::TransferWriteOp write,
-                                           vector::TransferReadOp candidateRead,
-                                           Value srcTensor) {
-  // Make sure none of the other uses read the part of the tensor modified
-  // by the transfer_write.
-  llvm::SmallVector<Value::use_range, 1> uses;
-  uses.push_back(srcTensor.getUses());
-  while (!uses.empty()) {
-    for (OpOperand &use : uses.pop_back_val()) {
-      Operation *user = use.getOwner();
-      // Skip the candidate use, only inspect the "other" uses.
-      if (user == candidateRead.getOperation() || user == write.getOperation())
-        continue;
-      // Consider all transitive uses through a vector.transfer_write.
-      if (auto writeUser = dyn_cast<vector::TransferWriteOp>(user)) {
-        uses.push_back(writeUser->getResult(0).getUses());
-        continue;
-      }
-      // Consider all nested uses through an scf::ForOp. We may have
-      // pass-through tensor arguments left from previous level of
-      // hoisting.
-      if (auto forUser = dyn_cast<scf::ForOp>(user)) {
-        Value arg = forUser.getLoopBody().getArgument(
-            use.getOperandNumber() - forUser.getNumControlOperands() +
-            /*iv value*/ 1);
-        uses.push_back(arg.getUses());
-        continue;
-      }
-      // Follow the use yield as long as it doesn't escape the original
-      // region.
-      scf::YieldOp yieldUser = dyn_cast<scf::YieldOp>(user);
-      if (yieldUser &&
-          write->getParentOp()->isAncestor(yieldUser->getParentOp())) {
-        Value ret = yieldUser->getParentOp()->getResult(use.getOperandNumber());
-        uses.push_back(ret.getUses());
-        continue;
-      }
-      auto read = dyn_cast<vector::TransferReadOp>(user);
-      if (!read || !isDisjointTransferIndices(
-                       cast<VectorTransferOpInterface>(read.getOperation()),
-                       cast<VectorTransferOpInterface>(write.getOperation()))) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-// To hoist transfer op on tensor the logic can be significantly simplified
-// compared to the case on buffer. The transformation follows this logic:
-// 1. Look for transfer_write with a single use from ForOp yield
-// 2. Check the uses of the matching block argument and look for a transfer_read
-// with the same indices.
-// 3. Check that all the other uses of the tensor argument are either disjoint
-// tensor_read or transfer_write. For transfer_write uses recurse to make sure
-// the new tensor has the same restrictions on its uses.
-// 4. Hoist the tensor_read/tensor_write and update the tensor SSA links.
-// After this transformation the scf.forOp may have unused arguments that can be
-// remove by the canonicalization pass.
-void mlir::linalg::hoistRedundantVectorTransfersOnTensor(FuncOp func) {
+void mlir::linalg::hoistRedundantVectorTransfers(Operation *root) {
   bool changed = true;
   while (changed) {
     changed = false;
-    func.walk([&](scf::ForOp forOp) {
-      Operation *yield = forOp.getBody()->getTerminator();
-      for (auto it : llvm::enumerate(forOp.getRegionIterArgs())) {
-        Value ret = yield->getOperand(it.index());
-        auto write = ret.getDefiningOp<vector::TransferWriteOp>();
-        if (!write || !write->hasOneUse())
-          continue;
-        LLVM_DEBUG(DBGS() << "Candidate write for hoisting: "
-                          << *write.getOperation() << "\n");
-        if (llvm::any_of(write.indices(), [&forOp](Value index) {
-              return !forOp.isDefinedOutsideOfLoop(index);
-            }))
-          continue;
-        // Find a read with the same type and indices.
-        vector::TransferReadOp matchingRead =
-            findMatchingTransferRead(write, it.value());
-        // Make sure none of the other uses read the part of the tensor modified
-        // by the transfer_write.
-        if (!matchingRead ||
-            tensorChunkAccessedByUnknownOp(write, matchingRead, it.value()))
-          continue;
+    // First move loop invariant ops outside of their loop. This needs to be
+    // done before as we cannot move ops without interrupting the function walk.
+    root->walk(
+        [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
 
-        // Hoist read before.
-        if (failed(forOp.moveOutOfLoop({matchingRead})))
-          llvm_unreachable(
-              "Unexpected failure to move transfer read out of loop");
-        // Update the source tensor.
-        matchingRead.sourceMutable().assign(forOp.initArgs()[it.index()]);
-
-        // Hoist write after.
-        write->moveAfter(forOp);
-        yield->setOperand(it.index(), write.source());
-
-        // Rewrite `loop` with new yields by cloning and erase the original
-        // loop.
-        OpBuilder b(matchingRead);
-        auto newForOp =
-            cloneWithNewYields(b, forOp, matchingRead.vector(), write.vector());
-
-        // Transfer write has been hoisted, need to update the vector and tensor
-        // source. Replace the result of the loop to use the new tensor created
-        // outside the loop.
-        newForOp.getResult(it.index()).replaceAllUsesWith(write.getResult(0));
-        write.vectorMutable().assign(newForOp.getResults().back());
-        write.sourceMutable().assign(newForOp.getResult(it.index()));
-
-        changed = true;
-        forOp.erase();
-        // Need to interrupt and restart because erasing the loop messes up the
-        // walk.
-        return WalkResult::interrupt();
-      }
-      return WalkResult::advance();
-    });
-  }
-}
-
-void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
-  bool changed = true;
-  while (changed) {
-    changed = false;
-
-    func.walk([&](vector::TransferReadOp transferRead) {
-      if (!transferRead.getShapedType().isa<MemRefType>())
+    root->walk([&](vector::TransferReadOp transferRead) {
+      if (!isa<MemRefType>(transferRead.getShapedType()))
         return WalkResult::advance();
 
       LLVM_DEBUG(DBGS() << "Candidate for hoisting: "
                         << *transferRead.getOperation() << "\n");
-      auto loop = dyn_cast<scf::ForOp>(transferRead->getParentOp());
+      auto loop = dyn_cast<LoopLikeOpInterface>(transferRead->getParentOp());
       LLVM_DEBUG(DBGS() << "Parent op: " << *transferRead->getParentOp()
                         << "\n");
-      if (!loop)
+      if (!isa_and_nonnull<scf::ForOp, affine::AffineForOp>(loop))
         return WalkResult::advance();
-
-      if (failed(moveLoopInvariantCode(
-              cast<LoopLikeOpInterface>(loop.getOperation()))))
-        llvm_unreachable(
-            "Unexpected failure to move invariant code out of loop");
 
       LLVM_DEBUG(DBGS() << "Candidate read: " << *transferRead.getOperation()
                         << "\n");
 
-      llvm::SetVector<Operation *> forwardSlice;
-      getForwardSlice(transferRead, &forwardSlice);
+      SetVector<Operation *> forwardSlice;
+      getForwardSlice(transferRead.getOperation(), &forwardSlice);
 
       // Look for the last TransferWriteOp in the forwardSlice of
       // `transferRead` that operates on the same memref.
       vector::TransferWriteOp transferWrite;
       for (auto *sliceOp : llvm::reverse(forwardSlice)) {
         auto candidateWrite = dyn_cast<vector::TransferWriteOp>(sliceOp);
-        if (!candidateWrite || candidateWrite.source() != transferRead.source())
+        if (!candidateWrite ||
+            candidateWrite.getSource() != transferRead.getSource())
           continue;
         transferWrite = candidateWrite;
       }
@@ -260,20 +242,38 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
         if (!loop.isDefinedOutsideOfLoop(operand))
           return WalkResult::advance();
 
-      // Only hoist transfer_read / transfer_write pairs for now.
-      if (!transferWrite)
+      // Only hoist transfer_read / transfer_write pairs and singleton
+      // transfer_reads for now.
+      if (!transferWrite) {
+        // Make sure there are no other accesses to the memref before
+        // hoisting transfer_read.
+        if (noAliasingUseInLoop(transferRead, loop))
+          loop.moveOutOfLoop(transferRead);
         return WalkResult::advance();
+      }
 
       LLVM_DEBUG(DBGS() << "Candidate: " << *transferWrite.getOperation()
                         << "\n");
 
       // Approximate aliasing by checking that:
-      //   1. indices are the same,
-      //   2. no other operations in the loop access the same memref except
+      //   1. indices, vector type and permutation map are the same (i.e., the
+      //      transfer_read/transfer_write ops are matching),
+      //   2. source operands for transfer.{read|write} do not originate from
+      //      Ops implementing ViewLikeOpInterface.
+      //   3. no other operations in the loop access the same memref except
       //      for transfer_read/transfer_write accessing statically disjoint
       //      slices.
-      if (transferRead.indices() != transferWrite.indices() &&
-          transferRead.getVectorType() == transferWrite.getVectorType())
+      if (transferRead.getIndices() != transferWrite.getIndices() ||
+          transferRead.getVectorType() != transferWrite.getVectorType() ||
+          transferRead.getPermutationMap() != transferWrite.getPermutationMap())
+        return WalkResult::advance();
+
+      auto *source = transferRead.getSource().getDefiningOp();
+      if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
+        return WalkResult::advance();
+
+      source = transferWrite.getSource().getDefiningOp();
+      if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
         return WalkResult::advance();
 
       // TODO: may want to memoize this information for performance but it
@@ -281,25 +281,25 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       DominanceInfo dom(loop);
       if (!dom.properlyDominates(transferRead.getOperation(), transferWrite))
         return WalkResult::advance();
-      for (auto &use : transferRead.source().getUses()) {
-        if (!dom.properlyDominates(loop, use.getOwner()))
+      for (auto &use : transferRead.getSource().getUses()) {
+        if (!loop->isAncestor(use.getOwner()))
           continue;
         if (use.getOwner() == transferRead.getOperation() ||
             use.getOwner() == transferWrite.getOperation())
           continue;
         if (auto transferWriteUse =
                 dyn_cast<vector::TransferWriteOp>(use.getOwner())) {
-          if (!isDisjointTransferSet(
-                  cast<VectorTransferOpInterface>(transferWrite.getOperation()),
-                  cast<VectorTransferOpInterface>(
-                      transferWriteUse.getOperation())))
+          if (!vector::isDisjointTransferSet(
+                  cast<VectorTransferOpInterface>(*transferWrite),
+                  cast<VectorTransferOpInterface>(*transferWriteUse),
+                  /*testDynamicValueUsingBounds=*/true))
             return WalkResult::advance();
         } else if (auto transferReadUse =
                        dyn_cast<vector::TransferReadOp>(use.getOwner())) {
-          if (!isDisjointTransferSet(
-                  cast<VectorTransferOpInterface>(transferWrite.getOperation()),
-                  cast<VectorTransferOpInterface>(
-                      transferReadUse.getOperation())))
+          if (!vector::isDisjointTransferSet(
+                  cast<VectorTransferOpInterface>(*transferWrite),
+                  cast<VectorTransferOpInterface>(*transferReadUse),
+                  /*testDynamicValueUsingBounds=*/true))
             return WalkResult::advance();
         } else {
           // Unknown use, we cannot prove that it doesn't alias with the
@@ -309,300 +309,30 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       }
 
       // Hoist read before.
-      if (failed(loop.moveOutOfLoop({transferRead})))
-        llvm_unreachable(
-            "Unexpected failure to move transfer read out of loop");
+      loop.moveOutOfLoop(transferRead);
 
       // Hoist write after.
       transferWrite->moveAfter(loop);
 
       // Rewrite `loop` with new yields by cloning and erase the original loop.
-      OpBuilder b(transferRead);
-      auto newForOp = cloneWithNewYields(b, loop, transferRead.vector(),
-                                         transferWrite.vector());
+      IRRewriter rewriter(transferRead.getContext());
+      NewYieldValuesFn yieldFn = [&](OpBuilder &b, Location loc,
+                                     ArrayRef<BlockArgument> newBBArgs) {
+        return SmallVector<Value>{transferWrite.getVector()};
+      };
 
-      // Transfer write has been hoisted, need to update the written value to
-      // the value yielded by the newForOp.
-      transferWrite.vector().replaceAllUsesWith(
-          newForOp.getResults().take_back()[0]);
+      auto maybeNewLoop = loop.replaceWithAdditionalYields(
+          rewriter, transferRead.getVector(),
+          /*replaceInitOperandUsesInLoop=*/true, yieldFn);
+      if (failed(maybeNewLoop))
+        return WalkResult::interrupt();
 
+      transferWrite.getVectorMutable().assign(
+          maybeNewLoop->getOperation()->getResults().back());
       changed = true;
-      loop.erase();
-      // Need to interrupt and restart because erasing the loop messes up the
-      // walk.
+      // Need to interrupt and restart because erasing the loop messes up
+      // the walk.
       return WalkResult::interrupt();
     });
   }
-}
-
-/// Ensure prerequisites that guarantee pad op hoisting can occur.
-/// Return failure in the cases when we cannot perform hoisting; i.e. if either:
-///   1. There exists a use of `simplePadOp` that is not a linalg input operand.
-///   2. There isn't an enclosing `outermostEnclosingForOp` loop.
-///   3. There exists an op with a region that is dominated by
-///   `outermostEnclosingForOp` and that isn't a LoopLikeInterface or a
-///    LinalgOp.
-///   3. There exists an op with side effects that is dominated by
-///    `outermostEnclosingForOp` and that isn't a LoopLikeInterface.
-///
-/// While ensuring prerequisites:
-///   1. Fill the `backwardSlice` to contain the topologically sorted ops
-///   dominated by `outermostEnclosingForOp`.
-///   2. Fill the `packingLoops` to contain only the enclosing loops of
-///   `backwardSlice` whose IV is actually used in computing padding. Loops that
-///   remain in `backwardSlice` but that are not in `packingLoops` are
-///   dimensions of reuse.
-static LogicalResult
-hoistPaddingOnTensorsPrerequisites(linalg::SimplePadOp simplePadOp, int nLevels,
-                                   llvm::SetVector<Operation *> &backwardSlice,
-                                   llvm::SetVector<Operation *> &packingLoops) {
-  // Bail on any use that isn't an input of a Linalg op.
-  // Hoisting of inplace updates happens after vectorization.
-  for (OpOperand &use : simplePadOp.result().getUses()) {
-    auto linalgUser = dyn_cast<linalg::LinalgOp>(use.getOwner());
-    if (!linalgUser || !linalgUser.isInputTensor(&use))
-      return failure();
-  }
-
-  // Get at most nLevels of enclosing loops.
-  SmallVector<LoopLikeOpInterface> reverseEnclosingLoops;
-  Operation *outermostEnclosingForOp = nullptr,
-            *nextEnclosingForOp =
-                simplePadOp->getParentOfType<LoopLikeOpInterface>();
-  while (nLevels-- > 0 && nextEnclosingForOp) {
-    outermostEnclosingForOp = nextEnclosingForOp;
-    reverseEnclosingLoops.push_back(outermostEnclosingForOp);
-    nextEnclosingForOp =
-        nextEnclosingForOp->getParentOfType<LoopLikeOpInterface>();
-  }
-  if (!outermostEnclosingForOp)
-    return failure();
-
-  // Get the backwards slice from `simplePadOp` that is dominated by the
-  // outermost enclosing loop.
-  DominanceInfo domInfo(outermostEnclosingForOp);
-  getBackwardSlice(simplePadOp, &backwardSlice, [&](Operation *op) {
-    return domInfo.dominates(outermostEnclosingForOp, op);
-  });
-
-  #if 0
-
-  // Bail on any op with a region that is not a LoopLikeInterface or a LinalgOp.
-  // Bail on any op with side effects that is not a LoopLikeInterface.
-  if (llvm::any_of(backwardSlice, [](Operation *op) {
-        if (isa<LoopLikeOpInterface>(op))
-          return false;
-        if (!MemoryEffectOpInterface::hasNoEffect(op))
-          return true;
-        return op->getNumRegions() > 0 && !isa<LinalgOp>(op);
-      }))
-    return failure();
-
-  #else
-
-  // Bail on any op with a region that is not a LoopLikeInterface or a LinalgOp.
-  if (llvm::any_of(backwardSlice, [](Operation *op) {
-        return op->getNumRegions() > 0 && !isa<LoopLikeOpInterface>(op) &&
-               !isa<LinalgOp>(op);
-      }))
-    return failure();
-
-  #endif
-
-  // Filter out the loops whose induction variable is not used to compute the
-  // padded result. As a first approximation, just look for IVs that have no use
-  // in the backwardSlice.
-  // These are the dimensions of reuse that we can exploit to reduce the amount
-  // of work / memory.
-  // TODO: would this optimization compose better as a canonicalization?
-  for (LoopLikeOpInterface loop : reverseEnclosingLoops) {
-    auto forOp = dyn_cast<scf::ForOp>(loop.getOperation());
-    if (!forOp)
-      continue;
-    for (Operation *user : forOp.getInductionVar().getUsers()) {
-      if (backwardSlice.contains(user)) {
-        packingLoops.insert(forOp);
-        break;
-      }
-    }
-  }
-
-  // Backward slice is a topologically sorted list of ops starting at
-  // `outermostEnclosingForOp`.
-  assert(outermostEnclosingForOp == backwardSlice.front());
-
-  return success();
-}
-
-static Value buildLoopTripCount(OpBuilder &b, Operation *op) {
-  MLIRContext *ctx = op->getContext();
-  AffineExpr lb, ub, step = getAffineSymbolExpr(0, ctx);
-  bindDims(ctx, lb, ub);
-  scf::ForOp forOp = cast<scf::ForOp>(op);
-  return b.create<AffineApplyOp>(
-      op->getLoc(), AffineMap::get(2, 1, {(ub - lb).ceilDiv(step)}, ctx),
-      ValueRange{forOp.lowerBound(), forOp.upperBound(), forOp.step()});
-}
-
-/// Mechanically hoist padding operations on tensors by at most `nLoops` into a
-/// new, generally larger tensor. This achieves packing of multiple padding ops
-/// into a larger tensor. On success, `simplePadOp` is replaced by the cloned
-/// version in the packing loop so the caller can continue reasoning about the
-/// padding operation.
-///
-/// Example in pseudo-mlir:
-/// =======================
-///
-/// If hoistPaddingOnTensors is called with `nLoops` = 2 on the following IR.
-/// ```
-///    scf.for (%i, %j, %k)
-///      %st0 = subtensor f(%i, %k) : ... to tensor<?x?xf32>
-///      %0 = linalg.simple_pad %st0 pad %pad :
-///             tensor<?x?xf32> to tensor<4x8xf32>
-///      compute(%0)
-/// ```
-///
-/// IR resembling the following is produced:
-///
-/// ```
-///    scf.for (%i) {
-///      %packed_init = linalg.init_tensor range(%j) : tensor<?x4x8xf32>
-///      %packed = scf.for (%k) iter_args(%p : %packed_init)
-///        %st0 = subtensor f(%i, %k) : ... to tensor<?x?xf32>
-///        %0 = linalg.simple_pad %st0 pad %pad :
-///               tensor<?x?xf32> to tensor<4x8xf32>
-///        scf.yield %1: tensor<?x4x8xf32>
-///      } -> tensor<?x4x8xf32>
-///      scf.for (%j, %k) {
-///        %st0 = subtensor %packed [%k, 0, 0][1, 4, 8][1, 1, 1] :
-///                 tensor<?x4x8xf32> to tensor<4x8xf32>
-///        compute(%st0)
-///      }
-///    }
-/// ```
-LogicalResult mlir::linalg::hoistPaddingOnTensors(SimplePadOp &simplePadOp,
-                                                  unsigned nLoops) {
-  llvm::SetVector<Operation *> backwardSlice, packingLoops;
-  if (failed(hoistPaddingOnTensorsPrerequisites(simplePadOp, nLoops,
-                                                backwardSlice, packingLoops)))
-    return failure();
-
-  // Update actual number of loops, which may be smaller.
-  nLoops = packingLoops.size();
-
-  Location loc = simplePadOp->getLoc();
-  RankedTensorType paddedTensorType = simplePadOp.getResultType();
-  unsigned paddedRank = paddedTensorType.getRank();
-
-  // Backward slice is a topologically sorted list of ops starting at
-  // `outermostEnclosingForOp`.
-  Operation *outermostEnclosingForOp = backwardSlice.front();
-  // IP just before the outermost loop considered that we hoist above.
-  OpBuilder b(outermostEnclosingForOp);
-
-  // Create the packed tensor<?x?x..?xpadded_shape> into which we amortize
-  // padding.
-  SmallVector<int64_t> packedShape(nLoops, ShapedType::kDynamicSize);
-  // TODO: go grab dims when necessary, for now SimplePadOp returns a static
-  // tensor.
-  llvm::append_range(packedShape, paddedTensorType.getShape());
-  auto packedTensorType =
-      RankedTensorType::get(packedShape, paddedTensorType.getElementType());
-  auto dynamicSizes = llvm::to_vector<4>(llvm::map_range(
-      packingLoops, [&](Operation *op) { return buildLoopTripCount(b, op); }));
-  Value packedTensor = b.create<linalg::InitTensorOp>(
-      loc, dynamicSizes, packedTensorType.getShape(),
-      packedTensorType.getElementType());
-
-  // Clone the operations involved in the backward slice, iteratively stepping
-  // into the loops that we encounter.
-  // The implementation proceeds in a stack-like fashion:
-  //   1. Iteratively clone and step into the loops, pushing the `packedTensor`
-  //      deeper in the stack.
-  //   2. Create a SubTensorInsert at the top of the stack.
-  //   3. Iteratively pop and yield the result of the SubTensorInsertOp across
-  //     the cloned loops.
-  SmallVector<Value> clonedLoopIvs;
-  clonedLoopIvs.reserve(nLoops);
-  BlockAndValueMapping bvm;
-  // Stack step 1. iteratively clone loops and push `packedTensor`.
-  // Insert `simplePadOp` into the backwardSlice so we clone it too.
-  backwardSlice.insert(simplePadOp);
-  for (Operation *op : backwardSlice) {
-    if (op->getNumRegions() == 0) {
-      b.clone(*op, bvm);
-      continue;
-    }
-    // TODO: support more cases as they appear.
-    auto forOp = dyn_cast<scf::ForOp>(op);
-    assert(forOp && "Expected scf::ForOp when hoisting pad ops");
-    // Unused loop, just skip it.
-    if (!packingLoops.contains(forOp))
-      continue;
-    auto clonedForOp =
-        b.create<scf::ForOp>(loc, forOp.lowerBound(), forOp.upperBound(),
-                             forOp.step(), packedTensor);
-    assert(clonedForOp->getNumRegions() == 1);
-    clonedLoopIvs.push_back(clonedForOp.getInductionVar());
-    b.setInsertionPointToStart(&clonedForOp->getRegion(0).front());
-    bvm.map(forOp.getInductionVar(), clonedLoopIvs.back());
-    packedTensor = clonedForOp.getRegionIterArgs().front();
-  }
-
-  // Stack step 2. create SubTensorInsertOp at the top of the stack.
-  // offsets = [clonedLoopIvs, 0 .. 0].
-  SmallVector<OpFoldResult> offsets(clonedLoopIvs.begin(), clonedLoopIvs.end());
-  offsets.append(paddedRank, b.getIndexAttr(0));
-  // sizes = [1 .. 1, paddedShape].
-  SmallVector<OpFoldResult> sizes(nLoops, b.getIndexAttr(1));
-  for (int64_t sz : paddedTensorType.getShape()) {
-    // TODO: go grab dims when necessary, for now SimplePadOp returns a static
-    // tensor.
-    assert(!ShapedType::isDynamic(sz) && "padded tensor needs static sizes");
-    sizes.push_back(b.getIndexAttr(sz));
-  }
-  // strides = [1 .. 1].
-  SmallVector<OpFoldResult> strides(nLoops + paddedRank, b.getIndexAttr(1));
-
-  Value inserted =
-      b.create<SubTensorInsertOp>(loc, bvm.lookup(simplePadOp.result()),
-                                  packedTensor, offsets, sizes, strides);
-
-  // Stack step 3. iteratively pop the stack and propagate the yield.
-  Value valueToYield = inserted;
-  for (Value iv : llvm::reverse(clonedLoopIvs)) {
-    auto forOp = scf::getForInductionVarOwner(iv);
-    b.setInsertionPointToEnd(&forOp.getRegion().front());
-    b.create<scf::YieldOp>(loc, valueToYield);
-    valueToYield = forOp.getResult(0);
-  }
-
-  // Now the packed tensor is ready, replace the original padding op by a
-  // 1x..x1 SubTensor [originalLoopIvs, 0 .. 0][1 .. 1, paddedShape][1 .. 1].
-  b.setInsertionPoint(simplePadOp);
-  SmallVector<Value> originalLoopIvs =
-      llvm::to_vector<4>(llvm::map_range(packingLoops, [](Operation *loop) {
-        return cast<scf::ForOp>(loop).getInductionVar();
-      }));
-  // offsets = [originalLoopIvs, 0 .. 0].
-  offsets.assign(originalLoopIvs.begin(), originalLoopIvs.end());
-  offsets.append(paddedRank, b.getIndexAttr(0));
-  // sizes = [1 .. 1, paddedShape] (definedabove).
-  // strides = [1 .. 1] (defined above)
-  packedTensor =
-      scf::getForInductionVarOwner(clonedLoopIvs.front())->getResult(0);
-  simplePadOp.replaceAllUsesWith(
-      b.create<SubTensorOp>(loc, simplePadOp.getResultType(), packedTensor,
-                            offsets, sizes, strides)
-          ->getResult(0));
-
-  Operation *toErase = simplePadOp;
-
-  // Make the newly cloned `simplePadOp` available to the caller.
-  simplePadOp =
-      cast<SimplePadOp>(bvm.lookup(simplePadOp.result()).getDefiningOp());
-
-  toErase->erase();
-
-  return success();
 }

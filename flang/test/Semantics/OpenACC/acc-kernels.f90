@@ -1,4 +1,4 @@
-! RUN: %S/../test_errors.sh %s %t %f18 -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc
 
 ! Check OpenACC clause validity for the following construct and directive:
 !   2.5.3 Kernels
@@ -21,6 +21,8 @@ program openacc_kernels_validity
   real :: reduction_r
   logical :: reduction_l
   real(8), dimension(N, N) :: aa, bb, cc
+  real(8), dimension(:), allocatable :: dd
+  real(8), pointer :: p
   logical :: ifCondition = .TRUE.
   type(atype) :: t
   type(atype), dimension(10) :: ta
@@ -99,7 +101,8 @@ program openacc_kernels_validity
   !$acc kernels deviceptr(aa, bb) no_create(cc)
   !$acc end kernels
 
-  !$acc kernels attach(aa, bb, cc)
+  !ERROR: Argument `aa` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+  !$acc kernels attach(dd, p, aa)
   !$acc end kernels
 
   !ERROR: PRIVATE clause is not allowed on the KERNELS directive
@@ -119,10 +122,10 @@ program openacc_kernels_validity
   !$acc kernels device_type(*)
   !$acc end kernels
 
-  !$acc kernels device_type(1)
+  !$acc kernels device_type(default)
   !$acc end kernels
 
-  !$acc kernels device_type(1, 3)
+  !$acc kernels device_type(default, host)
   !$acc end kernels
 
   !$acc kernels device_type(*) async wait num_gangs(8) num_workers(8) vector_length(128)
@@ -138,6 +141,19 @@ program openacc_kernels_validity
   !$acc kernels device_type(*) if(.TRUE.)
   do i = 1, N
     a(i) = 3.14
+  end do
+  !$acc end kernels
+
+  do i = 1, 100
+    !$acc kernels
+    !ERROR: CYCLE to construct outside of KERNELS construct is not allowed
+    if (i == 10) cycle
+    !$acc end kernels
+  end do
+
+  !$acc kernels
+  do i = 1, 100
+    if (i == 10) cycle
   end do
   !$acc end kernels
 
