@@ -17,6 +17,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
+#include <optional>
 
 namespace lldb_private {
 class Module;
@@ -73,7 +74,7 @@ ValueObjectConstResult::ValueObjectConstResult(
   }
 
   m_value.GetScalar() = (uintptr_t)m_data.GetDataStart();
-  m_value.SetValueType(Value::eValueTypeHostAddress);
+  m_value.SetValueType(Value::ValueType::HostAddress);
   m_value.SetCompilerType(compiler_type);
   m_name = name;
   SetIsConstant();
@@ -115,7 +116,7 @@ ValueObjectConstResult::ValueObjectConstResult(
   m_data.SetAddressByteSize(data_addr_size);
   m_data.SetData(data_sp);
   m_value.GetScalar() = (uintptr_t)data_sp->GetBytes();
-  m_value.SetValueType(Value::eValueTypeHostAddress);
+  m_value.SetValueType(Value::ValueType::HostAddress);
   m_value.SetCompilerType(compiler_type);
   m_name = name;
   SetIsConstant();
@@ -145,19 +146,19 @@ ValueObjectConstResult::ValueObjectConstResult(
   m_value.GetScalar() = address;
   m_data.SetAddressByteSize(addr_byte_size);
   m_value.GetScalar().GetData(m_data, addr_byte_size);
-  // m_value.SetValueType(Value::eValueTypeHostAddress);
+  // m_value.SetValueType(Value::ValueType::HostAddress);
   switch (address_type) {
   case eAddressTypeInvalid:
-    m_value.SetValueType(Value::eValueTypeScalar);
+    m_value.SetValueType(Value::ValueType::Scalar);
     break;
   case eAddressTypeFile:
-    m_value.SetValueType(Value::eValueTypeFileAddress);
+    m_value.SetValueType(Value::ValueType::FileAddress);
     break;
   case eAddressTypeLoad:
-    m_value.SetValueType(Value::eValueTypeLoadAddress);
+    m_value.SetValueType(Value::ValueType::LoadAddress);
     break;
   case eAddressTypeHost:
-    m_value.SetValueType(Value::eValueTypeHostAddress);
+    m_value.SetValueType(Value::ValueType::HostAddress);
     break;
   }
   m_value.SetCompilerType(compiler_type);
@@ -193,7 +194,7 @@ ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
   m_error = m_value.GetValueAsData(&exe_ctx, m_data, module);
 }
 
-ValueObjectConstResult::~ValueObjectConstResult() {}
+ValueObjectConstResult::~ValueObjectConstResult() = default;
 
 CompilerType ValueObjectConstResult::GetCompilerTypeImpl() {
   return m_value.GetCompilerType();
@@ -203,7 +204,7 @@ lldb::ValueType ValueObjectConstResult::GetValueType() const {
   return eValueTypeConstResult;
 }
 
-llvm::Optional<uint64_t> ValueObjectConstResult::GetByteSize() {
+std::optional<uint64_t> ValueObjectConstResult::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   if (!m_byte_size) {
     if (auto size =
@@ -215,10 +216,13 @@ llvm::Optional<uint64_t> ValueObjectConstResult::GetByteSize() {
 
 void ValueObjectConstResult::SetByteSize(size_t size) { m_byte_size = size; }
 
-size_t ValueObjectConstResult::CalculateNumChildren(uint32_t max) {
+llvm::Expected<uint32_t>
+ValueObjectConstResult::CalculateNumChildren(uint32_t max) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
-  return children_count <= max ? children_count : max;
+  if (!children_count)
+    return children_count;
+  return *children_count <= max ? *children_count : max;
 }
 
 ConstString ValueObjectConstResult::GetTypeName() {
@@ -263,12 +267,6 @@ lldb::addr_t ValueObjectConstResult::GetAddressOf(bool scalar_is_load_address,
   return m_impl.GetAddressOf(scalar_is_load_address, address_type);
 }
 
-ValueObject *ValueObjectConstResult::CreateChildAtIndex(
-    size_t idx, bool synthetic_array_member, int32_t synthetic_index) {
-  return m_impl.CreateChildAtIndex(idx, synthetic_array_member,
-                                   synthetic_index);
-}
-
 size_t ValueObjectConstResult::GetPointeeData(DataExtractor &data,
                                               uint32_t item_idx,
                                               uint32_t item_count) {
@@ -286,14 +284,14 @@ ValueObjectConstResult::GetDynamicValue(lldb::DynamicValueType use_dynamic) {
       if (process && process->IsPossibleDynamicValue(*this))
         m_dynamic_value = new ValueObjectDynamicValue(*this, use_dynamic);
     }
-    if (m_dynamic_value)
+    if (m_dynamic_value && m_dynamic_value->GetError().Success())
       return m_dynamic_value->GetSP();
   }
   return ValueObjectSP();
 }
 
 lldb::ValueObjectSP
-ValueObjectConstResult::Cast(const CompilerType &compiler_type) {
+ValueObjectConstResult::DoCast(const CompilerType &compiler_type) {
   return m_impl.Cast(compiler_type);
 }
 

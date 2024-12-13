@@ -15,17 +15,20 @@
 
 namespace lldb_private {
 
+/// Class that represents a defunct process loaded on memory via the "trace
+/// load" command.
 class ProcessTrace : public PostMortemProcess {
 public:
   static void Initialize();
 
   static void Terminate();
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "trace"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
-  ProcessTrace(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
+  ProcessTrace(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+               const FileSpec &core_file);
 
   ~ProcessTrace() override;
 
@@ -38,9 +41,7 @@ public:
 
   SystemRuntime *GetSystemRuntime() override { return nullptr; }
 
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   Status DoDestroy() override;
 
@@ -48,13 +49,10 @@ public:
 
   Status WillResume() override {
     Status error;
-    error.SetErrorStringWithFormat(
-        "error: %s does not support resuming processes",
-        GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support resuming processes", GetPluginName());
     return error;
   }
-
-  bool IsAlive() override;
 
   bool WarnBeforeDetach() const override { return false; }
 

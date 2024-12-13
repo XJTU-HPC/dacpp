@@ -1,4 +1,4 @@
-set(LLVM_LINK_COMPONENTS support)
+﻿set(LLVM_LINK_COMPONENTS support)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dacppLib/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/parser/include)

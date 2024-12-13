@@ -6,16 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
-#include <stdio.h>
-#if HAVE_SYS_TYPES_H
+#include <cstdio>
 #include <sys/types.h>
-#endif
-
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -26,6 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
@@ -41,7 +36,8 @@ char UtilityFunction::ID;
 /// \param[in] name
 ///     The name of the function, as used in the text.
 UtilityFunction::UtilityFunction(ExecutionContextScope &exe_scope,
-                                 std::string text, std::string name)
+                                 std::string text, std::string name,
+                                 bool enable_debugging)
     : Expression(exe_scope), m_execution_unit_sp(), m_jit_module_wp(),
       m_function_text(std::move(text)), m_function_name(std::move(name)) {}
 
@@ -68,6 +64,15 @@ FunctionCaller *UtilityFunction::MakeFunctionCaller(
     error.SetErrorString("Can't make a function caller without a process.");
     return nullptr;
   }
+  // Since we might need to allocate memory and maybe call code to make
+  // the caller, we need to be stopped.
+  if (process_sp->GetState() != lldb::eStateStopped) {
+    error.SetErrorStringWithFormatv(
+        "Can't make a function caller while the process is {0}: the process "
+        "must be stopped to allocate memory.",
+        StateAsCString(process_sp->GetState()));
+    return nullptr;
+  }
 
   Address impl_code_address;
   impl_code_address.SetOffset(StartAddress());
@@ -75,8 +80,8 @@ FunctionCaller *UtilityFunction::MakeFunctionCaller(
   name.append("-caller");
 
   m_caller_up.reset(process_sp->GetTarget().GetFunctionCallerForLanguage(
-      Language(), return_type, impl_code_address, arg_value_list, name.c_str(),
-      error));
+      Language().AsLanguageType(), return_type, impl_code_address,
+      arg_value_list, name.c_str(), error));
   if (error.Fail()) {
 
     return nullptr;
