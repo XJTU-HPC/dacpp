@@ -5,34 +5,66 @@ int main()
 {
     std::vector<int> dataA{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
     std::vector<int> shapeA{4, 4};
-    Tensor<int> matA(dataA, shapeA);
+    dacpp::Tensor<int> matA(dataA, shapeA);
 
-    std::vector<int> dataB{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-    std::vector<int> shapeB{4, 4};
-    Tensor<int> matB(dataB, shapeB);
+    matA.print();
 
-    std::vector<int> dataC{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-    std::vector<int> shapeC{4, 4};
-    Tensor<int> matC(dataC, shapeC);
+    //两个分区算子分别作用于0维和1维
+    RegularSlice si("si", 2, 2);
+    si.setDimId(0);
+    RegularSlice sj("sj", 2, 2);
+    sj.setDimId(1);
 
-    RegularSplit si("si", 2, 2);
-    si.setDimId(0);//这个作用的维度是0吗？
-    RegularSplit sj("sj", 2, 2);
-    sj.setDimId(0);
-    RegularSplit sk("sk", 2, 2);
-    sk.setDimId(0);
+    //两个降维算子分别作用于0维和1维
+    Index sk1("sk1");
+    sk1.setDimId(0);
+    Index sk2("sk2");
+    sk2.setDimId(1);
 
-    //下面测试设备内存分配大小的size
-    int matA_size = para_gene_tool.init_device_memory_size(matA);
-    std::cout << "matA_size:" << matA_size << std::endl; //应该输出16
+    //mat[分区][分区]
+    Dac_Ops matA_ops1;
+    matA_ops1.push_back(si);
+    matA_ops1.push_back(sj);
 
-    int matB_size = para_gene_tool.init_device_memory_size(matB);
-    std::cout << "matB_size:" << matB_size << std::endl; //应该输出16
+    //mat[降维][降维]
+    Dac_Ops matA_ops2;
+    matA_ops2.push_back(sk1);
+    matA_ops2.push_back(sk2); 
 
-    int in_retults = para_gene_tool.init_device_memory_size()
+    //mat[分区][降维]
+    Dac_Ops matA_ops3;
+    matA_ops3.push_back(si);
+    matA_ops3.push_back(sk2);
+
+    //mat[分区][]
+    Dac_Ops matA_ops4;
+    matA_ops4.push_back(si);
+
+    //mat[][降维]
+    Dac_Ops matA_ops5;
+    matA_ops5.push_back(sk2);
+
+    //mat[][] 没有算子组
+
+    ParameterGeneration<int> para_gene_tool;
+
+    // //下面测试设备内存分配大小的size
+
+    int matA1_size = para_gene_tool.init_device_memory_size(matA,matA_ops1);
+    std::cout << "matA_size:" << matA1_size << std::endl; //应该输出16 测试没有问题
+
+    int matA2_size = para_gene_tool.init_device_memory_size(matA,matA_ops2);
+    std::cout << "matA_size:" << matA2_size << std::endl; //应该输出16
+
+    int matA3_size = para_gene_tool.init_device_memory_size(matA,matA_ops3);
+    std::cout << "matA_size:" << matA3_size << std::endl; //应该输出16
+
+    int matA4_size = para_gene_tool.init_device_memory_size(matA,matA_ops4);
+    std::cout << "matA_size:" << matA4_size << std::endl; //应该输出16
+
+    int matA5_size = para_gene_tool.init_device_memory_size(matA,matA_ops5);
+    std::cout << "matA_size:" << matA5_size << std::endl; //应该输出16
+
+    int matA6_size = para_gene_tool.init_device_memory_size(matA);
+    std::cout << "matA_size:" << matA6_size << std::endl; //应该输出16
 }
-
-    // dacpp::RegularSplit si("idx1", 2, 2);
-    // dacpp::RegularSplit sj("idx2", 2, 2);
-    // dacpp::RegularSplit sk("idx3", 2, 2);
-    // dacpp::list dataList{matA[si][sk], matB[sk][sj], matC[si][sj]};
