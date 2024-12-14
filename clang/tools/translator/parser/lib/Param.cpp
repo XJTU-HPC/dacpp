@@ -32,8 +32,12 @@ void dacppTranslator::Param::setType(std::string type) {
     comma = strrchr (temp, ',');
 
     /* NO error output, just check.  */
-    assert(!strncmp(temp, "Tensor", 6) ||
-           !strncmp(temp, "const Tensor", strlen("const Tensor")));
+    if (strncmp (temp, "Tensor", 6) && 
+        strncmp (temp, "const Tensor", strlen ("const Tensor"))) {
+        this->basicType = "double";
+        return;
+    }
+
     assert (begin && end && begin < end);
 
     this->type = type;
