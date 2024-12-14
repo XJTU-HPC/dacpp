@@ -205,6 +205,9 @@ public:
         this->stride_ = operand.getStridePtr();
         return *this;
     }
+    Tensor<ImplType, N> operator[](std::initializer_list<int> idx) const {
+        return *this;
+    }
     Tensor<ImplType, N-1> operator[](int idx) const {
         return slice(0, idx);
     }
@@ -346,6 +349,9 @@ public:
         this->dim_ = operand.getDim();
         this->shape_ = operand.getShapePtr();
         this->stride_ = operand.getStridePtr();
+        return *this;
+    }
+    Tensor<ImplType, 1> operator[](std::initializer_list<int> idx) const {
         return *this;
     }
     ImplType& operator[](int idx) const {
