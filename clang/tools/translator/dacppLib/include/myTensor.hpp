@@ -5,10 +5,13 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <variant>
 
 #include "Slice.h"
 
 namespace dacpp {
+
+
 
 template<class ImplType>
 class TensorBase{
@@ -205,15 +208,28 @@ public:
         this->stride_ = operand.getStridePtr();
         return *this;
     }
-    Tensor<ImplType, N> operator[](std::initializer_list<int> idx) const {
-        return *this;
+    Tensor<ImplType, N> operator[](std::initializer_list<int> idx) {
+        int start , end, stride = 1;
+        if(idx.size() == 0)
+            return *this;
+        else if(idx.size() == 1){
+            const int i = *(idx.begin());
+            return slice(0, i, i + 1, 1);
+        }else {
+            const int *i = idx.begin();
+            start = *i;
+            i++;
+            end = *i;
+            i++;
+            if(i!=idx.end())    
+                stride = *i;
+            return slice(0, start, end, stride);
+        }
     }
     Tensor<ImplType, N-1> operator[](int idx) const {
         return slice(0, idx);
     }
-    Tensor<ImplType, N> operator[](Slice slc) const {
-        return slice(0, slc.start_, slc.end_, slc.stride_);
-    }
+
     Tensor<ImplType, N> operator[](RegularSplit sp) const {
         return *this;
     }
@@ -351,14 +367,26 @@ public:
         this->stride_ = operand.getStridePtr();
         return *this;
     }
-    Tensor<ImplType, 1> operator[](std::initializer_list<int> idx) const {
-        return *this;
+    Tensor<ImplType, 1> operator[](std::initializer_list<int> idx) {
+        int start , end, stride = 1;
+        if(idx.size() == 0)
+            return *this;
+        else if(idx.size() == 1){
+            const int i = *(idx.begin());
+            return slice(0, i, i + 1, 1);
+        }else {
+            const int *i = idx.begin();
+            start = *i;
+            i++;
+            end = *i;
+            i++;
+            if(i!=idx.end())    
+                stride = *i;
+            return slice(0, start, end, stride);
+        }
     }
     ImplType& operator[](int idx) const {
         return slice(0, idx);
-    }
-    Tensor<ImplType, 1> operator[](Slice slc) const {
-        return slice(0, slc.start_, slc.end_, slc.stride_);
     }
     Tensor<ImplType, 1> operator[](RegularSplit sp) const {
         return *this;
