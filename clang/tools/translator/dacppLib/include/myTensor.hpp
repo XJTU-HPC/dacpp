@@ -5,7 +5,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-#include <variant>
+#include <exception>
 
 #include "Slice.h"
 
@@ -66,7 +66,14 @@ public:
         recursivePrint(indices, 0);
         std::cout << "\n";
     }
+    int getCurrentDim() const {
+        return this->current_dim;
+    }
 protected:
+
+    void NextDim(){
+        this->current_dim ++;
+    }
     void recursiveTake(ImplType* data, int& idx, std::vector<int>& indices, int dimIdx) const {
         if(dimIdx == this->dim_) {
             int index = this->offset_;
@@ -122,6 +129,7 @@ protected:
     int dim_;
     std::shared_ptr<int> shape_;
     std::shared_ptr<int> stride_;
+    int current_dim = 0;
 };
 
 template<class ImplType, int N>
@@ -151,6 +159,10 @@ public:
         }
     }
     Tensor(const std::initializer_list<int> values, const std::vector<ImplType> data){
+        int ElementSize = 1;
+        for(auto value : values)    ElementSize *= value;
+        if(ElementSize != data.size())  
+            throw("The number of elements in the vector does not correspond to the Shape.");
         this->data_ = std::shared_ptr<ImplType>
             (new ImplType[data.size()], std::default_delete<ImplType[]>());
         for(size_t i = 0; i < data.size(); i++)
@@ -199,6 +211,14 @@ public:
         this->shape_ = shape;
         this->stride_ = stride;
     }
+    Tensor(std::shared_ptr<ImplType> data, int offset, int dim, std::shared_ptr<int> shape, std::shared_ptr<int> stride, int currentdim) {
+        this->data_ = data;
+        this->offset_ = offset;
+        this->dim_ = dim;
+        this->shape_ = shape;
+        this->stride_ = stride;
+        this->current_dim = currentdim;
+    }
     ~Tensor() {}
     Tensor& operator=(const Tensor<ImplType, N>& operand) {
         this->data_ = operand.getDataPtr();
@@ -206,15 +226,22 @@ public:
         this->dim_ = operand.getDim();
         this->shape_ = operand.getShapePtr();
         this->stride_ = operand.getStridePtr();
+        this->current_dim = 0;
         return *this;
     }
     Tensor<ImplType, N> operator[](std::initializer_list<int> idx) {
         int start , end, stride = 1;
-        if(idx.size() == 0)
-            return *this;
+        if(idx.size() == 0){
+            Tensor<ImplType, N> tmp = *this;
+            tmp.current_dim = this->current_dim + 1;
+            if(tmp.current_dim > tmp.dim_)
+                throw "Slice operates on dimensions that exceed those of Tensor.";
+            //std::cout<<tmp.current_dim<<std::endl;
+            return tmp;
+        }
         else if(idx.size() == 1){
             const int i = *(idx.begin());
-            return slice(0, i, i + 1, 1);
+            return slice(this->current_dim, i, i + 1, 1, 1);
         }else {
             const int *i = idx.begin();
             start = *i;
@@ -223,11 +250,11 @@ public:
             i++;
             if(i!=idx.end())    
                 stride = *i;
-            return slice(0, start, end, stride);
+            return slice(this->current_dim, start, end, stride, 1);
         }
     }
     Tensor<ImplType, N-1> operator[](int idx) const {
-        return slice(0, idx);
+        return slice(this->current_dim, idx);
     }
 
     Tensor<ImplType, N> operator[](RegularSplit sp) const {
@@ -241,7 +268,8 @@ public:
     // idx：索引
     Tensor<ImplType, N-1> slice(int dimIdx, int idx) const {
         // 参数检查
-        // if(dimIdx >= this->dim_ || idx >= this->shape_.get()[dimIdx]) {}
+        if(dimIdx >= this->dim_ || idx >= this->shape_.get()[dimIdx]) 
+            throw("Slice operates on dimensions that exceed those of Tensor.");
 
         int offset = this->offset_ + idx * this->stride_.get()[dimIdx];
         int dim = this->dim_ - 1;
@@ -257,12 +285,13 @@ public:
                 stride.get()[idx] = this->stride_.get()[idx + 1];
             }
         }
-        return Tensor<ImplType, N - 1>(this->data_, offset, dim, shape, stride);
+        return Tensor<ImplType, N - 1>(this->data_, offset, dim, shape, stride, this->current_dim);
     }
-    Tensor<ImplType, N> slice(int dimIdx, int start, int end, int sliceStride = 1) const {
+    Tensor<ImplType, N> slice(int dimIdx, int start, int end, int sliceStride = 1 , int ModifyDim = 0) const {
         // 参数检查
-        // if(dimIdx >= dim_ || start >= shape_.get()[dimIdx] || end > shape_.get()[dimIdx]) {}
-
+        if(dimIdx >= this->dim_ || start >= this->shape_.get()[dimIdx] || end > this->shape_.get()[dimIdx]
+        || start < 0 || end < 0 || start > end) 
+            throw("Slice operates on dimensions that exceed those of Tensor.");
         int offset = start * this->stride_.get()[dimIdx];
         int dim = this->dim_;
         std::shared_ptr<int> shape(new int[dim], std::default_delete<int[]>());
@@ -273,7 +302,7 @@ public:
         }
         shape.get()[dimIdx] = (end - start - 1) / sliceStride + 1;
         stride.get()[dimIdx] = this->stride_.get()[dimIdx] * sliceStride;
-        return Tensor<ImplType, N>(this->data_, offset, dim, shape, stride);
+        return Tensor<ImplType, N>(this->data_, offset, dim, shape, stride, this->current_dim + ModifyDim);
     }
     Tensor<ImplType, N> operator+(const Tensor<ImplType, N>& operand) const {
 
@@ -359,21 +388,35 @@ public:
         this->shape_ = shape;
         this->stride_ = stride;
     }
+    Tensor(std::shared_ptr<ImplType> data, int offset, int dim, std::shared_ptr<int> shape, std::shared_ptr<int> stride, int currentdim) {
+        this->data_ = data;
+        this->offset_ = offset;
+        this->dim_ = dim;
+        this->shape_ = shape;
+        this->stride_ = stride;
+        this->current_dim = currentdim;
+    }
     Tensor& operator=(const Tensor<ImplType, 1>& operand) {
         this->data_ = operand.getDataPtr();
         this->offset_ = operand.getOffset();
         this->dim_ = operand.getDim();
         this->shape_ = operand.getShapePtr();
         this->stride_ = operand.getStridePtr();
+        this->current_dim = 0;
         return *this;
     }
     Tensor<ImplType, 1> operator[](std::initializer_list<int> idx) {
         int start , end, stride = 1;
-        if(idx.size() == 0)
-            return *this;
+        if(idx.size() == 0){
+            Tensor<ImplType, 1> tmp = *this;
+            tmp.current_dim = this->current_dim + 1;
+            if(tmp.current_dim > tmp.dim_)
+                throw "Slice operates on dimensions that exceed those of Tensor.";
+            return tmp;
+        }
         else if(idx.size() == 1){
             const int i = *(idx.begin());
-            return slice(0, i, i + 1, 1);
+            return slice(this->current_dim, i, i + 1, 1, 1);
         }else {
             const int *i = idx.begin();
             start = *i;
@@ -382,24 +425,27 @@ public:
             i++;
             if(i!=idx.end())    
                 stride = *i;
-            return slice(0, start, end, stride);
+            return slice(this->current_dim, start, end, stride, 1);
         }
     }
-    ImplType& operator[](int idx) const {
-        return slice(0, idx);
+    ImplType& operator[](int idx) {
+        return slice(this->current_dim, idx);
     }
     Tensor<ImplType, 1> operator[](RegularSplit sp) const {
         return *this;
     }
     ImplType& operator[](Index sp) const ;
     ImplType& slice(int dimIdx, int idx) const {
+        if(dimIdx >= this->dim_ || idx >= this->shape_.get()[dimIdx]) 
+            throw("Slice operates on dimensions that exceed those of Tensor.");
         int offset = this->offset_ + idx * this->stride_.get()[dimIdx];
         return this->data_.get()[offset];
     }
-    Tensor<ImplType, 1> slice(int dimIdx, int start, int end, int sliceStride = 1) const {
+    Tensor<ImplType, 1> slice(int dimIdx, int start, int end, int sliceStride = 1 , int ModifyDim = 0) const {
         // 参数检查
-        // if(dimIdx >= dim_ || start >= shape_.get()[dimIdx] || end > shape_.get()[dimIdx]) {}
-
+        if(dimIdx >= this->dim_ || start >= this->shape_.get()[dimIdx] || end > this->shape_.get()[dimIdx]
+        || start < 0 || end < 0 || start > end) 
+            throw("Slice operates on dimensions that exceed those of Tensor.");
         int offset = start * this->stride_.get()[dimIdx];
         int dim = this->dim_;
         std::shared_ptr<int> shape(new int[dim], std::default_delete<int[]>());
@@ -410,7 +456,7 @@ public:
         }
         shape.get()[dimIdx] = (end - start - 1) / sliceStride + 1;
         stride.get()[dimIdx] = this->stride_.get()[dimIdx] * sliceStride;
-        return Tensor<ImplType, 1>(this->data_, offset, dim, shape, stride);
+        return Tensor<ImplType, 1>(this->data_, offset, dim, shape, stride, this->current_dim + ModifyDim);
     }
     Tensor<ImplType, 1> operator+(const Tensor<ImplType, 1>& operand) const {
 
