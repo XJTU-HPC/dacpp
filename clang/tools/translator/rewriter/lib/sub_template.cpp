@@ -507,6 +507,70 @@ std::string CodeGen_MemFree(std::string Name){
 	});
 }
 
+
+//参数生成的总模板
+const char *PARA_GENE_Template = R"~~~(
+    // 参数生成 提前计算后面需要用到的参数
+	ParameterGeneration<int> para_gene_tool;
+	{{OperatorSpilitNumberGeneration}} //生成算子划分份数
+	{{InitDeviceMemorySize}}//生成内存分配的大小
+)~~~";
+
+std::string CodeGen_ParameterGenerate(std::string OperatorSpilitNumberGeneration,std::string InitDeviceMemorySize){
+    return templateString(PARA_GENE_Template,
+	{
+		{"{{OperatorSpilitNumberGeneration}}",       OperatorSpilitNumberGeneration},
+		{"{{InitDeviceMemorySize}}", InitDeviceMemorySize}//设备内存的分配大小计算
+	});
+}
+
+//生成算子划分数的模板
+const char *OP_SPILIT_NUMBER_Generate_Template = R"~~~(
+	//生成算子的划分数
+    int {{OP_NAME}}_spilit_number = para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{NAME}});
+)~~~";
+
+std::string CodeGen_OpSpilitNumberGenerate(std::string op_name, std::string name){
+    return templateString(OP_SPILIT_NUMBER_Generate_Template,
+	{
+        {"{{OP_NAME}}",        op_name}, //算子的名字 注意这里有一个逗号
+		{"{{NAME}}",              name} //存数据的tensor的名字
+	});
+}
+
+//生成设备内存分配大小的模板
+const char *DEVICE_MEM_SIZE_Generate_Template1 = R"~~~(
+	//生成设备内存分配大小
+    int {{NAME}}_size = para_gene_tool.init_device_memory_size({{TENSOR_NAME}},{{DACOPS_NAME}});
+)~~~";
+
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME,std::string DACOPS_NAME){
+    return templateString(DEVICE_MEM_SIZE_Generate_Template1,
+	{
+        {"{{NAME}}",        NAME}, //设备内存的名字
+		{"{{TENSOR_NAME}}",     TENSOR_NAME}, //tensor的名字
+		{"{{DACOPS_NAME}}",        DACOPS_NAME} //算子组的名字
+	});
+}
+
+//生成设备内存分配的大小
+const char *DEVICE_MEM_SIZE_Generate_Template2 = R"~~~(
+	//生成设备内存分配大小
+    int {{NAME}}_size = para_gene_tool.init_device_memory_size({{TENSOR_NAME}},{{IN_DAC_OPS_NAME}},{{OUT_DAC_OPS_NAME}});
+)~~~";
+
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME){
+    return templateString(DEVICE_MEM_SIZE_Generate_Template2,
+	{
+        {"{{NAME}}",        NAME}, //设备内存的名字
+		{"{{TENSOR_NAME}}",     TENSOR_NAME}, //tensor的名字
+		{"{{IN_DAC_OPS_NAME}}", IN_DAC_OPS_NAME},//输入算子组的名字
+		{"{{OUT_DAC_OPS_NAME}}",OUT_DAC_OPS_NAME}//输出算子组的名字
+	});
+}
+
+
+
 // int main(){
 // 	std::cout<<"******************dac2sycl CodeGen test******************\n\n";
 // 	Dac_Op i = Dac_Op("i",3,0);
