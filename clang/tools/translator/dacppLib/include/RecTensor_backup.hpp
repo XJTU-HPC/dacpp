@@ -136,6 +136,14 @@ template<class ImplType, int N>
 class Tensor: public TensorBase <ImplType>{
 public:
     Tensor() {}
+    Tensor(const Tensor<ImplType, N> &x){
+        this->data_ = x.data_;
+        this->offset_ = x.offset_;
+        this->dim_ = x.dim_;
+        this->shape_ = x.shape_;
+        this->stride_ = x.stride_;
+        this->current_dim = 0;
+    }
     Tensor(const std::initializer_list<int> values, const ImplType* data){
         int ElementSize = 1;
         for(auto value : values)    ElementSize *= value;
@@ -232,15 +240,18 @@ public:
     Tensor<ImplType, N> operator[](std::initializer_list<int> idx) {
         int start , end, stride = 1;
         if(idx.size() == 0){
-            Tensor<ImplType, N> tmp = *this;
-            tmp.current_dim = this->current_dim + 1;
-            if(tmp.current_dim > tmp.dim_)
+            // this->current_dim++;
+            // Tensor<ImplType, N> tmp = *this;
+            // tmp.current_dim = this->current_dim + 1;
+            //if(tmp.current_dim > tmp.dim_)
+            if(this->current_dim + 1 > this->dim_)
                 throw "Slice operates on dimensions that exceed those of Tensor.";
-            //std::cout<<tmp.current_dim<<std::endl;
-            return tmp;
+            std::cout<<this->current_dim<<std::endl;
+            return slice(this->current_dim, 0, this->shape_.get()[this->current_dim], 1, 1);
         }
         else if(idx.size() == 1){
             const int i = *(idx.begin());
+            //std::cout<<this->current_dim + 1<<std::endl;
             return slice(this->current_dim, i, i + 1, 1, 1);
         }else {
             const int *i = idx.begin();
@@ -250,6 +261,7 @@ public:
             i++;
             if(i!=idx.end())    
                 stride = *i;
+            //std::cout<<this->current_dim + 1<<std::endl;
             return slice(this->current_dim, start, end, stride, 1);
         }
     }
