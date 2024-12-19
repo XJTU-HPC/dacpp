@@ -194,12 +194,14 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 else if(split->type.compare("RegularSplit") == 0) {
                     dacppTranslator::RegularSplit* regulerSplit = static_cast<dacppTranslator::RegularSplit*>(split);
                     mem[j] *= (shellParam->getShape(k) - regulerSplit->getSplitSize() + regulerSplit->getSplitStride()) / regulerSplit->getSplitStride() * regulerSplit->getSplitSize();
+                    
                 }
                 // 保形划分
                 else {
                     mem[j] *= shellParam->getShape(k);
                 }
             }
+            std::cout << mem[j] << std::endl;
         }
 
         // 计算结构

@@ -27,6 +27,7 @@ add_executable(UsmTemplateTest UsmTemplateTest.cpp)
 add_executable(BufferTemplateTest BufferTemplateTest.cpp)
 add_executable(ParameterGenerationTest ParameterGenerationTest.cpp)
 add_executable(ParameterGenerationTest2 ParameterGenerationTest2.cpp)
+add_executable(ParameterGenerationTest11 ParameterGenerationTest11.cpp)
 
 set_target_properties(blockMatMulTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
@@ -85,6 +86,9 @@ set_target_properties(ParameterGenerationTest PROPERTIES
 set_target_properties(ParameterGenerationTest2 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
+set_target_properties(ParameterGenerationTest11 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
 
 target_link_libraries(blockMatMulTest DacppLib RewriterLib)
 target_link_libraries(blockMatMulTest2 DacppLib RewriterLib)
@@ -105,3 +109,4 @@ target_link_libraries(UsmTemplateTest DacppLib RewriterLib)
 target_link_libraries(BufferTemplateTest DacppLib RewriterLib)
 target_link_libraries(ParameterGenerationTest DacppLib RewriterLib)
 target_link_libraries(ParameterGenerationTest2 DacppLib RewriterLib)
+target_link_libraries(ParameterGenerationTest11 DacppLib RewriterLib)

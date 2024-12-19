@@ -72,4 +72,74 @@ class ParameterGeneration
             int multiple = in_op_product / out_op_product;//得到输入是输出的倍数
             return tensor.getSize() * multiple;
         }
+
+
+
+        //计算输入数量
+        int init_Countin(Dac_Ops in_ops){
+            int countIn = 1;
+            std::string set;
+            std::set<std::string> setIn;
+            for(int i = 0; i < in_ops.size; i++){
+                if(setIn.count(in_ops[i].name))
+                    continue;
+                countIn *= in_ops[i].split_size;
+                setIn.insert(in_ops[i].name);
+            }
+            return countIn;
+        }
+
+        //计算输出数量
+        int init_Countout(Dac_Ops out_ops){
+            int countOut = 1;
+            std::string set;
+            std::set<std::string> setOut;
+            for(int i = 0; i < out_ops.size; i++){
+                if(setOut.count(out_ops[i].name))
+                    continue;
+                countOut *= out_ops[i].split_size;
+                setOut.insert(out_ops[i].name);
+            }
+            return countOut;
+        }
+
+        //添加算子
+        void init_Exop(Dac_Ops in_ops, Dac_Ops* out_ops){
+            std::set<std::string> set;
+            for(int i = 0; i < out_ops->size; i++){
+                set.insert(out_ops->DacOps[i].name);
+            }
+            for(int i = 0; i < in_ops.size; i++){
+                if(set.count(in_ops[i].name))
+                    continue;
+                out_ops->push_back(in_ops[i]);
+            }
+                for(int i = 0; i < out_ops->size; i++){
+                    std::cout << out_ops->DacOps[i].name << std::endl;
+                }
+        }
+        //计算内存分配
+        int* init_mem(dacpp::Tensor<ImplType> tensor,std::vector<Dac_Ops> Params){
+            int* mem = new int[Params.size()];
+            for(int j = 0; j < Params.size(); j++) {
+                mem[j] = 1;
+                for(int k = 0; k < Params[j].size; k++) {
+                    // 降维划分
+                    if(Params[j].DacOps[k].type == "Index") {
+                        mem[j] = tensor.getShape(k);
+                    }
+                    // 规则分区划分
+                    else if(Params[j].DacOps[k].type == "RegularSlice") {
+                        mem[j] *= (tensor.getShape(k) - Params[j].DacOps[k].split_size + Params[j].DacOps[k].stride) / Params[j].DacOps[k].stride * Params[j].DacOps[k].split_size;
+                    }
+                    // 保形划分
+                    else {
+                        mem[j] *= tensor.getShape(k);
+                    }
+                }
+            }
+            return mem;
+        }
+
+        
 };

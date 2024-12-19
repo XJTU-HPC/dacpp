@@ -1,7 +1,6 @@
 #include <set>
 #include <iostream>
 #include <sstream>
-
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "Rewriter.h"
 #include "Split.h"

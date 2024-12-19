@@ -569,6 +569,59 @@ std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_N
 	});
 }
 
+const char *REDUCTION_Template_Span2 = R"~~~(
+    // 归约
+    q.submit([&](handler &h) {
+    	h.parallel_for(
+        range<1>({{SPLIT_SIZE}} * {{SPAN_SIZE}}),
+        reduction(span<{{TYPE}},{{SPAN_SIZE}}>(reduction_{{NAME}},{{SPAN_SIZE}}), 
+        {{REDUCTION_RULE}},
+        property::reduction::initialize_to_identity()),
+        [=](id<1> i,auto &reducer) {
+            reducer[i % {{SPLIT_LENGTH}} + i/({{SPLIT_LENGTH}}*{{SPLIT_SIZE}})*{{SPLIT_LENGTH}}].combine(d_{{NAME}}[i]);
+     	});
+ }).wait();
+    q.memcpy(d_{{NAME}},reduction_{{NAME}}, {{SPAN_SIZE}}*sizeof({{TYPE}})).wait();
+)~~~";
+
+std::string CodeGen_Reduction_Span2(std::string SpanSize,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule) {
+    return templateString(REDUCTION_Template_Span,
+	{
+        {"{{SPAN_SIZE}}",        SpanSize},   
+		{"{{SPLIT_SIZE}}",       SplitSize},
+		{"{{SPLIT_LENGTH}}",     SplitLength},
+		{"{{TYPE}}",             Type},
+		{"{{NAME}}",             Name},
+		{"{{REDUCTION_RULE}}",   ReductionRule}
+	});
+}
+
+const char *D2H_MEM_MOV_1_Template2 = R"~~~(
+    // 归并结果返回
+    q.memcpy(r_{{NAME}}, d_{{NAME}}, reduction_size*sizeof({{TYPE}})).wait();
+    {{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}});)~~~";
+
+const char *D2H_MEM_MOV_2_Template2 = R"~~~(
+    // 归约结果返回
+    q.memcpy(r_{{NAME}},d__{{NAME}}, reduction_size*sizeof({{TYPE}})).wait();
+    {{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}});)~~~";
+
+std::string CodeGen_D2HMemMov(std::string Name,std::string Type,bool isReduction){
+    if(isReduction){
+		return templateString(D2H_MEM_MOV_2_Template2,
+		{
+			{"{{TYPE}}",            Type},
+			{"{{NAME}}",            Name},
+		});
+	}
+	else{
+		return templateString(D2H_MEM_MOV_1_Template2,
+		{
+			{"{{TYPE}}",            Type},
+			{"{{NAME}}",            Name},
+		});
+	}
+}
 
 
 // int main(){
