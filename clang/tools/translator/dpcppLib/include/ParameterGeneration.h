@@ -12,17 +12,24 @@ class ParameterGeneration
 
         }
 
-        //生成算子的划分数 分区算子
-        int init_operetor_splitnumber(RegularSlice si,dacpp::Tensor<ImplType> tensor)
-        {  
-            int split_num = (tensor.getShape(si.dimId) - si.size) / si.stride + 1;
-            return split_num;
-        }
+        // //生成算子的划分数 分区算子
+        // int init_operetor_splitnumber(RegularSlice si,dacpp::Tensor<ImplType> tensor)
+        // {  
+        //     int split_num = (tensor.getShape(si.dimId) - si.size) / si.stride + 1;
+        //     return split_num;
+        // }
 
-        //生成算子的划分数 降维算子
-        int init_operetor_splitnumber(Index si,dacpp::Tensor<ImplType> tensor)
-        {  
-            int split_num = tensor.getShape(si.dimId); //算子作用维度的划分数
+        // //生成算子的划分数 降维算子
+        // int init_operetor_splitnumber(Index si,dacpp::Tensor<ImplType> tensor)
+        // {  
+        //     int split_num = tensor.getShape(si.dimId); //算子作用维度的划分数
+        //     return split_num;
+        // }
+
+        //生成算子的划分数 不用区分分区算子和降维算子 直接用Dac_Op去计算就可以了
+        int init_operetor_splitnumber(Dac_Op si,dacpp::Tensor<ImplType> tensor)
+        {
+            int split_num = (tensor.getShape(si.dimId) - si.size) / si.stride + 1;
             return split_num;
         }
 
@@ -56,21 +63,31 @@ class ParameterGeneration
             return tensor.getSize();
         }
 
-        //生成设备内存的分配大小 下面这个是不对的
-        int init_device_memory_size(dacpp::Tensor<ImplType> tensor,Dac_Ops in_ops,Dac_Ops out_ops)
+        //生成设备内存的分配大小 支持情况：数据重组时中间需要的内存 为啥了不知道 反正就这样算的
+        //传入四个参数 分别是输入的tensor组 输出的tensor 输入tensor的算子组的数组 输出tensor的算子组
+        int init_device_memory_size(std::vector<dacpp::Tensor<ImplType>> tensor_in,dacpp::Tensor<ImplType> tensor_out,std::vector<Dac_Ops> ops_in,Dac_Ops ops_out)
         {
             int in_op_product = 1;//输入算子划分数的乘积
-            for(int i = 0;i < in_ops.size;i ++)
+            std::unordered_set<std::string> mySet;//输入算子是否相同 现在只能拿名字去判断
+            //下面遍历所有输入算子组里面的算子
+            for(int i = 0;i < ops_in.size();i ++)
             {
-                in_op_product *= init_operetor_splitnumber(in_ops[i]);
+                for(int j = 0;j < ops_in[i].size;j ++)
+                {
+                    if(mySet.find(ops_in[i][j].name) == mySet.end()) //如果这个算子不存在于集合中
+                    {
+                        mySet.insert(ops_in[i][j].name);//插入集合中去
+                        in_op_product *= init_operetor_splitnumber(ops_in[i].DacOps[j],tensor_in[i]);
+                    }
+                }
             }
-            int out_op_product = 1;//输出算子划分数的乘积
-            for(int i = 0;i < out_ops.size;i ++)
+
+            int out_op_product = 1;//输出就一个计算比较简单
+            for(int i = 0;i < ops_out.size;i ++)
             {
-                out_op_product *= init_operetor_splitnumber(out_ops[i]);
+                out_op_product *= init_operetor_splitnumber(ops_out.DacOps[i],tensor_out);
             }
-            int multiple = in_op_product / out_op_product;//得到输入是输出的倍数
-            return tensor.getSize() * multiple;
+            return init_device_memory_size(tensor_out,ops_out) * in_op_product / out_op_product;
         }
 
 

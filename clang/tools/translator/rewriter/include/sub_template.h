@@ -75,6 +75,7 @@ std::string CodeGen_OpSpilitNumberGenerate(std::string op_name, std::string name
 
 std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME,std::string DACOPS_NAME);
 
-std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME);
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME);
 
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_IN_NAME,std::string TENSOR_OUT_NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME);
 #endif

@@ -538,7 +538,7 @@ std::string CodeGen_OpSpilitNumberGenerate(std::string op_name, std::string name
 	});
 }
 
-//生成设备内存分配大小的模板
+//生成设备内存分配大小的模板 对应mat[分区][分区] mat[分区][降维] mat[分区][] mat[降维][]
 const char *DEVICE_MEM_SIZE_Generate_Template1 = R"~~~(
 	//生成设备内存分配大小
     int {{NAME}}_size = para_gene_tool.init_device_memory_size({{TENSOR_NAME}},{{DACOPS_NAME}});
@@ -553,18 +553,33 @@ std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_N
 	});
 }
 
-//生成设备内存分配的大小
+//生成设备内存分配大小的模板 对应mat[][]
 const char *DEVICE_MEM_SIZE_Generate_Template2 = R"~~~(
 	//生成设备内存分配大小
-    int {{NAME}}_size = para_gene_tool.init_device_memory_size({{TENSOR_NAME}},{{IN_DAC_OPS_NAME}},{{OUT_DAC_OPS_NAME}});
+    int {{NAME}}_size = para_gene_tool.init_device_memory_size({{TENSOR_NAME}});
 )~~~";
 
-std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME){
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME){
     return templateString(DEVICE_MEM_SIZE_Generate_Template2,
 	{
         {"{{NAME}}",        NAME}, //设备内存的名字
-		{"{{TENSOR_NAME}}",     TENSOR_NAME}, //tensor的名字
-		{"{{IN_DAC_OPS_NAME}}", IN_DAC_OPS_NAME},//输入算子组的名字
+		{"{{TENSOR_NAME}}",     TENSOR_NAME} //tensor的名字
+	});
+}
+
+//生成设备内存分配的大小 对应数据重组需要分配的大小
+const char *DEVICE_MEM_SIZE_Generate_Template3 = R"~~~(
+	//生成设备内存分配大小
+    int {{NAME}}_size = para_gene_tool.init_device_memory_size({{TENSOR_IN_NAME}},{{TENSOR_OUT_NAME}},{{IN_DAC_OPS_NAME}},{{OUT_DAC_OPS_NAME}});
+)~~~";
+
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_IN_NAME,std::string TENSOR_OUT_NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME){
+    return templateString(DEVICE_MEM_SIZE_Generate_Template3,
+	{
+        {"{{NAME}}",        NAME}, //设备内存的名字
+		{"{{TENSOR_IN_NAME}}",     TENSOR_IN_NAME}, //输入tensor组的名字
+		{"{{TENSOR_OUT_NAME}}", TENSOR_OUT_NAME},//输出Tensor的名字 这个就一个Tensor
+		{"{{IN_DAC_OPS_NAME}}", IN_DAC_OPS_NAME},//输入算子组的组的名字
 		{"{{OUT_DAC_OPS_NAME}}",OUT_DAC_OPS_NAME}//输出算子组的名字
 	});
 }
