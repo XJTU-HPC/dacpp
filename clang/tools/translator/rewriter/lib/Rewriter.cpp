@@ -26,17 +26,12 @@
 //             }   
 // }
 
-    // 设备内存释放
-    std::string memFree = reduction2;
-    for (int shellParamIdx = 0; shellParamIdx < shell->getNumShellParams(); shellParamIdx++) {
-        ShellParam* shellParam = shell->getShellParam(shellParamIdx);
-        memFree += CodeGen_MemFree(shellParam->getName());
-    }
+void dacppTranslator::Rewriter::setRewriter(clang::Rewriter* rewriter) {
+    this->rewriter = rewriter;
+}
 
-    std::string syclFunc = CodeGen_DAC2SYCL(dacShellName, dacShellParams, deviceMemAlloc,
-                                       opInit, dac, memFree);
-    
-    return syclFunc;
+void dacppTranslator::Rewriter::setDacppFile(DacppFile* dacppFile) {
+    this->dacppFile = dacppFile;
 }
 
 void dacppTranslator::Rewriter::rewriteDac() {
@@ -410,15 +405,41 @@ void dacppTranslator::Rewriter::rewriteDac() {
         // 内核执行
         std::string kernelExecute = CodeGen_KernelExecute(std::to_string(countIn), IndexInit, CalcEmbed);
 
-        code += generateSyclFunc(expr) + "\n\n";
+        // 归约结果返回
+        std::string reduction = "";
+        for(int j = 0; j < shell->getNumShellParams(); j++) {
+            ShellParam* shellParam = shell->getShellParam(j);
+            if(shellParam->getRw() == 1 && countIn != countOut) {
+                std::string ReductionRule = "sycl::plus<>()";
+                reduction += CodeGen_Reduction_Span(std::to_string(mem[j]), std::to_string(countIn / countOut),
+                                                    std::to_string(countIn), shellParam->getName(), 
+                                                    shellParam->getBasicType(), ReductionRule);
+            }
+        }
+        // 归并结果返回
+        std::string D2HMemMove = "";
+        for(int j = 0; j < shell->getNumShellParams(); j++) {
+            ShellParam* shellParam = shell->getShellParam(j);
+            if(shellParam->getRw() == 1) {
+                D2HMemMove += CodeGen_D2HMemMov(shellParam->getName(), shellParam->getBasicType(), std::to_string(mem[j]), false);
+            }
+        }
 
-        // 删除原来的shell和calc
+        // 内存释放
+        std::string memFree = "";
+        for(int j = 0; j < shell->getNumParams(); j++) {
+            ShellParam* shellParam = shell->getShellParam(j);
+            memFree += CodeGen_MemFree(shellParam->getName());
+        }
+        
+        code += CodeGen_DAC2SYCL(dacShellName, dacShellParams, opInit, dataRecon, deviceMemAlloc, H2DMemMove, kernelExecute, reduction, D2HMemMove, memFree);
+        code += "\n\n";
         rewriter->RemoveText(shell->getShellLoc()->getSourceRange());
         rewriter->RemoveText(calc->getCalcLoc()->getSourceRange());
-
-        // 插入新生成的sycl函数
-        rewriter->InsertText(dacppFile->getMainFuncLoc()->getBeginLoc(), code);
     }
+
+    rewriter->InsertText(dacppFile->getMainFuncLoc()->getBeginLoc(), code);
+
 }
 
 /*
@@ -442,7 +463,6 @@ void dacpp::Source2Source::recursiveRewriteMain(Stmt* curStmt) {
 */
 
 void dacppTranslator::Rewriter::rewriteMain() {
-    
     for (int exprCount = 0; exprCount < dacppFile->getNumExpression(); exprCount++) {
         Expression* expr = dacppFile->getExpression(exprCount);
         Shell* shell = expr->getShell();
@@ -459,4 +479,3 @@ void dacppTranslator::Rewriter::rewriteMain() {
         rewriter->InsertText(expr->getDacExpr()->getBeginLoc(), code);   
     }
 }
-
