@@ -468,7 +468,7 @@ namespace dacpp {
         if(dimIdx >= this->dim_ || start >= this->shape_.get()[dimIdx] || end > this->shape_.get()[dimIdx]
         || start < 0 || end < 0 || start > end) 
             throw std::runtime_error("[{}] operates on dimensions that exceed those of Tensor.");
-        int offset = start * this->stride_.get()[dimIdx];
+        int offset = this->offset_ + start * this->stride_.get()[dimIdx];
         int dim = this->dim_;
         std::shared_ptr<int> shape(new int[dim], std::default_delete<int[]>());
         std::shared_ptr<int> stride(new int[dim], std::default_delete<int[]>());
@@ -789,7 +789,7 @@ namespace dacpp {
         if(dimIdx >= this->dim_ || start >= this->shape_.get()[dimIdx] || end > this->shape_.get()[dimIdx]
         || start < 0 || end < 0 || start > end) 
             throw std::runtime_error("[{}] operates on dimensions that exceed those of TensorProxy.");
-        int offset = start * this->stride_.get()[dimIdx];
+        int offset = this->offset_ + start * this->stride_.get()[dimIdx];
         int dim = this->dim_;
         std::shared_ptr<int> shape(new int[dim], std::default_delete<int[]>());
         std::shared_ptr<int> stride(new int[dim], std::default_delete<int[]>());
@@ -913,7 +913,7 @@ namespace dacpp {
         if(dimIdx >= this->dim_ || start >= this->shape_.get()[dimIdx] || end > this->shape_.get()[dimIdx]
         || start < 0 || end < 0 || start > end) 
             throw("Slice operates on dimensions that exceed those of TensorProxy.");
-        int offset = start * this->stride_.get()[dimIdx];
+        int offset = this->offset_ + start * this->stride_.get()[dimIdx];
         int dim = this->dim_;
         std::shared_ptr<int> shape(new int[dim], std::default_delete<int[]>());
         std::shared_ptr<int> stride(new int[dim], std::default_delete<int[]>());
