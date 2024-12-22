@@ -63,7 +63,8 @@ class ParameterGeneration
             return tensor.getSize();
         }
 
-        //生成设备内存的分配大小 支持情况：数据重组时中间需要的内存 为啥了不知道 反正就这样算的
+        /*下面函数已废弃  接口太复杂了*/
+        //生成设备内存的分配大小 支持情况：数据重组时中间需要的内存 内核函数中localsize的大小 为啥了不知道 反正就这样算的
         //传入四个参数 分别是输入的tensor组 输出的tensor 输入tensor的算子组的数组 输出tensor的算子组
         int init_device_memory_size(std::vector<dacpp::Tensor<ImplType>> tensor_in,dacpp::Tensor<ImplType> tensor_out,std::vector<Dac_Ops> ops_in,Dac_Ops ops_out)
         {
@@ -89,4 +90,23 @@ class ParameterGeneration
             }
             return init_device_memory_size(tensor_out,ops_out) * in_op_product / out_op_product;
         }
+        /*上面函数已废弃*/
+
+        //生成设备内存的分配大小 支持情况：数据重组时中间需要的内存 内核函数中localsize的大小
+        //Dac_Ops ops_in中所有非算子是不同的，由抽象语法树后端进行去重
+        int init_device_memory_size(Dac_Ops ops_in,Dac_Ops ops_out,dacpp::Tensor<ImplType> tensor_out)
+        {
+            int in_op_product = 1;//输入算子划分数的乘积
+            for(int i = 0;i < ops_in.size;i ++)
+            {
+                in_op_product *= ops_in.DacOps[i].split_size; //spilit在前面初始化算子的时候已经完成
+            }
+            int out_op_pruduct = 1;//输出算子划分数的乘积
+            for(int i = 0;i < ops_out.size;i ++)
+            {
+                out_op_pruduct *= ops_out.DacOps[i].split_size; //spilit在前面初始化算子的时候已经完成
+            }
+            return init_device_memory_size(tensor_out,ops_out) * in_op_product / out_op_product;
+        }
+
 };
