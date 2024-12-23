@@ -607,30 +607,30 @@ std::string CodeGen_ParameterGenerate(std::string InitDeviceMemorySize){
 
 /*下面函数已废弃*/
 //构造tensor_in std::vector<dacpp::Tensor<ImplType>> tensor_in
-const char *Tensor_Vector_Declaration_Template = R"~~~(
-	std::vector<dacpp::Tensor<{{TYPE}}>> {{NAME}};
-)~~~";
+// const char *Tensor_Vector_Declaration_Template = R"~~~(
+// 	std::vector<dacpp::Tensor<{{TYPE}}>> {{NAME}};
+// )~~~";
 
-std::string CodeGen_TensorVectorDeclarationGenerate(std::string TYPE, std::string tensor_name){
-    return templateString(Tensor_Vector_Declaration_Template,
-	{
-        {"{{TYPE}}",        TYPE}, //Tensor里面的数据类型
-		{"{{NAME}}",    tensor_name} //Tensor vector组的名字 注意前后命名一致性 
-	});
-}
+// std::string CodeGen_TensorVectorDeclarationGenerate(std::string TYPE, std::string tensor_name){
+//     return templateString(Tensor_Vector_Declaration_Template,
+// 	{
+//         {"{{TYPE}}",        TYPE}, //Tensor里面的数据类型
+// 		{"{{NAME}}",    tensor_name} //Tensor vector组的名字 注意前后命名一致性 
+// 	});
+// }
 
-//tensor_in.pushback();往vector组里面添加数据
-const char *Tensor_Vector_Add_Template = R"~~~(
-	{{NAME}}.push_back({{NAME2}});
-)~~~";
+// //tensor_in.pushback();往vector组里面添加数据
+// const char *Tensor_Vector_Add_Template = R"~~~(
+// 	{{NAME}}.push_back({{NAME2}});
+// )~~~";
 
-std::string CodeGen_TensorVectorAddGenerate(std::string NAME, std::string NAME2){
-    return templateString(Tensor_Vector_Add_Template,
-	{
-        {"{{NAME}}",        NAME}, //Tensor vector组的名字
-		{"{{NAME2}}",       NAME2} //加到里面的Tensor的名字 
-	});
-}
+// std::string CodeGen_TensorVectorAddGenerate(std::string NAME, std::string NAME2){
+//     return templateString(Tensor_Vector_Add_Template,
+// 	{
+//         {"{{NAME}}",        NAME}, //Tensor vector组的名字
+// 		{"{{NAME2}}",       NAME2} //加到里面的Tensor的名字 
+// 	});
+// }
 /*上面函数已废弃*/
 
 //生成设备内存分配大小的模板 对应mat[分区][分区] mat[分区][降维] mat[分区][] mat[降维][]
@@ -664,21 +664,21 @@ std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_N
 
 /*下面函数已废弃*/
 //生成设备内存分配的大小 对应数据重组需要分配的大小
-const char *DEVICE_MEM_SIZE_Generate_Template3 = R"~~~(
-	//生成设备内存分配大小
-    int {{NAME}}_size = para_gene_tool.init_device_memory_size({{TENSOR_IN_NAME}},{{TENSOR_OUT_NAME}},{{IN_DAC_OPS_NAME}},{{OUT_DAC_OPS_NAME}});
-)~~~";
+// const char *DEVICE_MEM_SIZE_Generate_Template3 = R"~~~(
+// 	//生成设备内存分配大小
+//     int {{NAME}}_size = para_gene_tool.init_device_memory_size({{TENSOR_IN_NAME}},{{TENSOR_OUT_NAME}},{{IN_DAC_OPS_NAME}},{{OUT_DAC_OPS_NAME}});
+// )~~~";
 
-std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_IN_NAME,std::string TENSOR_OUT_NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME){
-    return templateString(DEVICE_MEM_SIZE_Generate_Template3,
-	{
-        {"{{NAME}}",        NAME}, //设备内存的名字
-		{"{{TENSOR_IN_NAME}}",     TENSOR_IN_NAME}, //输入tensor组的名字
-		{"{{TENSOR_OUT_NAME}}", TENSOR_OUT_NAME},//输出Tensor的名字 这个就一个Tensor
-		{"{{IN_DAC_OPS_NAME}}", IN_DAC_OPS_NAME},//输入算子组的组的名字
-		{"{{OUT_DAC_OPS_NAME}}",OUT_DAC_OPS_NAME}//输出算子组的名字
-	});
-}
+// std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_IN_NAME,std::string TENSOR_OUT_NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME){
+//     return templateString(DEVICE_MEM_SIZE_Generate_Template3,
+// 	{
+//         {"{{NAME}}",        NAME}, //设备内存的名字
+// 		{"{{TENSOR_IN_NAME}}",     TENSOR_IN_NAME}, //输入tensor组的名字
+// 		{"{{TENSOR_OUT_NAME}}", TENSOR_OUT_NAME},//输出Tensor的名字 这个就一个Tensor
+// 		{"{{IN_DAC_OPS_NAME}}", IN_DAC_OPS_NAME},//输入算子组的组的名字
+// 		{"{{OUT_DAC_OPS_NAME}}",OUT_DAC_OPS_NAME}//输出算子组的名字
+// 	});
+// }
 /*上面函数已废弃*/
 
 //生成设备内存分配的大小 对应数据重组需要分配的大小 localsize工作项的多少
@@ -697,19 +697,130 @@ std::string CodeGen_DeviceMemSizeGenerate(std::string NAME,std::string IN_DAC_OP
 	});
 }
 
-//将算子添加到算子组的模板
-
-const char *DEVICE_MEM_SIZE_Generate_Template3 = R"~~~(
-	//生成设备内存分配大小
-    int {{NAME}}_size = para_gene_tool.init_device_memory_size({{IN_DAC_OPS_NAME}},{{OUT_DAC_OPS_NAME}},{{TENSOR_OUT}});
+//将算子添加到算子组的模板 之前数据重组时也有添加算子到算子组的模板 这个并不会每次都设置维度和划分长度
+const char *ADD_OP2OPS_Template = R"~~~(
+    {{OPS_NAME}}_ops.push_back({{OP_NAME}});
 )~~~";
 
-std::string CodeGen_DeviceMemSizeGenerate(std::string NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME,std::string TENSOR_OUT){
-    return templateString(DEVICE_MEM_SIZE_Generate_Template3,
+std::string CodeGen_AddOp2Ops(std::string OPS_NAME, std::string OP_NAME){
+    return templateString(ADD_OP2OPS_Template,
 	{
-		{"{{NAME}}",            NAME},
-		{"{{IN_DAC_OPS_NAME}}", IN_DAC_OPS_NAME},//输入算子组的名字
-		{"{{OUT_DAC_OPS_NAME}}",OUT_DAC_OPS_NAME},//输出算子组的名字
-		{"{{TENSOR_OUT}}",      TENSOR_OUT}//输出数据TENSOR的名字
+		{"{{OPS_NAME}}",    OPS_NAME},
+		{"{{OP_NAME}}",      OP_NAME}
+	});
+}
+
+//更改算子作用维度  并不是每个算子在添加到算子组时都需要更改维度
+const char *SET_OP_DIMID_Template = R"~~~(
+	//更改算子作用维度
+    {{OP_NAME}}.setDimId({{DIMID}});
+)~~~";
+
+std::string CodeGen_SetOpDimId(std::string OP_NAME, std::string DIMID){
+    return templateString(SET_OP_DIMID_Template,
+	{
+		{"{{OP_NAME}}",    OP_NAME},
+		{"{{DIMID}}",      DIMID}
+	});
+}
+
+const char *OPS_INIT_Template = R"~~~(
+    // 算子组初始化
+    Dac_Ops {{OPS_NAME}}_ops;
+    {{ADD_OP2OPS}}
+)~~~";
+
+std::string CodeGen_DataOpsInit(std::string OPS_NAME,std::string ADD_OP2OPS){
+    return templateString(OPS_INIT_Template,
+	{
+		{"{{OPS_NAME}}",       OPS_NAME},
+		{"{{ADD_OP2OPS}}",    ADD_OP2OPS}
+	});
+}
+
+//新的索引生成模板 相当于现在的ops能用的只有算子的名字了 这个还没有进行测试 可能有问题
+std::string CodeGen_IndexInit2(Dac_Ops ops,std::vector<std::string> sets,std::vector<std::string> offsets)//sets表示每个算子属于的集合的名字 offsets表示每个算子相对于集合的偏移量
+{ 
+    std::set<std::string> sets_map;//用于辅助找到不同的集合的个数
+    std::vector<std::string> sets_order;//记录了不同的集合出现的顺序，储存集合的名字： idx idy idz
+    std::vector<std::string> sets_split;//记录了不同集合对应的划分数，与集合名相对应： idx的划分数 idy的划分数 idz的划分数 
+    for (int i = 0; i < sets.size(); ++i) 
+    {
+        if (sets_map.find(sets[i]) == sets_map.end())//如果容器里没有
+        {
+            sets_map.insert(sets[i]);//将集合插入容器
+            sets_order.push_back(sets[i]);//将集合放入到集合的数组中
+            sets_split.push_back(ops[i].name + ".split_size");//将集合对应的划分数放入数组中
+        }
+    }
+    
+    int sets_size = sets_map.size();//得到各类集合总个数
+    std::unordered_map<std::string,std::string> sets_sub_expression;//<集合的名称，集合对应的索引表达式>
+
+    for(int i = 0;i < sets_size; i++)//有几个集合就循环几次
+    {
+		std::string sub_expression = "item_id";
+		for(int j = i + 1;j < sets_size;j ++){
+			sub_expression = sub_expression + "/" + sets_split[j];
+		}
+		//sub_expression = sub_expression + "%" + std::to_string(sets_split[i]);//取模操作应该在偏移之后
+        sets_sub_expression[sets_order[i]] = sub_expression;//将子表达式和集合的名字进行关联
+	}
+
+    //下面根据偏移量来计算各个算子对应的索引
+    int len = ops.size;
+    for(int i = 0;i < len;i ++)
+    {
+        std::string index_expression = "(";
+        index_expression = index_expression + sets_sub_expression[sets[i]];//得到集合的索引
+        //index_expression = index_expression + "+" + "(" + offsets[i] + ")" + "+" + std::to_string(ops[i].split_size) + ")";//加上偏移量和划分数 防止出现负数
+		index_expression = index_expression + "+" + "(" + offsets[i] + ")" + ")";
+		index_expression = index_expression + "%" + ops[i].name + ".split_size";
+        ops[i].setExp(index_expression);
+    }
+
+	std::string expression = "";
+	for(int i=0;i<len;i++){
+		expression = expression + templateString(INDEX_INIT_Template,
+		{
+			{"{{NAME}}", ops[i].name},
+			{"{{EXPRESSION}}", ops[i].getExp()}
+		});
+	}
+	return expression;
+}
+
+//新的嵌入计算的模板 这个还没有进行测试 可能有问题
+const char *CALC_EMBED_Template2 = R"~~~(
+            {{DAC_CALC_NAME}}{{DAC_CALC_ARGS}})~~~";
+
+std::string CodeGen_CalcEmbed2(std::string Name,Args args){
+	std::string DacCalcArgs = "(";
+	int len = args.size;
+	for(int i=0;i<len;i++){
+		std::string IndexComb="(";
+		for(int j=0;j<args[i].ops.size;j++){
+			IndexComb+= args[i].ops[j].name + "*" + args[i].ops[j].name + ".split_length";
+			if(j!=args[i].ops.size-1) IndexComb+="+";
+		}
+		IndexComb+=")";
+		if(IndexComb == "()")
+		{
+			DacCalcArgs+=args[i].name;
+		}
+		else{
+			DacCalcArgs+=args[i].name + "+" + IndexComb;
+		}		
+		if(i==len-1){
+			DacCalcArgs+=");";
+		}
+		else{
+			DacCalcArgs+=",";
+		}
+	}
+	return templateString(CALC_EMBED_Template,
+	{
+		{"{{DAC_CALC_NAME}}",    Name},
+		{"{{DAC_CALC_ARGS}}",    DacCalcArgs}
 	});
 }
