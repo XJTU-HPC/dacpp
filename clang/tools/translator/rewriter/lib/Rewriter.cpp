@@ -9,6 +9,7 @@
 #include "dacInfo.h"
 #include "sub_template.h"
 #include "test.h"
+#include "ASTParse.h"
 
 // void DFS(int node, std::vector<bool>& visited, Dac_Ops ops, Dac_Ops component, int componentID, std::vector<std::string>& sets) {
 //             visited[node] = true;
@@ -465,17 +466,15 @@ void dacpp::Source2Source::recursiveRewriteMain(Stmt* curStmt) {
 void dacppTranslator::Rewriter::rewriteMain() {
     for (int exprCount = 0; exprCount < dacppFile->getNumExpression(); exprCount++) {
         Expression* expr = dacppFile->getExpression(exprCount);
-        Shell* shell = expr->getShell();
-        std::string code = "";
-        code += shell->getName() + "(";
-        for(int paramCount = 0; paramCount < shell->getNumParams(); paramCount++) {
-            code += shell->getParam(paramCount)->getName();
-            if(paramCount != shell->getNumParams() - 1) {
-                code += ", ";
-            }
-        }
-        code += ");";
-        expr->getDacExpr()->dump();
-        rewriter->InsertText(expr->getDacExpr()->getBeginLoc(), code);   
+        Expr *dacExprLHS = expr->getDacExpr()->getLHS();
+        CallExpr *shellCall = getNode<CallExpr>(dacExprLHS);
+        std::string str;
+        llvm::raw_string_ostream rso(str);
+        clang::LangOptions langOpts;
+        langOpts.CPlusPlus = true; // 启用C++选项（根据需要配置）
+        clang::PrintingPolicy policy(langOpts);
+        shellCall->printPretty(rso, nullptr, policy);
+        std::string code = rso.str();
+        rewriter->ReplaceText(expr->getDacExpr()->getSourceRange(), code);   
     }
 }

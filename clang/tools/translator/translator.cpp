@@ -120,6 +120,7 @@ public:
         rewriter->setDacppFile(dacppFile);
         // dacppTranslator::printDacppFileInfo(dacppFile);
         rewriter->rewriteDac();
+        rewriter->rewriteMain();
 
         // // this will output to screen as what you got.
         // clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID())

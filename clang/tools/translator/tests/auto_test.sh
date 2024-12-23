@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-exec 2>/dev/null
+# exec 2>/dev/null
 
 #Delelte all tmporary files
 rm -rf ./tmp
