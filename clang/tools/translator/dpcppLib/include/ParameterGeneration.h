@@ -12,7 +12,6 @@ class ParameterGeneration
         ParameterGeneration(){
 
         }
-
         // //生成算子的划分数 分区算子
         // int init_operetor_splitnumber(RegularSlice si,dacpp::Tensor<ImplType> tensor)
         // {  
@@ -94,7 +93,7 @@ class ParameterGeneration
         }
         /*上面函数已废弃*/
 
-        //生成设备内存的分配大小 支持情况：数据重组时中间需要的内存 内核函数中localsize的大小
+        //生成设备内存的分配大小 支持情况：数据重组时中间需要的内存 
         //Dac_Ops ops_in中所有的算子是不同的，由抽象语法树后端进行去重
         int init_device_memory_size(Dac_Ops ops_in,Dac_Ops ops_out,dacpp::Tensor<ImplType,N> tensor_out)
         {
@@ -111,6 +110,40 @@ class ParameterGeneration
             return init_device_memory_size(tensor_out,ops_out) * in_op_product / out_op_product;
         }
 
-        
+        //生成开辟工作项多少 localsize
+        //实际上是输入算子所有划分数的乘积 或者说数据元组的个数（数据单元组成数据元组）
+        //由后端对算子组进行去重
+        int init_work_item_size(Dac_Ops in_ops)
+        {
+            int result = 1;
+            for(int i = 0;i < in_ops.size;i ++)
+            {
+                result *= in_ops.DacOps[i].split_size;
+            }
+            return result;
+        }
 
+        //生成算子的划分长度
+        //两个参数分别是算子组和重组之后的数据大小
+        void init_op_spilit_length(Dac_Ops& ops,int size)
+        {
+            ops.DacOps[0].setSplitLength(size / ops.DacOps[0].split_size);//第0维的划分长度是重组后的数据大小除以第0维的划分数
+            for(int i = 1;i < ops.size;i ++)
+            {
+                ops.DacOps[i].setSplitLength(ops.DacOps[i - 1].split_length / ops.DacOps[i].split_size);
+            }
+        }
+
+        //生成SpilitLength的矩阵
+        int** init_spilit_length_martix(std::vector<Dac_Ops> ops_s)
+        {
+            int martix_length = ops_s.size();//矩阵的第一维存放算子组的数量
+            int martix_width = 1;
+            //遍历一遍算子组组，找到算子组算子最多的个数作为矩阵的第二维 存放算子
+            for(int i = 0;i < ops_s.size();i ++)
+                if(ops_s[i].size > martix_width)
+                    martix_width = ops_s[i].size;
+            int** result = new int*[martix_length];
+
+        }   
 };

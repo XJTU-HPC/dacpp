@@ -69,13 +69,28 @@ std::string CodeGen_D2HMemMov(std::string Name,std::string Type,std::string Size
 
 std::string CodeGen_MemFree(std::string Name);
 
-std::string CodeGen_ParameterGenerate(std::string OperatorSpilitNumberGeneration,std::string InitDeviceMemorySize);
+//下面是新增的
 
-std::string CodeGen_OpSpilitNumberGenerate(std::string op_name, std::string name);
+std::string CodeGen_DAC2SYCL2(std::string dacShellName, std::string dacShellParams, std::string opInit, std::string parameter_generate, std::string deviceMemAlloc, std::string dataAssocComp, std::string memFree);
+
+std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string tensor_name);
 
 std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME,std::string DACOPS_NAME);
 
 std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME);
 
-std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_IN_NAME,std::string TENSOR_OUT_NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME);
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME,std::string TENSOR_OUT);
+
+std::string CodeGen_AddOp2Ops(std::string OP_NAME,std::string DIM_ID,std::string OPS_NAME);
+
+std::string CodeGen_DataOpsInit2(std::string OPS_NAME,std::string ADD_OP2OPS);
+
+std::string CodeGen_Init_Spilit_Length(std::string OPS_NAME,std::string SIZE);
+
+std::string CodeGen_IndexInit2(Dac_Ops ops,std::vector<std::string> sets,std::vector<std::string> offsets);
+
+std::string CodeGen_CalcEmbed2(std::string Name,Args args);
+
+std::string CodeGen_Init_Work_Item_Number(std::string NAME,std::string OPS_NAME);
+
 #endif
