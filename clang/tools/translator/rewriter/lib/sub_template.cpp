@@ -744,13 +744,13 @@ std::string CodeGen_DataOpsInit2(std::string OPS_NAME,std::string ADD_OP2OPS){
 }
 
 //计算算子组里面算子的划分数
-const char *INIT_SPILIT_LENGTH_Template = R"~~~(
-    // 计算算子组里面的算子的划分数
-    para_gene_tool.init_op_spilit_length({{OPS_NAME}},{{SIZE}});
+const char *INIT_SPLIT_LENGTH_Template = R"~~~(
+    // 计算算子组里面的算子的划分长度
+    para_gene_tool.init_op_split_length({{OPS_NAME}},{{SIZE}});
 )~~~";
 
-std::string CodeGen_Init_Spilit_Length(std::string OPS_NAME,std::string SIZE){
-    return templateString(INIT_SPILIT_LENGTH_Template,
+std::string CodeGen_Init_Split_Length(std::string OPS_NAME,std::string SIZE){
+    return templateString(INIT_SPLIT_LENGTH_Template,
 	{
 		{"{{OPS_NAME}}",       OPS_NAME},
 		{"{{SIZE}}",           SIZE}//这个是重组之后的数据的大小
@@ -786,17 +786,20 @@ std::string CodeGen_Declare_DacOps_Vector(std::string OPSS_NAME,std::string PUSH
 }
 
 //生成算子划分长度的二维矩阵
-const char *INIT_SPILIT_LENGTH_MATRIX_Template = R"~~~(
-    // 生成划分长度的二维矩阵
-    int SpilitLength[{{ROW_NUM}}][{{COL_NUM}}] = {0};
-	
+const char *INIT_SPLIT_LENGTH_MATRIX_Template = R"~~~(
+	{{DECLARE_DACOPS_VECTOR}}
+	// 生成划分长度的二维矩阵
+    int SplitLength[{{ROW}}][{{COL}}] = {0};
+    para_gene_tool.init_split_length_martix({{ROW}},{{COL}},&SplitLength[0][0],{{OPS_S_NAME}});
 )~~~";
 
-std::string CodeGen_Init_Spilit_Length_Matrix(std::string OPS_NAME,std::string SIZE){
-    return templateString(INIT_SPILIT_LENGTH_MATRIX_Template,
+std::string CodeGen_Init_Split_Length_Matrix(std::string DECLARE_DACOPS_VECTOR,std::string ROW,std::string COL,std::string OPS_S_NAME){
+    return templateString(INIT_SPLIT_LENGTH_MATRIX_Template,
 	{
-		{"{{OPS_NAME}}",       OPS_NAME},
-		{"{{SIZE}}",           SIZE}//这个是重组之后的数据的大小
+		{"{{DECLARE_DACOPS_VECTOR}}",       DECLARE_DACOPS_VECTOR},
+		{"{{ROW}}",       ROW},//行 也就是算子组组的个数 后端可以提供
+		{"{{COL}}",       COL},//列 算子组中最多的算子的个数作为列
+		{"{{OPS_S_NAME}}",       OPS_S_NAME}//前面声明的算子组组的名字
 	});
 }
 
@@ -899,7 +902,7 @@ std::string CodeGen_CalcEmbed2(std::string Name,Args args){
 	for(int i=0;i<len;i++){
 		std::string IndexComb="(";
 		for(int j=0;j<args[i].ops.size;j++){
-			IndexComb+= args[i].ops[j].name + "*" + "SplitLength[" + std::to_string(i) + "][" + std::to_string(j) + "]";
+			IndexComb+= args[i].ops[j].name + "_" + "*" + "SplitLength[" + std::to_string(i) + "][" + std::to_string(j) + "]";
 			if(j!=args[i].ops.size-1) IndexComb+="+";
 		}
 		IndexComb+=")";

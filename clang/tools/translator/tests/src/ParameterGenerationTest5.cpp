@@ -52,14 +52,26 @@ int main(){
     std::cout << divice_memory;
 
     //生成算子的划分长度 注意名字要和前面保持一致
-    std::string init_spilitlength = CodeGen_Init_Spilit_Length("matA_ops","matA_size");
-    init_spilitlength += CodeGen_Init_Spilit_Length("matB_ops","matB_size");
-    init_spilitlength += CodeGen_Init_Spilit_Length("In_ops","matC_size");
+    std::string init_spilitlength = CodeGen_Init_Split_Length("matA_ops","matA_size");
+    init_spilitlength += CodeGen_Init_Split_Length("matB_ops","matB_size");
+    init_spilitlength += CodeGen_Init_Split_Length("In_ops","matC_size");
+    init_spilitlength += CodeGen_Init_Split_Length("reduction_ops","reduction_size");
     std::cout << init_spilitlength;
+
+    //生成算子长度的矩阵
+    std::string AddDacOps2Vector = CodeGen_Add_DacOps2Vector("ops_s","matA_ops");
+    AddDacOps2Vector += CodeGen_Add_DacOps2Vector("ops_s","matB_ops");
+    AddDacOps2Vector += CodeGen_Add_DacOps2Vector("ops_s","In_ops");
+    std::string DeclareDacOpsVector = CodeGen_Declare_DacOps_Vector("ops_s",AddDacOps2Vector);
+    std::string InitSpilitLengthMatrix = CodeGen_Init_Split_Length_Matrix(DeclareDacOpsVector,"3","3","ops_s");//注意行和列由后端进行填充 否则加大了SYCL代码复杂度
+    std::cout << InitSpilitLengthMatrix;
+
 
     //生成分配工作项数量的多少
     std::string item_number = CodeGen_Init_Work_Item_Number("item_size","in_ops");
     std::cout << item_number;
+
+
 
     /*blockMatMulTest2.cpp 源码*/
     // 设备内存分配
@@ -136,7 +148,13 @@ int main(){
 
     std::string CalcEmbed = CodeGen_CalcEmbed2("block_mat_mul",args);//注意调用了新的嵌入计算模板
 	std::string KernelExecute = CodeGen_KernelExecute("item_size",IndexInit,CalcEmbed);//注意这里面填的size的大小需要是前面算出来的大小
-	std::cout<<KernelExecute;
+	//std::cout<<KernelExecute;
+
+    //std::string Reduction = CodeGen_Reduction("8","matC","int","sycl::plus<>()");//这个调用的是已经弃用的归约模板
+    //下面填归约模板注意：span_size就是归约分配的内存的大小 SpilitSize是in_ops的划分数除以out_ops的划分数(前面有计算) SplitLength就是结果数据的最后一个算子的划分长度
+    //存在问题：两次归约的话应该怎么办
+    std::string Reduction = CodeGen_Reduction_Span("reduction_size",std::string SplitSize,std::string SplitLength,"matC","int","sycl::plus<>()");
+	std::string D2HMemMove = CodeGen_D2HMemMov("matC","int","1",true);
 
     /*blockMatMulTest2.cpp 源码*/
 

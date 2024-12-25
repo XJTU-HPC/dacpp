@@ -1,7 +1,7 @@
 #include "ParameterGeneration.h"
 #include "sub_template.h"
 
-//测试算子划分数的计算
+//测试算子划分长度的计算
 
 int main()
 {
@@ -30,7 +30,7 @@ int main()
 
     int DataReconstructorSize = para_gene_tool.init_device_memory_size(matA,ops_in);//这个应该是36
 
-    para_gene_tool.init_op_spilit_length(ops_in,DataReconstructorSize);
+    para_gene_tool.init_op_split_length(ops_in,DataReconstructorSize);
 
     for(int i = 0;i < ops_in.size;i ++)
     {
