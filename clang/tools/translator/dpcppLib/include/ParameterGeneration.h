@@ -1,17 +1,17 @@
 #include <iostream>
 #include <string>
 #include <unordered_set>
-#include "/data/zjx/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
+// #include "/data/zjx/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
 #include "sub_template.h"
+#include "ReconTensor.h"
 
-template <typename ImplType>
+template <typename ImplType,int N>
 class ParameterGeneration
 {
     public:
         ParameterGeneration(){
 
         }
-
         // //生成算子的划分数 分区算子
         // int init_operetor_splitnumber(RegularSlice si,dacpp::Tensor<ImplType> tensor)
         // {  
@@ -27,14 +27,15 @@ class ParameterGeneration
         // }
 
         //生成算子的划分数 不用区分分区算子和降维算子 直接用Dac_Op去计算就可以了
-        int init_operetor_splitnumber(Dac_Op si,dacpp::Tensor<ImplType> tensor)
+        int init_operetor_splitnumber(Dac_Op si,dacpp::Tensor<ImplType,N> tensor)
         {
             int split_num = (tensor.getShape(si.dimId) - si.size) / si.stride + 1;
             return split_num;
         }
 
         //生成设备内存的分配大小 支持情况：mat[分区][分区] mat[分区][降维] mat[分区][] mat[降维][]
-        int init_device_memory_size(dacpp::Tensor<ImplType> tensor,Dac_Ops ops)
+        //同时也是设备和主机之间内存移动大小 q.memcpy()里面的SIZE
+        int init_device_memory_size(dacpp::Tensor<ImplType,N> tensor,Dac_Ops ops)
         {
             int result = 1;//初始化结果为1 
             std::unordered_set<int> mySet;//用来存储算子作用的维度
@@ -58,14 +59,15 @@ class ParameterGeneration
         }
 
         //生成设备内存分配大小 支持情况：mat[][]
-        int init_device_memory_size(dacpp::Tensor<ImplType> tensor)
+        int init_device_memory_size(dacpp::Tensor<ImplType,N> tensor)
         {
             return tensor.getSize();
         }
 
-        //生成设备内存的分配大小 支持情况：数据重组时中间需要的内存 为啥了不知道 反正就这样算的
+        /*下面函数已废弃  接口太复杂了*/
+        //生成设备内存的分配大小 支持情况：数据重组时中间需要的内存 内核函数中localsize的大小 为啥了不知道 反正就这样算的
         //传入四个参数 分别是输入的tensor组 输出的tensor 输入tensor的算子组的数组 输出tensor的算子组
-        int init_device_memory_size(std::vector<dacpp::Tensor<ImplType>> tensor_in,dacpp::Tensor<ImplType> tensor_out,std::vector<Dac_Ops> ops_in,Dac_Ops ops_out)
+        int init_device_memory_size(std::vector<dacpp::Tensor<ImplType,N>> tensor_in,dacpp::Tensor<ImplType,N> tensor_out,std::vector<Dac_Ops> ops_in,Dac_Ops ops_out)
         {
             int in_op_product = 1;//输入算子划分数的乘积
             std::unordered_set<std::string> mySet;//输入算子是否相同 现在只能拿名字去判断
@@ -89,74 +91,59 @@ class ParameterGeneration
             }
             return init_device_memory_size(tensor_out,ops_out) * in_op_product / out_op_product;
         }
+        /*上面函数已废弃*/
 
-
-
-        //计算输入数量
-        int init_Countin(Dac_Ops in_ops){
-            int countIn = 1;
-            std::string set;
-            std::set<std::string> setIn;
-            for(int i = 0; i < in_ops.size; i++){
-                if(setIn.count(in_ops[i].name))
-                    continue;
-                countIn *= in_ops[i].split_size;
-                setIn.insert(in_ops[i].name);
+        //生成设备内存的分配大小 支持情况：数据重组时中间需要的内存 
+        //Dac_Ops ops_in中所有的算子是不同的，由抽象语法树后端进行去重
+        int init_device_memory_size(Dac_Ops ops_in,Dac_Ops ops_out,dacpp::Tensor<ImplType,N> tensor_out)
+        {
+            int in_op_product = 1;//输入算子划分数的乘积
+            for(int i = 0;i < ops_in.size;i ++)
+            {
+                in_op_product *= ops_in.DacOps[i].split_size; //spilit在前面初始化算子的时候已经完成
             }
-            return countIn;
+            int out_op_product = 1;//输出算子划分数的乘积
+            for(int i = 0;i < ops_out.size;i ++)
+            {
+                out_op_product *= ops_out.DacOps[i].split_size; //spilit在前面初始化算子的时候已经完成
+            }
+            return init_device_memory_size(tensor_out,ops_out) * in_op_product / out_op_product;
         }
 
-        //计算输出数量
-        int init_Countout(Dac_Ops out_ops){
-            int countOut = 1;
-            std::string set;
-            std::set<std::string> setOut;
-            for(int i = 0; i < out_ops.size; i++){
-                if(setOut.count(out_ops[i].name))
-                    continue;
-                countOut *= out_ops[i].split_size;
-                setOut.insert(out_ops[i].name);
+        //生成开辟工作项多少 localsize
+        //实际上是输入算子所有划分数的乘积 或者说数据元组的个数（数据单元组成数据元组）
+        //由后端对算子组进行去重
+        int init_work_item_size(Dac_Ops in_ops)
+        {
+            int result = 1;
+            for(int i = 0;i < in_ops.size;i ++)
+            {
+                result *= in_ops.DacOps[i].split_size;
             }
-            return countOut;
+            return result;
         }
 
-        //添加算子
-        void init_Exop(Dac_Ops in_ops, Dac_Ops* out_ops){
-            std::set<std::string> set;
-            for(int i = 0; i < out_ops->size; i++){
-                set.insert(out_ops->DacOps[i].name);
+        //生成算子的划分长度
+        //两个参数分别是算子组和重组之后的数据大小
+        void init_op_spilit_length(Dac_Ops& ops,int size)
+        {
+            ops.DacOps[0].setSplitLength(size / ops.DacOps[0].split_size);//第0维的划分长度是重组后的数据大小除以第0维的划分数
+            for(int i = 1;i < ops.size;i ++)
+            {
+                ops.DacOps[i].setSplitLength(ops.DacOps[i - 1].split_length / ops.DacOps[i].split_size);
             }
-            for(int i = 0; i < in_ops.size; i++){
-                if(set.count(in_ops[i].name))
-                    continue;
-                out_ops->push_back(in_ops[i]);
-            }
-                for(int i = 0; i < out_ops->size; i++){
-                    std::cout << out_ops->DacOps[i].name << std::endl;
-                }
-        }
-        //计算内存分配
-        int* init_mem(dacpp::Tensor<ImplType> tensor,std::vector<Dac_Ops> Params){
-            int* mem = new int[Params.size()];
-            for(int j = 0; j < Params.size(); j++) {
-                mem[j] = 1;
-                for(int k = 0; k < Params[j].size; k++) {
-                    // 降维划分
-                    if(Params[j].DacOps[k].type == "Index") {
-                        mem[j] = tensor.getShape(k);
-                    }
-                    // 规则分区划分
-                    else if(Params[j].DacOps[k].type == "RegularSlice") {
-                        mem[j] *= (tensor.getShape(k) - Params[j].DacOps[k].split_size + Params[j].DacOps[k].stride) / Params[j].DacOps[k].stride * Params[j].DacOps[k].split_size;
-                    }
-                    // 保形划分
-                    else {
-                        mem[j] *= tensor.getShape(k);
-                    }
-                }
-            }
-            return mem;
         }
 
-        
+        //生成SpilitLength的矩阵
+        int** init_spilit_length_martix(std::vector<Dac_Ops> ops_s)
+        {
+            int martix_length = ops_s.size();//矩阵的第一维存放算子组的数量
+            int martix_width = 1;
+            //遍历一遍算子组组，找到算子组算子最多的个数作为矩阵的第二维 存放算子
+            for(int i = 0;i < ops_s.size();i ++)
+                if(ops_s[i].size > martix_width)
+                    martix_width = ops_s[i].size;
+            int** result = new int*[martix_length];
+
+        }   
 };

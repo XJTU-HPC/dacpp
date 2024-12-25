@@ -2,13 +2,13 @@
 #include "sub_template.h"
 
 
-//测试设备内存空间分配
+//测试设备内存空间分配 使用新的Tensor
 
 int main()
 {
     std::vector<int> dataA{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-    std::vector<int> shapeA{4, 4};
-    dacpp::Tensor<int> matA(dataA, shapeA);
+    //std::vector<int> shapeA{4, 4};
+    dacpp::Tensor<int,2> matA({4,4},dataA);
 
     matA.print();
 
@@ -49,7 +49,7 @@ int main()
 
     //mat[][] 没有算子组
 
-    ParameterGeneration<int> para_gene_tool;
+    ParameterGeneration<int,2> para_gene_tool;
 
     // //下面测试设备内存分配大小的size
 
