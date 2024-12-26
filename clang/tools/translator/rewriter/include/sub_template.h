@@ -99,4 +99,11 @@ std::string CodeGen_CalcEmbed2(std::string Name,Args args);
 
 std::string CodeGen_Init_Work_Item_Number(std::string NAME,std::string OPS_NAME);
 
+std::string CodeGen_Init_Reduction_Split_Size(std::string NAME,std::string OPS_IN,std::string OPS_OUT);
+
+std::string CodeGen_Init_Reduction_Split_Length(std::string NAME,std::string OPS_NAME);
+
+std::string CodeGen_ParameterGenerate(std::string InitOPS,std::string InitDeviceMemorySize,std::string InitSplitLength,std::string InitSpilitLengthMatrix,std::string ItemNumber,std::string InitReductionSplitSize,std::string InitReductionSplitLength);
+
+std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string TENSOR_NAME);
 #endif

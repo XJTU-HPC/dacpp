@@ -160,5 +160,12 @@ class ParameterGeneration
                 out_op_product *= ops_out.DacOps[i].split_size; //spilit在前面初始化算子的时候已经完成
             }
             return in_op_product / out_op_product;
-        }  
+        }
+
+        //生成归约中split_length的大小
+        //逻辑是某个算子组（输出算子组）最后一个算子的划分数
+        int init_reduction_split_length(Dac_Ops ops)
+        {
+            return ops.DacOps[ops.size].split_length;//返回最后一个算子的划分数
+        }       
 };
