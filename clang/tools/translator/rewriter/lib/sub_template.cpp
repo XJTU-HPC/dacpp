@@ -518,10 +518,10 @@ void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) {
     // 设备选择
     auto selector = gpu_selector_v;
     queue q(selector);
-	ParameterGeneration<int,2> para_gene_tool; //参数生成工具
-	// 算子初始化
+    ParameterGeneration<int,2> para_gene_tool; //参数生成工具
+    // 算子初始化
     {{OP_INIT}}
-	//参数生成
+    //参数生成
 	{{ParameterGenerate}}
     // 设备内存分配
     {{DEVICE_MEM_ALLOC}}
@@ -598,13 +598,25 @@ std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string
 //参数生成的总模板
 const char *PARA_GENE_Template = R"~~~(
     // 参数生成 提前计算后面需要用到的参数	
-	{{InitDeviceMemorySize}}//生成内存分配的大小
+	{{InitOPS}}
+	{{InitDeviceMemorySize}}
+	{{InitSplitLength}}
+	{{InitSpilitLengthMatrix}}
+	{{ItemNumber}}
+	{{InitReductionSplitSize}}
+	{{InitReductionSplitLength}}
 )~~~";
 
-std::string CodeGen_ParameterGenerate(std::string InitDeviceMemorySize){
+std::string CodeGen_ParameterGenerate(std::string InitOPS,std::string InitDeviceMemorySize,std::string InitSplitLength,std::string InitSpilitLengthMatrix,std::string ItemNumber,std::string InitReductionSplitSize,std::string InitReductionSplitLength){
     return templateString(PARA_GENE_Template,
 	{
-		{"{{InitDeviceMemorySize}}", InitDeviceMemorySize}//设备内存的分配大小计算
+		{"{{InitOPS}}", InitOPS},
+		{"{{InitDeviceMemorySize}}", InitDeviceMemorySize},//设备内存的分配大小计算
+		{"{{InitSplitLength}}",InitSplitLength},
+		{"{{InitSpilitLengthMatrix}}",InitSpilitLengthMatrix},
+		{"{{ItemNumber}}",ItemNumber},
+		{"{{InitReductionSplitSize}}",InitReductionSplitSize},
+		{"{{InitReductionSplitLength}}",InitReductionSplitLength}
 	});
 }
 
@@ -638,7 +650,7 @@ std::string CodeGen_ParameterGenerate(std::string InitDeviceMemorySize){
 
 //生成设备内存分配大小的模板 对应mat[分区][分区] mat[分区][降维] mat[分区][] mat[降维][]
 const char *DEVICE_MEM_SIZE_Generate_Template1 = R"~~~(
-	//生成设备内存分配大小
+    //生成设备内存分配大小
     int {{NAME}} = para_gene_tool.init_device_memory_size({{TENSOR_NAME}},{{DACOPS_NAME}});
 )~~~";
 
@@ -653,7 +665,7 @@ std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_N
 
 //生成设备内存分配大小的模板 对应mat[][]
 const char *DEVICE_MEM_SIZE_Generate_Template2 = R"~~~(
-	//生成设备内存分配大小
+    //生成设备内存分配大小
     int {{NAME}} = para_gene_tool.init_device_memory_size({{TENSOR_NAME}});
 )~~~";
 
@@ -684,9 +696,9 @@ std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_N
 // }
 /*上面函数已废弃*/
 
-//生成设备内存分配的大小 对应数据重组需要分配的大小 localsize工作项的多少
+//生成设备内存分配的大小 对应数据重组需要分配的大小 
 const char *DEVICE_MEM_SIZE_Generate_Template3 = R"~~~(
-	//生成设备内存分配大小
+    //生成设备内存分配大小
     int {{NAME}} = para_gene_tool.init_device_memory_size({{IN_DAC_OPS_NAME}},{{OUT_DAC_OPS_NAME}},{{TENSOR_OUT}});
 )~~~";
 
@@ -744,13 +756,13 @@ std::string CodeGen_DataOpsInit2(std::string OPS_NAME,std::string ADD_OP2OPS){
 }
 
 //计算算子组里面算子的划分数
-const char *INIT_SPILIT_LENGTH_Template = R"~~~(
-    // 计算算子组里面的算子的划分数
-    para_gene_tool.init_op_spilit_length({{OPS_NAME}},{{SIZE}});
+const char *INIT_SPLIT_LENGTH_Template = R"~~~(
+    // 计算算子组里面的算子的划分长度
+    para_gene_tool.init_op_split_length({{OPS_NAME}},{{SIZE}});
 )~~~";
 
-std::string CodeGen_Init_Spilit_Length(std::string OPS_NAME,std::string SIZE){
-    return templateString(INIT_SPILIT_LENGTH_Template,
+std::string CodeGen_Init_Split_Length(std::string OPS_NAME,std::string SIZE){
+    return templateString(INIT_SPLIT_LENGTH_Template,
 	{
 		{"{{OPS_NAME}}",       OPS_NAME},
 		{"{{SIZE}}",           SIZE}//这个是重组之后的数据的大小
@@ -786,17 +798,20 @@ std::string CodeGen_Declare_DacOps_Vector(std::string OPSS_NAME,std::string PUSH
 }
 
 //生成算子划分长度的二维矩阵
-const char *INIT_SPILIT_LENGTH_MATRIX_Template = R"~~~(
-    // 生成划分长度的二维矩阵
-    int SpilitLength[{{ROW_NUM}}][{{COL_NUM}}] = {0};
-	
+const char *INIT_SPLIT_LENGTH_MATRIX_Template = R"~~~(
+	{{DECLARE_DACOPS_VECTOR}}
+	// 生成划分长度的二维矩阵
+    int SplitLength[{{ROW}}][{{COL}}] = {0};
+    para_gene_tool.init_split_length_martix({{ROW}},{{COL}},&SplitLength[0][0],{{OPS_S_NAME}});
 )~~~";
 
-std::string CodeGen_Init_Spilit_Length_Matrix(std::string OPS_NAME,std::string SIZE){
-    return templateString(INIT_SPILIT_LENGTH_MATRIX_Template,
+std::string CodeGen_Init_Split_Length_Matrix(std::string DECLARE_DACOPS_VECTOR,std::string ROW,std::string COL,std::string OPS_S_NAME){
+    return templateString(INIT_SPLIT_LENGTH_MATRIX_Template,
 	{
-		{"{{OPS_NAME}}",       OPS_NAME},
-		{"{{SIZE}}",           SIZE}//这个是重组之后的数据的大小
+		{"{{DECLARE_DACOPS_VECTOR}}",       DECLARE_DACOPS_VECTOR},
+		{"{{ROW}}",       ROW},//行 也就是算子组组的个数 后端可以提供
+		{"{{COL}}",       COL},//列 算子组中最多的算子的个数作为列
+		{"{{OPS_S_NAME}}",       OPS_S_NAME}//前面声明的算子组组的名字
 	});
 }
 
@@ -812,6 +827,35 @@ std::string CodeGen_Init_Work_Item_Number(std::string NAME,std::string OPS_NAME)
 	{
 		{"{{NAME}}",           NAME},
 		{"{{OPS_NAME}}",       OPS_NAME}//算子组的名字
+	});
+}
+
+//计算归约中split_size的大小
+const char *INIT_REDUCTION_SPLIT_SIZE_Template = R"~~~(
+    // 计算归约中split_size的大小
+    int {{NAME}} = para_gene_tool.init_reduction_split_size({{OPS_IN}},{{OPS_OUT}});
+)~~~";
+
+std::string CodeGen_Init_Reduction_Split_Size(std::string NAME,std::string OPS_IN,std::string OPS_OUT){
+    return templateString(INIT_REDUCTION_SPLIT_SIZE_Template,
+	{
+		{"{{NAME}}",           NAME},//归约中spilitsize的名字
+		{"{{OPS_IN}}",       OPS_IN},//输入算子组的名字
+		{"{{OPS_OUT}}",     OPS_OUT}//输出算子组的名字
+	});
+}
+
+//计算归约中split_length的大小
+const char *INIT_REDUCTION_SPLIT_LENGTH_Template = R"~~~(
+    // 计算归约中split_length的大小
+    int {{NAME}} = para_gene_tool.init_reduction_split_length({{OPS_NAME}});
+)~~~";
+
+std::string CodeGen_Init_Reduction_Split_Length(std::string NAME,std::string OPS_NAME){
+    return templateString(INIT_REDUCTION_SPLIT_LENGTH_Template,
+	{
+		{"{{NAME}}",           NAME},//归约中spilitsize的名字
+		{"{{OPS_NAME}}",   OPS_NAME} //算子组的名字
 	});
 }
 
@@ -899,7 +943,7 @@ std::string CodeGen_CalcEmbed2(std::string Name,Args args){
 	for(int i=0;i<len;i++){
 		std::string IndexComb="(";
 		for(int j=0;j<args[i].ops.size;j++){
-			IndexComb+= args[i].ops[j].name + "*" + "SplitLength[" + std::to_string(i) + "][" + std::to_string(j) + "]";
+			IndexComb+= args[i].ops[j].name + "_" + "*" + "SplitLength[" + std::to_string(i) + "][" + std::to_string(j) + "]";
 			if(j!=args[i].ops.size-1) IndexComb+="+";
 		}
 		IndexComb+=")";

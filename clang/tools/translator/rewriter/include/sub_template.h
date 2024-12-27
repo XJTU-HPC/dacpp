@@ -85,7 +85,13 @@ std::string CodeGen_AddOp2Ops(std::string OP_NAME,std::string DIM_ID,std::string
 
 std::string CodeGen_DataOpsInit2(std::string OPS_NAME,std::string ADD_OP2OPS);
 
-std::string CodeGen_Init_Spilit_Length(std::string OPS_NAME,std::string SIZE);
+std::string CodeGen_Init_Split_Length(std::string OPS_NAME,std::string SIZE);
+
+std::string CodeGen_Add_DacOps2Vector(std::string OPSS_NAME,std::string OPS_NAME);
+
+std::string CodeGen_Declare_DacOps_Vector(std::string OPSS_NAME,std::string PUSH_BACK_DAC_OPS);
+
+std::string CodeGen_Init_Split_Length_Matrix(std::string DECLARE_DACOPS_VECTOR,std::string ROW,std::string COL,std::string OPS_S_NAME);
 
 std::string CodeGen_IndexInit2(Dac_Ops ops,std::vector<std::string> sets,std::vector<std::string> offsets);
 
@@ -93,4 +99,11 @@ std::string CodeGen_CalcEmbed2(std::string Name,Args args);
 
 std::string CodeGen_Init_Work_Item_Number(std::string NAME,std::string OPS_NAME);
 
+std::string CodeGen_Init_Reduction_Split_Size(std::string NAME,std::string OPS_IN,std::string OPS_OUT);
+
+std::string CodeGen_Init_Reduction_Split_Length(std::string NAME,std::string OPS_NAME);
+
+std::string CodeGen_ParameterGenerate(std::string InitOPS,std::string InitDeviceMemorySize,std::string InitSplitLength,std::string InitSpilitLengthMatrix,std::string ItemNumber,std::string InitReductionSplitSize,std::string InitReductionSplitLength);
+
+std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string TENSOR_NAME);
 #endif

@@ -125,7 +125,7 @@ class ParameterGeneration
 
         //生成算子的划分长度
         //两个参数分别是算子组和重组之后的数据大小
-        void init_op_spilit_length(Dac_Ops& ops,int size)
+        void init_op_split_length(Dac_Ops& ops,int size)
         {
             ops.DacOps[0].setSplitLength(size / ops.DacOps[0].split_size);//第0维的划分长度是重组后的数据大小除以第0维的划分数
             for(int i = 1;i < ops.size;i ++)
@@ -134,16 +134,38 @@ class ParameterGeneration
             }
         }
 
-        //生成SpilitLength的矩阵
-        int** init_spilit_length_martix(std::vector<Dac_Ops> ops_s)
+        //生成SplitLength的矩阵
+        void init_split_length_martix(int Rows,int Cols,int* matrix,std::vector<Dac_Ops> ops_s)
         {
-            int martix_length = ops_s.size();//矩阵的第一维存放算子组的数量
-            int martix_width = 1;
-            //遍历一遍算子组组，找到算子组算子最多的个数作为矩阵的第二维 存放算子
-            for(int i = 0;i < ops_s.size();i ++)
-                if(ops_s[i].size > martix_width)
-                    martix_width = ops_s[i].size;
-            int** result = new int*[martix_length];
+            for(int i = 0;i < Rows; i++)//row的大小就是ops_s里面包含算子组的个数
+            {
+                for(int j = 0;j < ops_s[i].size;j ++)//[i][j]访问每个算子组里面的算子 
+                {
+                    matrix[i * Cols + j] = ops_s[i].DacOps[j].split_length;//将算子的划分数传入到一个矩阵中
+                }
+            }
+        }
 
-        }   
+        //生成归约中spilits_size的大小 逻辑是输出的算子的划分数除以输出的算子的划分数
+        int init_reduction_split_size(Dac_Ops ops_in,Dac_Ops ops_out)
+        {
+            int in_op_product = 1;//输入算子划分数的乘积
+            for(int i = 0;i < ops_in.size;i ++)
+            {
+                in_op_product *= ops_in.DacOps[i].split_size; //spilit在前面初始化算子的时候已经完成
+            }
+            int out_op_product = 1;//输出算子划分数的乘积
+            for(int i = 0;i < ops_out.size;i ++)
+            {
+                out_op_product *= ops_out.DacOps[i].split_size; //spilit在前面初始化算子的时候已经完成
+            }
+            return in_op_product / out_op_product;
+        }
+
+        //生成归约中split_length的大小
+        //逻辑是某个算子组（输出算子组）最后一个算子的划分数
+        int init_reduction_split_length(Dac_Ops ops)
+        {
+            return ops.DacOps[ops.size].split_length;//返回最后一个算子的划分数
+        }       
 };
