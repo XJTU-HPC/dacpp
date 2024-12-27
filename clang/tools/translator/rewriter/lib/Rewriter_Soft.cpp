@@ -235,7 +235,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
         std::string item_number = CodeGen_Init_Work_Item_Number("Item_Size","In_OPS");
         // std::cout << item_number;
 
-        std::string InitOPS =  dataOpsInit + dataOpsInit_inops + dataOpsInit_outops + dataOpsInit_reductions;
+        std::string InitOPS = opInit + dataOpsInit + dataOpsInit_inops + dataOpsInit_outops + dataOpsInit_reductions;
 
             //生成归约中Split_size中的大小
         std::string Init_Reduction_Split_Size = CodeGen_Init_Reduction_Split_Size("reduction_split_size","In_ops","Out_ops");
