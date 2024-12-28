@@ -238,11 +238,11 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
         std::string InitOPS = opInit + dataOpsInit + dataOpsInit_inops + dataOpsInit_outops + dataOpsInit_reductions;
 
             //生成归约中Split_size中的大小
-        std::string Init_Reduction_Split_Size = CodeGen_Init_Reduction_Split_Size("reduction_split_size","In_ops","Out_ops");
+        std::string Init_Reduction_Split_Size = CodeGen_Init_Reduction_Split_Size("Reduction_Split_Size","In_ops","Out_ops");
         //std::cout << Init_Reduction_Split_Size;
 
         //生成归约中Split_length大小
-        std::string Init_Reduction_Split_Length = CodeGen_Init_Reduction_Split_Length("reduction_split_length","Out_ops");
+        std::string Init_Reduction_Split_Length = CodeGen_Init_Reduction_Split_Length("Reduction_Split_Length","Out_ops");
 
         std::string ParameterGenerate = CodeGen_ParameterGenerate(InitOPS,divice_memory,splitLength,InitSplitLengthMatrix,item_number,Init_Reduction_Split_Size,Init_Reduction_Split_Length); 
         // std::cout << ParameterGenerate;
@@ -303,8 +303,8 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
         for(int NumShellParam = 0; NumShellParam < shell->getNumShellParams(); NumShellParam++){
             ShellParam* shellParam = shell->getShellParam(NumShellParam);
             if(shellParam->getRw() == 1){
-                Reduction = CodeGen_Reduction_Span("reduction_size","reduction_split_size","reduction_split_length",shellParam->getName(),shellParam->getBasicType(),"sycl::plus<>()");
-	            D2HMemMove = CodeGen_D2HMemMov(shellParam->getName(),shellParam->getBasicType(),"reduction_size",false);
+                Reduction = CodeGen_Reduction_Span("Reduction_Size","Reduction_Split_Size","Reduction_Split_Length",shellParam->getName(),shellParam->getBasicType(),ReductionRule);
+	            D2HMemMove = CodeGen_D2HMemMov(shellParam->getName(),shellParam->getBasicType(),"Reduction_Size",false);
             }
         }
         // std::cout << Reduction;
