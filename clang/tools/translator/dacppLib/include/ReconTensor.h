@@ -7,6 +7,7 @@
 #include <exception>
 #include <memory>
 #include "Slice.h"
+#include "FuncTensor.hpp"
 
 
 
@@ -20,6 +21,9 @@ namespace dacpp {
     template<class ImplType>
     class TensorBase{
     public:
+        operator FuncTensor<ImplType>() const {
+            return FuncTensor<ImplType>(this->data_, this->offset_, this->dim_, this->shape_, this->stride_);
+        };
         std::shared_ptr<ImplType> getDataPtr() const;
         int getOffset() const;
         int getDim() const;
@@ -50,9 +54,9 @@ namespace dacpp {
     public:
         Tensor(const TensorProxy<ImplType, N> &x);
         Tensor(const Tensor<ImplType, N> &x);
-        Tensor(const std::initializer_list<int> values, const ImplType* data);
-        Tensor(const std::initializer_list<int> values, const std::vector<ImplType> data);
-        Tensor(const std::initializer_list<int> values, ImplType data = 0);
+        Tensor(const std::vector<int> values, const ImplType* data);
+        Tensor(const std::vector<int> values, const std::vector<ImplType> data);
+        Tensor(const std::vector<int> values, ImplType data = 0);
         Tensor(std::shared_ptr<ImplType> data, int offset, int dim, std::shared_ptr<int> shape, std::shared_ptr<int> stride);
         Tensor(std::shared_ptr<ImplType> data, int offset, int dim, std::shared_ptr<int> shape, std::shared_ptr<int> stride, int currentdim);
         Tensor<ImplType, N>& operator=(const Tensor<ImplType, N>& operand);
@@ -62,16 +66,16 @@ namespace dacpp {
         TensorProxy<ImplType, N - 1> operator[](Index sp) const;
         Tensor<ImplType, N-1> slice(int dimIdx, int idx) const;
         Tensor<ImplType, N> slice(int dimIdx, int start, int end, int sliceStride = 1 , int ModifyDim = 0) const;
-        Tensor<ImplType, N> operator+(const Tensor<ImplType, N>& operand) const;
-        Tensor<ImplType, N> operator-(const Tensor<ImplType, N>& operand) const;
-        Tensor<ImplType, N> operator*(const Tensor<ImplType, N>& operand) const;
-        Tensor<ImplType, N> operator/(const Tensor<ImplType, N>& operand) const;
-        Tensor<ImplType, N> operator%(const Tensor<ImplType, N>& operand) const;
-        void operator+=(const Tensor<ImplType, N>& operand);
-        void operator-=(const Tensor<ImplType, N>& operand);
-        void operator*=(const Tensor<ImplType, N>& operand);
-        void operator/=(const Tensor<ImplType, N>& operand);
-        void operator%=(const Tensor<ImplType, N>& operand);
+        Tensor<ImplType, N> operator+(const Tensor<ImplType, N>& operand) const{};
+        Tensor<ImplType, N> operator-(const Tensor<ImplType, N>& operand) const{};
+        Tensor<ImplType, N> operator*(const Tensor<ImplType, N>& operand) const{};
+        Tensor<ImplType, N> operator/(const Tensor<ImplType, N>& operand) const{};
+        Tensor<ImplType, N> operator%(const Tensor<ImplType, N>& operand) const{};
+        void operator+=(const Tensor<ImplType, N>& operand){};
+        void operator-=(const Tensor<ImplType, N>& operand){};
+        void operator*=(const Tensor<ImplType, N>& operand){};
+        void operator/=(const Tensor<ImplType, N>& operand){};
+        void operator%=(const Tensor<ImplType, N>& operand){};
     };
 
     template<class ImplType>
@@ -82,7 +86,6 @@ namespace dacpp {
     public:
         Tensor(const TensorProxy<ImplType, 1> &x);
         Tensor(std::vector<ImplType> init);
-        Tensor(std::initializer_list<ImplType> init);
         Tensor(int len, const ImplType *init);
         Tensor(std::shared_ptr<ImplType> data, int offset, int dim, std::shared_ptr<int> shape, std::shared_ptr<int> stride);
         Tensor(std::shared_ptr<ImplType> data, int offset, int dim, std::shared_ptr<int> shape, std::shared_ptr<int> stride, int currentdim);
@@ -93,16 +96,16 @@ namespace dacpp {
         ImplType& operator[](Index sp) const;
         ImplType& slice(int dimIdx, int idx) const;
         Tensor<ImplType, 1> slice(int dimIdx, int start, int end, int sliceStride = 1 , int ModifyDim = 0) const;
-        Tensor<ImplType, 1> operator+(const Tensor<ImplType, 1>& operand) const;
-        Tensor<ImplType, 1> operator-(const Tensor<ImplType, 1>& operand) const;
-        Tensor<ImplType, 1> operator*(const Tensor<ImplType, 1>& operand) const;
-        Tensor<ImplType, 1> operator/(const Tensor<ImplType, 1>& operand) const;
-        Tensor<ImplType, 1> operator%(const Tensor<ImplType, 1>& operand) const;
-        void operator+=(const Tensor<ImplType, 1>& operand);
-        void operator-=(const Tensor<ImplType, 1>& operand);
-        void operator*=(const Tensor<ImplType, 1>& operand);
-        void operator/=(const Tensor<ImplType, 1>& operand);
-        void operator%=(const Tensor<ImplType, 1>& operand);
+        Tensor<ImplType, 1> operator+(const Tensor<ImplType, 1>& operand) const{};
+        Tensor<ImplType, 1> operator-(const Tensor<ImplType, 1>& operand) const{};
+        Tensor<ImplType, 1> operator*(const Tensor<ImplType, 1>& operand) const{};
+        Tensor<ImplType, 1> operator/(const Tensor<ImplType, 1>& operand) const{};
+        Tensor<ImplType, 1> operator%(const Tensor<ImplType, 1>& operand) const{};
+        void operator+=(const Tensor<ImplType, 1>& operand){};
+        void operator-=(const Tensor<ImplType, 1>& operand){};
+        void operator*=(const Tensor<ImplType, 1>& operand){};
+        void operator/=(const Tensor<ImplType, 1>& operand){};
+        void operator%=(const Tensor<ImplType, 1>& operand){};
     };
 
     template<class ImplType>
@@ -140,16 +143,16 @@ namespace dacpp {
         TensorProxy<ImplType, N - 1> operator[](Index sp) const;
         TensorProxy<ImplType, N-1> Pslice(int dimIdx, int idx) const;
         TensorProxy<ImplType, N> Pslice(int dimIdx, int start, int end, int sliceStride = 1 , int ModifyDim = 0) const;
-        TensorProxy<ImplType, N> operator+(const TensorProxy<ImplType, N>& operand) const;
-        TensorProxy<ImplType, N> operator-(const TensorProxy<ImplType, N>& operand) const;
-        TensorProxy<ImplType, N> operator*(const TensorProxy<ImplType, N>& operand) const;
-        TensorProxy<ImplType, N> operator/(const TensorProxy<ImplType, N>& operand) const;
-        TensorProxy<ImplType, N> operator%(const TensorProxy<ImplType, N>& operand) const;
-        void operator+=(const TensorProxy<ImplType, N>& operand);
-        void operator-=(const TensorProxy<ImplType, N>& operand);
-        void operator*=(const TensorProxy<ImplType, N>& operand);
-        void operator/=(const TensorProxy<ImplType, N>& operand);
-        void operator%=(const TensorProxy<ImplType, N>& operand);
+        TensorProxy<ImplType, N> operator+(const TensorProxy<ImplType, N>& operand) const{};
+        TensorProxy<ImplType, N> operator-(const TensorProxy<ImplType, N>& operand) const{};
+        TensorProxy<ImplType, N> operator*(const TensorProxy<ImplType, N>& operand) const{};
+        TensorProxy<ImplType, N> operator/(const TensorProxy<ImplType, N>& operand) const{};
+        TensorProxy<ImplType, N> operator%(const TensorProxy<ImplType, N>& operand) const{};
+        void operator+=(const TensorProxy<ImplType, N>& operand){};
+        void operator-=(const TensorProxy<ImplType, N>& operand){};
+        void operator*=(const TensorProxy<ImplType, N>& operand){};
+        void operator/=(const TensorProxy<ImplType, N>& operand){};
+        void operator%=(const TensorProxy<ImplType, N>& operand){};
     };
 
     template<class ImplType>
@@ -166,16 +169,16 @@ namespace dacpp {
         ImplType& operator[](Index sp) const;
         ImplType& Pslice(int dimIdx, int idx) const;
         TensorProxy<ImplType, 1> Pslice(int dimIdx, int start, int end, int sliceStride = 1 , int ModifyDim = 0) const;
-        TensorProxy<ImplType, 1> operator+(const TensorProxy<ImplType, 1>& operand) const;
-        TensorProxy<ImplType, 1> operator-(const TensorProxy<ImplType, 1>& operand) const;
-        TensorProxy<ImplType, 1> operator*(const TensorProxy<ImplType, 1>& operand) const;
-        TensorProxy<ImplType, 1> operator/(const TensorProxy<ImplType, 1>& operand) const;
-        TensorProxy<ImplType, 1> operator%(const TensorProxy<ImplType, 1>& operand) const;
-        void operator+=(const TensorProxy<ImplType, 1>& operand);
-        void operator-=(const TensorProxy<ImplType, 1>& operand);
-        void operator*=(const TensorProxy<ImplType, 1>& operand);
-        void operator/=(const TensorProxy<ImplType, 1>& operand);
-        void operator%=(const TensorProxy<ImplType, 1>& operand);
+        TensorProxy<ImplType, 1> operator+(const TensorProxy<ImplType, 1>& operand) const{};
+        TensorProxy<ImplType, 1> operator-(const TensorProxy<ImplType, 1>& operand) const{};
+        TensorProxy<ImplType, 1> operator*(const TensorProxy<ImplType, 1>& operand) const{};
+        TensorProxy<ImplType, 1> operator/(const TensorProxy<ImplType, 1>& operand) const{};
+        TensorProxy<ImplType, 1> operator%(const TensorProxy<ImplType, 1>& operand) const{};
+        void operator+=(const TensorProxy<ImplType, 1>& operand){};
+        void operator-=(const TensorProxy<ImplType, 1>& operand){};
+        void operator*=(const TensorProxy<ImplType, 1>& operand){};
+        void operator/=(const TensorProxy<ImplType, 1>& operand){};
+        void operator%=(const TensorProxy<ImplType, 1>& operand){};
     };
 
     template <class T>
@@ -312,7 +315,7 @@ namespace dacpp {
         this->current_dim = 0;
     }
     template<class ImplType, int N>
-    Base :: Tensor(const std::initializer_list<int> values, const ImplType* data){
+    Base :: Tensor(const std::vector<int> values, const ImplType* data){
         int ElementSize = 1;
         for(auto value : values)    ElementSize *= value;
         this->data_ = std::shared_ptr<ImplType>
@@ -323,7 +326,7 @@ namespace dacpp {
         this->dim_ = values.size();
         this->shape_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
         this->stride_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
-        const auto *it = values.end();
+        auto it = values.end();
         it--;
         for(int idx = this->dim_ - 1; idx >= 0; idx--) {
             this->shape_.get()[idx] = *it;
@@ -335,7 +338,7 @@ namespace dacpp {
         }
     }
     template<class ImplType, int N>
-    Base :: Tensor(const std::initializer_list<int> values, const std::vector<ImplType> data){
+    Base :: Tensor(const std::vector<int> values, const std::vector<ImplType> data){
         int ElementSize = 1;
         for(auto value : values)    ElementSize *= value;
         if(ElementSize != data.size())  
@@ -348,7 +351,7 @@ namespace dacpp {
         this->dim_ = values.size();
         this->shape_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
         this->stride_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
-        const auto *it = values.end();
+        auto it = values.end();
         it--;
         for(int idx = this->dim_ - 1; idx >= 0; idx--) {
             this->shape_.get()[idx] = *it;
@@ -360,7 +363,7 @@ namespace dacpp {
         }
     }
     template<class ImplType, int N>
-    Base :: Tensor(const std::initializer_list<int> values, ImplType data){
+    Base :: Tensor(const std::vector<int> values, ImplType data){
         int ElementSize = 1;
         for(auto value : values)    ElementSize *= value;
         this->data_ = std::shared_ptr<ImplType>
@@ -371,7 +374,7 @@ namespace dacpp {
         this->dim_ = values.size();
         this->shape_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
         this->stride_ = std::shared_ptr<int>(new int[this->dim_], std::default_delete<int[]>());
-        const auto *it = values.end();
+        auto it = values.end();
         it--;
         for(int idx = this->dim_ - 1; idx >= 0; idx--) {
             this->shape_.get()[idx] = *it;
@@ -480,26 +483,6 @@ namespace dacpp {
         stride.get()[dimIdx] = this->stride_.get()[dimIdx] * sliceStride;
         return Tensor<ImplType, N>(this->data_, offset, dim, shape, stride, this->current_dim + ModifyDim);
     }
-    template<class ImplType, int N>
-    Tensor<ImplType, N> Base :: operator+(const Tensor<ImplType, N>& operand) const {}
-    template<class ImplType, int N>
-    Tensor<ImplType, N> Base :: operator-(const Tensor<ImplType, N>& operand) const {}
-    template<class ImplType, int N>
-    Tensor<ImplType, N> Base :: operator*(const Tensor<ImplType, N>& operand) const {}
-    template<class ImplType, int N>
-    Tensor<ImplType, N> Base :: operator/(const Tensor<ImplType, N>& operand) const {}
-    template<class ImplType, int N>
-    Tensor<ImplType, N> Base :: operator%(const Tensor<ImplType, N>& operand) const {}
-    template<class ImplType, int N>
-    void Base :: operator+=(const Tensor<ImplType, N>& operand) {}
-    template<class ImplType, int N>
-    void Base :: operator-=(const Tensor<ImplType, N>& operand) {}
-    template<class ImplType, int N>
-    void Base :: operator*=(const Tensor<ImplType, N>& operand) {}
-    template<class ImplType, int N>
-    void Base :: operator/=(const Tensor<ImplType, N>& operand) {}
-    template<class ImplType, int N>
-    void Base :: operator%=(const Tensor<ImplType, N>& operand) {}
     #undef Base
 
     #define Base Tensor<ImplType, 1>
@@ -531,10 +514,6 @@ namespace dacpp {
     }
     template<class ImplType>
     Base :: Tensor(std::vector<ImplType> init){
-        initialize(init.begin(), init.end());
-    }
-    template<class ImplType>
-    Base :: Tensor(std::initializer_list<ImplType> init){
         initialize(init.begin(), init.end());
     }
     template<class ImplType>
@@ -628,26 +607,6 @@ namespace dacpp {
         stride.get()[dimIdx] = this->stride_.get()[dimIdx] * sliceStride;
         return Tensor<ImplType, 1>(this->data_, offset, dim, shape, stride, this->current_dim + ModifyDim);
     }
-    template<class ImplType>
-    Tensor<ImplType, 1> Base :: operator+(const Tensor<ImplType, 1>& operand) const {}
-    template<class ImplType>
-    Tensor<ImplType, 1> Base :: operator-(const Tensor<ImplType, 1>& operand) const {}
-    template<class ImplType>
-    Tensor<ImplType, 1> Base :: operator*(const Tensor<ImplType, 1>& operand) const {}
-    template<class ImplType>
-    Tensor<ImplType, 1> Base :: operator/(const Tensor<ImplType, 1>& operand) const {}
-    template<class ImplType>
-    Tensor<ImplType, 1> Base :: operator%(const Tensor<ImplType, 1>& operand) const {}
-    template<class ImplType>
-    void Base :: operator+=(const Tensor<ImplType, 1>& operand) {}
-    template<class ImplType>
-    void Base :: operator-=(const Tensor<ImplType, 1>& operand) {}
-    template<class ImplType>
-    void Base :: operator*=(const Tensor<ImplType, 1>& operand) {}
-    template<class ImplType>
-    void Base :: operator/=(const Tensor<ImplType, 1>& operand) {}
-    template<class ImplType>
-    void Base :: operator%=(const Tensor<ImplType, 1>& operand) {}
     #undef Base
     #define Base ProxyBase<ImplType>
 
@@ -801,27 +760,6 @@ namespace dacpp {
         stride.get()[dimIdx] = this->stride_.get()[dimIdx] * sliceStride;
         return TensorProxy<ImplType, N>(this->data_, offset, dim, shape, stride, this->current_dim + ModifyDim);
     }
-    template<class ImplType, int N>
-    TensorProxy<ImplType, N> Base :: operator+(const TensorProxy<ImplType, N>& operand) const {}
-    template<class ImplType, int N>
-    TensorProxy<ImplType, N> Base :: operator-(const TensorProxy<ImplType, N>& operand) const {}
-    template<class ImplType, int N>
-    TensorProxy<ImplType, N> Base :: operator*(const TensorProxy<ImplType, N>& operand) const {}
-    template<class ImplType, int N>
-    TensorProxy<ImplType, N> Base :: operator/(const TensorProxy<ImplType, N>& operand) const {}
-    template<class ImplType, int N>
-    TensorProxy<ImplType, N> Base :: operator%(const TensorProxy<ImplType, N>& operand) const {}
-    template<class ImplType, int N>
-    void Base :: operator+=(const TensorProxy<ImplType, N>& operand) {}
-    template<class ImplType, int N>
-    void Base :: operator-=(const TensorProxy<ImplType, N>& operand) {}
-    template<class ImplType, int N>
-    void Base :: operator*=(const TensorProxy<ImplType, N>& operand) {}
-    template<class ImplType, int N>
-    void Base :: operator/=(const TensorProxy<ImplType, N>& operand) {}
-    template<class ImplType, int N>
-    void Base :: operator%=(const TensorProxy<ImplType, N>& operand) {}
-
     #undef Base
 
     #define Base TensorProxy<ImplType, 1>
@@ -925,26 +863,6 @@ namespace dacpp {
         stride.get()[dimIdx] = this->stride_.get()[dimIdx] * sliceStride;
         return TensorProxy<ImplType, 1>(this->data_, offset, dim, shape, stride, this->current_dim + ModifyDim);
     }
-    template<class ImplType>
-    TensorProxy<ImplType, 1> Base :: operator+(const TensorProxy<ImplType, 1>& operand) const {}
-    template<class ImplType>
-    TensorProxy<ImplType, 1> Base :: operator-(const TensorProxy<ImplType, 1>& operand) const {}
-    template<class ImplType>
-    TensorProxy<ImplType, 1> Base :: operator*(const TensorProxy<ImplType, 1>& operand) const {}
-    template<class ImplType>
-    TensorProxy<ImplType, 1> Base :: operator/(const TensorProxy<ImplType, 1>& operand) const {}
-    template<class ImplType>
-    TensorProxy<ImplType, 1> Base :: operator%(const TensorProxy<ImplType, 1>& operand) const {}
-    template<class ImplType>
-    void Base :: operator+=(const TensorProxy<ImplType, 1>& operand) {}
-    template<class ImplType>
-    void Base :: operator-=(const TensorProxy<ImplType, 1>& operand) {}
-    template<class ImplType>
-    void Base :: operator*=(const TensorProxy<ImplType, 1>& operand) {}
-    template<class ImplType>
-    void Base :: operator/=(const TensorProxy<ImplType, 1>& operand) {}
-    template<class ImplType>
-    void Base :: operator%=(const TensorProxy<ImplType, 1>& operand) {}
     #undef Base
 }
 
