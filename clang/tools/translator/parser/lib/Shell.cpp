@@ -342,7 +342,7 @@ bool Visitor::VisitVarDecl (VarDecl *D)
                                                ->getParamDecl(paramsCount)
                                                ->getType()
                                                .getAsString()));
-        shellParam->setType(sh->getParam(paramsCount)->getType());
+        shellParam->setType(sh->getParam(paramsCount)->newType);
         shellParam->setName(sh->getParam(paramsCount)->getName());
         for (int shapeIdx = 0; shapeIdx < sh->getParam(paramsCount)->getDim();
              shapeIdx++) {
@@ -521,9 +521,7 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
         shellFunc->getParamDecl(paramsCount)->getType().getAsString()));
 
     // 设置参数类型
-    std::string type =
-        shellFunc->getParamDecl(paramsCount)->getType().getAsString();
-    param->setType(type);
+    param->setType(shellFunc->getParamDecl(paramsCount)->getType());
 
     // 设置参数名称
     param->setName(shellFunc->getParamDecl(paramsCount)->getNameAsString());
