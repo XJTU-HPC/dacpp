@@ -67,30 +67,30 @@ class ParameterGeneration
         /*下面函数已废弃  接口太复杂了*/
         //生成设备内存的分配大小 支持情况：数据重组时中间需要的内存 内核函数中localsize的大小 为啥了不知道 反正就这样算的
         //传入四个参数 分别是输入的tensor组 输出的tensor 输入tensor的算子组的数组 输出tensor的算子组
-        int init_device_memory_size(std::vector<dacpp::Tensor<ImplType,N>> tensor_in,dacpp::Tensor<ImplType,N> tensor_out,std::vector<Dac_Ops> ops_in,Dac_Ops ops_out)
-        {
-            int in_op_product = 1;//输入算子划分数的乘积
-            std::unordered_set<std::string> mySet;//输入算子是否相同 现在只能拿名字去判断
-            //下面遍历所有输入算子组里面的算子
-            for(int i = 0;i < ops_in.size();i ++)
-            {
-                for(int j = 0;j < ops_in[i].size;j ++)
-                {
-                    if(mySet.find(ops_in[i][j].name) == mySet.end()) //如果这个算子不存在于集合中
-                    {
-                        mySet.insert(ops_in[i][j].name);//插入集合中去
-                        in_op_product *= init_operetor_splitnumber(ops_in[i].DacOps[j],tensor_in[i]);
-                    }
-                }
-            }
+        // int init_device_memory_size(std::vector<dacpp::Tensor<ImplType,N>> tensor_in,dacpp::Tensor<ImplType,N> tensor_out,std::vector<Dac_Ops> ops_in,Dac_Ops ops_out)
+        // {
+        //     int in_op_product = 1;//输入算子划分数的乘积
+        //     std::unordered_set<std::string> mySet;//输入算子是否相同 现在只能拿名字去判断
+        //     //下面遍历所有输入算子组里面的算子
+        //     for(int i = 0;i < ops_in.size();i ++)
+        //     {
+        //         for(int j = 0;j < ops_in[i].size;j ++)
+        //         {
+        //             if(mySet.find(ops_in[i][j].name) == mySet.end()) //如果这个算子不存在于集合中
+        //             {
+        //                 mySet.insert(ops_in[i][j].name);//插入集合中去
+        //                 in_op_product *= init_operetor_splitnumber(ops_in[i].DacOps[j],tensor_in[i]);
+        //             }
+        //         }
+        //     }
 
-            int out_op_product = 1;//输出就一个计算比较简单
-            for(int i = 0;i < ops_out.size;i ++)
-            {
-                out_op_product *= init_operetor_splitnumber(ops_out.DacOps[i],tensor_out);
-            }
-            return init_device_memory_size(tensor_out,ops_out) * in_op_product / out_op_product;
-        }
+        //     int out_op_product = 1;//输出就一个计算比较简单
+        //     for(int i = 0;i < ops_out.size;i ++)
+        //     {
+        //         out_op_product *= init_operetor_splitnumber(ops_out.DacOps[i],tensor_out);
+        //     }
+        //     return init_device_memory_size(tensor_out,ops_out) * in_op_product / out_op_product;
+        // }
         /*上面函数已废弃*/
 
         //生成设备内存的分配大小 支持情况：数据重组时中间需要的内存 
