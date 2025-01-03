@@ -268,14 +268,13 @@ bool Visitor::VisitVarDecl (VarDecl *D)
   */
   {
     if (curVarDecl->getType().getAsString().compare("dacpp::list") != 0 &&
-        curVarDecl->getType().getAsString().compare("dacpp::Index") != 0 &&
-        curVarDecl->getType().getAsString().compare("dacpp::RegularSplit") !=
-            0) {
+        curVarDecl->getType().getAsString().compare("dacpp::index") != 0 &&
+        curVarDecl->getType().getAsString().compare("dacpp::split") != 0) {
       break;
     }
 
     // 解析降维算子
-    if (curVarDecl->getType().getAsString().compare("dacpp::Index") == 0) {
+    if (curVarDecl->getType().getAsString().compare("dacpp::index") == 0) {
       dacppTranslator::IndexSplit *sp = new dacppTranslator::IndexSplit(nullptr);
       sp->setId(curVarDecl->getNameAsString());
       sp->type = "IndexSplit";
@@ -287,7 +286,7 @@ bool Visitor::VisitVarDecl (VarDecl *D)
     }
 
     // 解析规则分区算子
-    if (curVarDecl->getType().getAsString().compare("dacpp::RegularSplit") ==
+    if (curVarDecl->getType().getAsString().compare("dacpp::split") ==
         0) {
       dacppTranslator::RegularSplit *sp = new dacppTranslator::RegularSplit(nullptr);
       sp->setId(curVarDecl->getNameAsString());
@@ -354,13 +353,11 @@ bool Visitor::VisitVarDecl (VarDecl *D)
           VarDecl *vd = dyn_cast<VarDecl>(
               dacppTranslator::getNode<DeclRefExpr>(astExprs[i])->getDecl());
 
-          if (vd->getType().getAsString().compare("dacpp::RegularSplit") == 0) {
+          if (vd->getType().getAsString().compare("dacpp::split") == 0) {
             dacppTranslator::RegularSplit *sp =
                 new dacppTranslator::RegularSplit((dacppTranslator::RegularSplit *) GetVex(sh->G, LocateVex (sh->G, vd))->s);
             sp->type = "RegularSplit";
-            sp->setId(dacppTranslator::getNode<StringLiteral>(vd->getInit())
-                          ->getString()
-                          .str());
+            sp->setId(vd->getNameAsString());
             sp->setDimIdx(i);
             CXXConstructExpr *CCE =
                 dacppTranslator::getNode<CXXConstructExpr>(vd->getInit());
@@ -393,12 +390,10 @@ bool Visitor::VisitVarDecl (VarDecl *D)
               }
             }
             shellParam->setSplit(sp);
-          } else if (vd->getType().getAsString().compare("dacpp::Index") == 0) {
+          } else if (vd->getType().getAsString().compare("dacpp::index") == 0) {
             dacppTranslator::IndexSplit *sp = new dacppTranslator::IndexSplit((dacppTranslator::IndexSplit *) GetVex(sh->G, LocateVex (sh->G, vd))->s);
             sp->type = "IndexSplit";
-            sp->setId(dacppTranslator::getNode<StringLiteral>(vd->getInit())
-                          ->getString()
-                          .str());
+            sp->setId(vd->getNameAsString());
             sp->setDimIdx(i);
             sp->setSplitNumber(shellParam->getShape(i));
             for (int m = 0; m < sh->getNumSplits(); m++) {

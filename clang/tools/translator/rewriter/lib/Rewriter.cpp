@@ -243,6 +243,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
             }
         }
 
+        // 数据重组
         std::string dataRecon = "";
         for(int count = 0; count < shell->getNumShellParams(); count++) {
             ShellParam* shellParam = shell->getShellParam(count);
@@ -411,6 +412,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam* shellParam = shell->getShellParam(j);
             if(shellParam->getRw() == 1 && countIn != countOut) {
+                reduction += CodeGen_DeviceMemAllocReduction(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[j]));
                 std::string ReductionRule = "sycl::plus<>()";
                 reduction += CodeGen_Reduction_Span(std::to_string(mem[j]), std::to_string(countIn / countOut),
                                                     std::to_string(countIn), shellParam->getName(), 

@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <fstream>
 #include <queue>
-#include "Slice.h"
-#include "Tensor.hpp"
+#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
+#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
 
 using dacpp::Tensor;
 
@@ -55,7 +55,7 @@ void pde(int* u_kin, int* u_kout, int* r)
 
 
 // 生成函数调用
-void PDE(const dacpp::Tensor<int> u_kin, dacpp::Tensor<int> & u_kout, const dacpp::Tensor<int> r) { 
+void PDE(const dacpp::Tensor<int> & u_kin, dacpp::Tensor<int> & u_kout, const dacpp::Tensor<int> & r) { 
     // 设备选择
     auto selector = gpu_selector_v;
     queue q(selector);
@@ -92,7 +92,7 @@ void PDE(const dacpp::Tensor<int> u_kin, dacpp::Tensor<int> & u_kout, const dacp
     u_kout_tool.Reconstruct(r_u_kout);
     // 数据重组
     DataReconstructor<int> r_tool;
-    int* r_r=(int*)malloc(sizeof(int)*4);
+    int* r_r=(int*)malloc(sizeof(int)*1);
     
     // 数据算子组初始化
     Dac_Ops r_ops;
@@ -106,13 +106,13 @@ void PDE(const dacpp::Tensor<int> u_kin, dacpp::Tensor<int> & u_kout, const dacp
     // 设备内存分配
     int *d_u_kout=malloc_device<int>(4,q);
     // 设备内存分配
-    int *d_r=malloc_device<int>(4,q);
+    int *d_r=malloc_device<int>(1,q);
     // 数据移动
     
     // 数据移动
     q.memcpy(d_u_kin,r_u_kin,1212*sizeof(int)).wait();
     // 数据移动
-    q.memcpy(d_r,r_r,4*sizeof(int)).wait();   
+    q.memcpy(d_r,r_r,1*sizeof(int)).wait();   
     // 内核执行
     
     //工作项划分
@@ -200,15 +200,13 @@ int main() {
         }
         std::vector<int> shape2 = {4, 1};
         Tensor<int> middle_tensor(middle_points, shape2);
-        
-        // Tensor<int> u_test1 = u_tensor.slice(1,k);
          std::vector<int> shape3 = {1, 1};
          std::vector<int> r_data;
          r_data.push_back(r);
          Tensor<int> R(r_data, shape3);
 
-        Tensor<int> u_test1 = u_tensor.slice(1,k);
-         PDE(u_test1, middle_tensor,R);
+        //  Tensor<int> u_test1 = u_tensor.slice(1,k);
+         PDE(u_tensor[{}][{k}], middle_tensor, R);
         
         //计算完毕后，替换第1到4个点
         for (int i = 1; i <= 4; i++) {
