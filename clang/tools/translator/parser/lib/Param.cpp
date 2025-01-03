@@ -119,7 +119,7 @@ std::string dacppTranslator::Param::getType() {
 }
 
 std::string dacppTranslator::Param::getBasicType() {
-    return BasicType.getAsString().c_str();
+    return BasicType.getAsString();
 }
 
 void dacppTranslator::Param::setName(std::string name) {
