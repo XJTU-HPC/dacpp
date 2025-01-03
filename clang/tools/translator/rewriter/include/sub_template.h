@@ -28,6 +28,8 @@ std::string CodeGen_DAC2SYCL(std::string dacShellName, std::string dacShellParam
 std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams,std::string opInit,std::string dataRecon,
 	std::string deviceMemAlloc,std::string H2DMemMove,std::string kernelExecute,std::string reduction,std::string D2HMemMove,std::string memFree);
 
+std::string CodeGen_DataInfoInit(std::string name);
+
 std::string CodeGen_RegularSliceInit(std::string opName,std::string size,std::string stride,std::string splitSize);
 
 std::string CodeGen_IndexInit(std::string opName,std::string splitSize);

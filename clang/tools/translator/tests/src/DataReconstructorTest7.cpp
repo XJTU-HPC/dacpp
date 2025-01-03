@@ -2,9 +2,7 @@
 #include <vector>
 #include <cmath>
 #include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
 
-using dacpp::Tensor;
 using namespace std;
 
 // 网格参数
@@ -22,9 +20,22 @@ const float dy = Ly / (NY - 1);
 // const float dt = 0.5 * std::fmin(dx, dy) / c; // 满足稳定性条件
 
 #include "DataReconstructor.h"
+using dacpp::Tensor;
 
 // 生成函数调用
-void waveEqShell(const dacpp::Tensor<float> & matCur, const dacpp::Tensor<float> & matPrev, dacpp::Tensor<float> & matNext) { 
+void waveEqShell(const dacpp::Tensor<float,2> & matCur, const dacpp::Tensor<float,2> & matPrev, dacpp::Tensor<float,2> & matNext) { 
+    DataInfo info_matCur;
+    info_matCur.dim = matCur.getDim();
+    for(int i = 0; i < info_matCur.dim; i++) info_matCur.dimLength.push_back(matCur.getShape(i));
+
+    DataInfo info_matPrev;
+    info_matPrev.dim = matPrev.getDim();
+    for(int i = 0; i < info_matPrev.dim; i++) info_matPrev.dimLength.push_back(matPrev.getShape(i));
+
+    DataInfo info_matNext;
+    info_matNext.dim = matNext.getDim();
+    for(int i = 0; i < info_matNext.dim; i++) info_matNext.dimLength.push_back(matNext.getShape(i));
+    
     // 算子初始化
     
     // 规则分区算子初始化
@@ -54,8 +65,8 @@ void waveEqShell(const dacpp::Tensor<float> & matCur, const dacpp::Tensor<float>
     sp2.setSplitLength(9);
     matCur_ops.push_back(sp2);
     
-    matCur_tool.init(matCur,matCur_ops);
-    matCur_tool.Reconstruct(r_matCur);
+    matCur_tool.init(info_matCur,matCur_ops);
+    matCur_tool.Reconstruct(r_matCur,matCur);
     std::cout<<"重组后的 r_matCur:\n";
     for(int i = 0; i < 36; i++) {
         for (size_t j = 0; j < 9; j++){
@@ -84,8 +95,8 @@ void waveEqShell(const dacpp::Tensor<float> & matCur, const dacpp::Tensor<float>
     idx2.setDimId(1);
     idx2.setSplitLength(1);
     matPrev_ops.push_back(idx2);
-    matPrev_tool.init(matPrev,matPrev_ops);
-    matPrev_tool.Reconstruct(r_matPrev);
+    matPrev_tool.init(info_matPrev,matPrev_ops);
+    matPrev_tool.Reconstruct(r_matPrev,matPrev);
 
     std::cout<<"重组后的 r_matPrev:\n";
     for(int i = 0; i < 6; i++) {
@@ -108,8 +119,8 @@ void waveEqShell(const dacpp::Tensor<float> & matCur, const dacpp::Tensor<float>
     idx2.setDimId(1);
     idx2.setSplitLength(1);
     matNext_ops.push_back(idx2);
-    matNext_tool.init(matNext,matNext_ops);
-    matNext_tool.Reconstruct(r_matNext);
+    matNext_tool.init(info_matNext,matNext_ops);
+    matNext_tool.Reconstruct(r_matNext,matNext);
 }
 
 int main() {
@@ -133,8 +144,8 @@ int main() {
     }
 
 
-    std::vector<int> shape_u_curr = {8, 8};
-    Tensor<float> u_curr_tensor(u_curr, shape_u_curr);
+    // std::vector<int> shape_u_curr = {8, 8};
+    Tensor<float,2> u_curr_tensor({8,8},u_curr);
     std::cout<<"init u_curr:\n";
     u_curr_tensor.print();
     
@@ -144,8 +155,8 @@ int main() {
             u_prev_middle_points.push_back(u_prev[i*NY+j]);  
         }    
     }
-    std::vector<int> shape2= {6, 6};
-    Tensor<float> u_prev_middle_tensor(u_prev_middle_points, shape2);
+    // std::vector<int> shape2= {6, 6};
+    Tensor<float,2> u_prev_middle_tensor({6,6},u_prev_middle_points);
     std::cout<<"init u_prev:\n";
     u_prev_middle_tensor.print();
 
@@ -155,8 +166,8 @@ int main() {
             u_next_middle_points.push_back(u_next[i*NY+j]);  
         }
     }
-    std::vector<int> shape1= {6, 6};
-    Tensor<float> u_next_middle_tensor(u_next_middle_points, shape1);
+    // std::vector<int> shape1= {6, 6};
+    Tensor<float,2> u_next_middle_tensor({6,6},u_next_middle_points);
     std::cout<<"init u_next:\n";
     u_next_middle_tensor.print();
 
