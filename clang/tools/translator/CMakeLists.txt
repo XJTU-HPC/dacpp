@@ -3,7 +3,7 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dacppLib/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/parser/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/rewriter/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/test)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/parseDebug)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dpcppLib/include)
 include_directories(/usr/include)
 
@@ -30,7 +30,7 @@ set(REWRITER_SOURCES
 add_library(DacppLib ${DACPPLIB_SOURCES})
 add_library(ParserLib ${PARSER_SOURCES})
 add_library(RewriterLib ${REWRITER_SOURCES})
-add_library(TestLib test/test.cpp)
+add_library(TestLib parseDebug/test.cpp)
 
 add_clang_executable(translator
   translator.cpp

@@ -454,7 +454,7 @@ public:
         }
     }
 
-    Tensor<ImplType> operator[](RegularSplit sp) const {
+    Tensor<ImplType> operator[](split sp) const {
         return *this;
     }
 
