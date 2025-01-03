@@ -118,6 +118,17 @@ std::string CodeGen_DAC2SYCL(std::string dacShellName,std::string dacShellParams
 	});
 }
 
+const char *DATA_INFO_INIT_Template = R"~~~(
+    // 数据信息初始化
+    DataInfo info_{{NAME}};
+    info_{{NAME}}.dim = {{NAME}}.getDim();
+    for(int i = 0; i < info_{{NAME}}.dim; i++) info_{{NAME}}.dimLength.push_back({{NAME}}.getShape(i));)~~~";
+std::string CodeGen_DataInfoInit(std::string name){
+    return templateString(DATA_INFO_INIT_Template,
+	{
+		{"{{NAME}}",    name}
+	});
+}
 const char *OP_REGULAR_SLICE_INIT_Template = R"~~~(
     // 规则分区算子初始化
     RegularSlice {{OP_NAME}} = RegularSlice("{{OP_NAME}}", {{SIZE}}, {{STRIDE}});
@@ -194,8 +205,8 @@ const char *DATA_RECON_Template = R"~~~(
     DataReconstructor<{{TYPE}}> {{NAME}}_tool;
     {{TYPE}}* r_{{NAME}}=({{TYPE}}*)malloc(sizeof({{TYPE}})*{{SIZE}});
     {{DATA_OPS_INIT}}
-    {{NAME}}_tool.init({{NAME}},{{NAME}}_ops);
-    {{NAME}}_tool.Reconstruct(r_{{NAME}});)~~~";
+    {{NAME}}_tool.init(info_{{NAME}},{{NAME}}_ops);
+    {{NAME}}_tool.Reconstruct(r_{{NAME}},{{NAME}});)~~~";
 
 std::string CodeGen_DataReconstruct(std::string type,std::string name,std::string size,std::string dataOpsInit){
     return templateString(DATA_RECON_Template,
@@ -210,7 +221,7 @@ std::string CodeGen_DataReconstruct(std::string type,std::string name,std::strin
 const char *DATA_RECON_OP_PUSH_Template = R"~~~(
     // 数据重组
     {{OP_PUSH_BACK2TOOL}}
-    {{NAME}}_tool.Reconstruct(r_{{NAME}});)~~~";
+    {{NAME}}_tool.Reconstruct(r_{{NAME}},{{NAME}});)~~~";
 
 std::string CodeGen_DataReconstructOpPush(std::string name,std::string opPushBack2Tool){
     return templateString(DATA_RECON_OP_PUSH_Template,
@@ -232,7 +243,7 @@ std::string CodeGen_OpPopFromTool(std::string name){
 const char *DATA_RECON_OP_POP_Template = R"~~~(
     // 数据重组
     {{OP_POP_FROM_TOOL}}
-    {{NAME}}_tool.Reconstruct(r_{{NAME}});)~~~";
+    {{NAME}}_tool.Reconstruct(r_{{NAME}},{{NAME}});)~~~";
 
 std::string CodeGen_DataReconstructOpPop(std::string name,std::string opPopFromTool){
     return templateString(DATA_RECON_OP_POP_Template,
@@ -471,12 +482,12 @@ std::string CodeGen_Reduction_Span(std::string SpanSize,std::string SplitSize,st
 const char *D2H_MEM_MOV_1_Template = R"~~~(
     // 归并结果返回
     q.memcpy(r_{{NAME}}, d_{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();
-    {{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}});)~~~";
+    {{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}},{{NAME}});)~~~";
 
 const char *D2H_MEM_MOV_2_Template = R"~~~(
     // 归约结果返回
     q.memcpy(r_{{NAME}},d__{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();
-    {{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}});)~~~";
+    {{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}},{{NAME}});)~~~";
 
 std::string CodeGen_D2HMemMov(std::string Name,std::string Type,std::string Size,bool isReduction){
     if(isReduction){
