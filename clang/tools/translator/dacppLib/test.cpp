@@ -11,6 +11,7 @@ using std::endl;
 int main() {
     vector<int> data{1,2,3,4,5,6,7,8,9};
     Tensor<int,2> u_tensor({3,3}, data);
+    Tensor<int,2> b_tensor= u_tensor;
     cout<<std::string(50,'=')<<endl;
     for(int i=0;i<3;i++){
         for(int j=0;j<3;j++)
@@ -18,22 +19,39 @@ int main() {
         cout<<std::endl;
     }
     cout<<std::string(50,'=')<<endl;
-    Tensor<int, 2> c_tensor = u_tensor[{1}][{}];
-    //cout<<c_tensor.getOffset()<<" "<<c_tensor.getDim()<<endl;
-    for(int i=0;i<c_tensor.getShape(0);i++){
-        for(int j=0;j<c_tensor.getShape(1);j++)
-            cout<<c_tensor[i][j]<< " ";
+    Tensor<int, 2> c_tensor;
+    c_tensor = b_tensor[{}][{1}];
+    b_tensor.print();
+    c_tensor.print();
+    vector<int> dip{9,8,1,4,5,2,3,6,7};
+    u_tensor.array2Tensor(dip);
+    cout<<std::string(50,'=')<<endl;
+    u_tensor.print();
+    cout<<std::string(50,'=')<<endl;
+
+    u_tensor.tensor2Array(data);
+    for(auto it : data)cout<<it<<" ";
+    cout<<endl;
+    cout<<std::string(50,'=')<<endl;
+    c_tensor.tensor2Array(data);
+    for(auto it : data)cout<<it<<" ";
+    cout<<endl;
+    cout<<std::string(50,'=')<<endl;
+
+    u_tensor[{}][{1,3}] = b_tensor[{}][{1,3}];
+    Tensor<int, 2> d_tensor = b_tensor[{}][{}];
+    b_tensor.array2Tensor(dip);
+    std::vector<int> indices;
+    for(int i=0;i<3;i++){
+        indices.push_back(i);
+        for(int j=0;j<2;j++){
+            indices.push_back(j);
+            cout<<d_tensor.getElement(indices)<< " ";
+            indices.pop_back();
+        }
+        indices.pop_back();
         cout<<std::endl;
     }
-
-    //cout<<c_tensor[0][1]<<" "<<c_tensor[0][2]<<endl;
     cout<<std::string(50,'=')<<endl;
-    // c_tensor = u_tensor[{0}][{0,2}];
-    // for(int i=0;i<c_tensor.getShape(0);i++){
-    //     for(int j=0;j<c_tensor.getShape(1);j++)
-    //         cout<<c_tensor[i][j]<< " ";
-    //     cout<<std::endl;
-    // }
-    // cout<<std::string(50,'=')<<endl;
     return 0;
 }
