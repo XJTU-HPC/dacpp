@@ -198,7 +198,7 @@ namespace dacpp {
         return val;
     }
     template<class ImplType>
-    void reviseValue(ImplType val, std::vector<int> indices){
+    void TensorBase<ImplType> ::reviseValue(ImplType val, std::vector<int> indices){
         int index = this->getOffset();
         for(int i=0;i<this->getDim();i++)
             index = index + this->getStride(i)*indices[i];
