@@ -117,18 +117,21 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
         }
         //算子初始化
         std::string opInit = "";
+        std::vector<bool> visited(shell->getNumShellParams(), false);
         for(int NumShellParam = 0; NumShellParam < shell->getNumShellParams(); NumShellParam++){
             ShellParam* shellParam = shell->getShellParam(NumShellParam);
             for(int NumSplit = 0; NumSplit < shellParam->getNumSplit(); NumSplit++){
                 Split* split = shellParam->getSplit(NumSplit);
-                if(split->type.compare("IndexSplit") == 1){
+                if(split->type.compare("IndexSplit") == 0){
                     IndexSplit* indexSplit = static_cast<IndexSplit*>(split);
-                    opInit += CodeGen_IndexInit2(indexSplit->getId(),std::to_string(NumSplit),shellParam->getName());
+                    opInit += CodeGen_IndexInit2(indexSplit->getId(),std::to_string(NumSplit),shellParam->getName(),visited[NumShellParam*shell->getNumShellParams()+NumSplit]);
+                    visited[NumShellParam*shell->getNumShellParams()+NumSplit] = true;
                 }
                 else if(split->type.compare("RegularSplit") == 0){
                     RegularSplit* regularSplit = static_cast<RegularSplit*>(split);
                     opInit += CodeGen_RegularSliceInit2(regularSplit->getId(),std::to_string(regularSplit->getSplitSize()),
-                    std::to_string(regularSplit->getSplitStride()),std::to_string(NumSplit),shellParam->getName());
+                    std::to_string(regularSplit->getSplitStride()),std::to_string(NumSplit),shellParam->getName(),visited[NumShellParam*shell->getNumShellParams()+NumSplit]);
+                    visited[NumShellParam*shell->getNumShellParams()+NumSplit] = true;
                 }
             }
 

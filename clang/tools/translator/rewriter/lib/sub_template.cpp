@@ -552,8 +552,15 @@ const char *OP_REGULAR_SLICE_INIT_Template2 = R"~~~(
     {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}}));
 )~~~";
 
-std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string tensor_name){
-    return templateString(OP_REGULAR_SLICE_INIT_Template2,
+const char *OP_REGULAR_SLICE_INIT_Template2_Redefinition = R"~~~(
+    // 规则分区算子初始化
+    {{OP_NAME}}.setDimId({{DIM_ID}});
+    {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}}));
+)~~~";
+
+std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string tensor_name,bool Redefinition){
+    if(!Redefinition){
+		return templateString(OP_REGULAR_SLICE_INIT_Template2,
 	{
 		{"{{OP_NAME}}",    opName},
 		{"{{SIZE}}",       size},
@@ -561,6 +568,19 @@ std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::s
 		{"{{DIM_ID}}",     dim_id}, //需要通过dimId来计算算子的划分数了
 		{"{{TENSOR_NAME}}",     tensor_name}
 	});
+	}
+	return templateString(OP_REGULAR_SLICE_INIT_Template2_Redefinition,
+	{	
+		{"{{OP_NAME}}",    opName},
+		{"{{SIZE}}",       size},
+		{"{{STRIDE}}",     stride},
+		{"{{DIM_ID}}",     dim_id}, //需要通过dimId来计算算子的划分数了
+		{"{{TENSOR_NAME}}",     tensor_name}
+	});
+}
+
+std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string tensor_name){
+	return "";
 }
 
 //新的 降维算子初始化
@@ -571,9 +591,23 @@ const char *OP_INDEX_INIT_Template2 = R"~~~(
     {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}}));
 )~~~";
 
-std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string TENSOR_NAME){
-    return templateString(OP_INDEX_INIT_Template2,
+const char *OP_INDEX_INIT_Template2_Redefinition = R"~~~(
+    // 降维算子初始化
+    {{OP_NAME}}.setDimId({{DIM_ID}});
+    {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}}));
+)~~~";
+
+std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string TENSOR_NAME,bool Redefinition){
+    if(!Redefinition){
+	return templateString(OP_INDEX_INIT_Template2,
 	{
+		{"{{OP_NAME}}",    opName},
+		{"{{DIM_ID}}", dim_id}, //需要通过dimId来计算算子的划分数
+		{"{{TENSOR_NAME}}", TENSOR_NAME}
+	});
+	}
+	return templateString(OP_INDEX_INIT_Template2_Redefinition,
+	{	
 		{"{{OP_NAME}}",    opName},
 		{"{{DIM_ID}}", dim_id}, //需要通过dimId来计算算子的划分数
 		{"{{TENSOR_NAME}}", TENSOR_NAME}
