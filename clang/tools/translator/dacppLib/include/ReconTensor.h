@@ -38,6 +38,8 @@ namespace dacpp {
         void array2Tensor(std::vector <ImplType> data);
         void print() const;
         int getCurrentDim() const;
+        ImplType getElement(std::vector<int> indices);
+        void reviseValue(ImplType val, std::vector<int> indices);
     protected:
         void NextDim();
         void recursiveTake(ImplType* data, int& idx, int dimIdx) const;
@@ -187,6 +189,22 @@ namespace dacpp {
         }
         std::cout << "}";
     }
+    template<class ImplType>
+    ImplType TensorBase<ImplType> ::getElement(std::vector<int> indices){
+        int index = this->getOffset();
+        for(int i=0;i<this->getDim();i++)
+            index = index + this->getStride(i)*indices[i];
+        ImplType val = this->getDataPtr().get()[index];
+        return val;
+    }
+    template<class ImplType>
+    void reviseValue(ImplType val, std::vector<int> indices){
+        int index = this->getOffset();
+        for(int i=0;i<this->getDim();i++)
+            index = index + this->getStride(i)*indices[i];
+        this->getDataPtr().get()[index] = val;
+        return;
+    }
 
     template<class ImplType, int N>
     class Tensor: public TensorBase <ImplType>{
@@ -233,9 +251,12 @@ namespace dacpp {
         this->current_dim = 0;
         this->shape_.reset(new int[this->dim_]);
         this->stride_.reset(new int[this->dim_]);
-        for(int i = 0; i < this->dim_; i++){
+        for(int i = this->dim_ - 1; i >=0; i--){
             this->shape_.get()[i] = x.getShape(i);
-            this->stride_.get()[i] = x.getStride(i);
+            if(i == this->dim_ - 1)
+                this->stride_.get()[i] = 1;
+            else
+                this->stride_.get()[i] = this->stride_.get()[i + 1] * this->shape_.get()[i + 1];
         }
         for(int i = 0; i < data.size(); i++)
             this->data_.get()[i] = data[i];
@@ -250,13 +271,16 @@ namespace dacpp {
         this->current_dim = 0;
         this->shape_.reset(new int[this->dim_]);
         this->stride_.reset(new int[this->dim_]);
-        for(int i = 0; i < this->dim_; i++){
+        for(int i = this->dim_ - 1; i >=0; i--){
             this->shape_.get()[i] = x.getShape(i);
-            this->stride_.get()[i] = x.getStride(i);
+            if(i == this->dim_ - 1)
+                this->stride_.get()[i] = 1;
+            else
+                this->stride_.get()[i] = this->stride_.get()[i + 1] * this->shape_.get()[i + 1];
         }
         for(int i = 0; i < data.size(); i++)
             this->data_.get()[i] = data[i];
-    }
+    }//Shape可以直接=过来,但是offset=0之后stride需要重算
     template<class ImplType, int N>
     Tensor<ImplType, N> :: Tensor(const std::vector<int> values, const ImplType* data){
         int ElementSize = 1;
@@ -352,9 +376,12 @@ namespace dacpp {
         this->data_.reset(new ImplType[data.size()]);   
         this->offset_ = 0;
         this->current_dim = 0;
-        for(int i = 0; i < this->dim_; i++){
+        for(int i = this->dim_ - 1; i >=0; i--){
             this->shape_.get()[i] = operand.getShape(i);
-            this->stride_.get()[i] = operand.getStride(i);
+            if(i == this->dim_ - 1)
+                this->stride_.get()[i] = 1;
+            else
+                this->stride_.get()[i] = this->stride_.get()[i + 1] * this->shape_.get()[i + 1];
         }
         for(int i = 0; i < data.size(); i++)
             this->data_.get()[i] = data[i];
@@ -489,12 +516,23 @@ namespace dacpp {
     }
     template<class ImplType>
     Base :: Tensor(const TensorProxy<ImplType, 1> &x){
-        this->data_ = x.getDataPtr();
-        this->offset_ = x.getOffset();
+        std::vector<ImplType> data;
+        x.tensor2Array(data);
+        this->data_.reset(new ImplType[data.size()]);   
         this->dim_ = x.getDim();
-        this->shape_ = x.getShapePtr();
-        this->stride_ = x.getStridePtr();
+        this->offset_ = 0;
         this->current_dim = 0;
+        this->shape_.reset(new int[this->dim_]);
+        this->stride_.reset(new int[this->dim_]);
+        for(int i = this->dim_ - 1; i >=0; i--){
+            this->shape_.get()[i] = x.getShape(i);
+            if(i == this->dim_ - 1)
+                this->stride_.get()[i] = 1;
+            else
+                this->stride_.get()[i] = this->stride_.get()[i + 1] * this->shape_.get()[i + 1];
+        }
+        for(int i = 0; i < data.size(); i++)
+            this->data_.get()[i] = data[i];
     }
     template<class ImplType>
     Base :: Tensor(const Tensor<ImplType, 1> &x){
@@ -506,9 +544,12 @@ namespace dacpp {
         this->current_dim = 0;
         this->shape_.reset(new int[this->dim_]);
         this->stride_.reset(new int[this->dim_]);
-        for(int i = 0; i < this->dim_; i++){
+        for(int i = this->dim_ - 1; i >=0; i--){
             this->shape_.get()[i] = x.getShape(i);
-            this->stride_.get()[i] = x.getStride(i);
+            if(i == this->dim_ - 1)
+                this->stride_.get()[i] = 1;
+            else
+                this->stride_.get()[i] = this->stride_.get()[i + 1] * this->shape_.get()[i + 1];
         }
         for(int i = 0; i < data.size(); i++)
             this->data_.get()[i] = data[i];
@@ -778,7 +819,7 @@ namespace dacpp {
     }
     template<class ImplType, int N>
     template<int M>
-    TensorProxy<ImplType, N>& TensorProxy<ImplType, N     > :: operator =(const TensorProxy<ImplType, M>& operand){
+    TensorProxy<ImplType, N>& TensorProxy<ImplType, N> :: operator =(const TensorProxy<ImplType, M>& operand){
         std::vector <ImplType> Dl, Dr;
         this->tensor2Array(Dl);
         operand.tensor2Array(Dr);
@@ -919,7 +960,7 @@ namespace dacpp {
             i++;
             if(i!=idx.end())    
                 stride = *i;
-            return slice(this->current_dim, start, end, stride, 1);
+            return Pslice(this->current_dim, start, end, stride, 1);
         }
     }
     template<class ImplType>
