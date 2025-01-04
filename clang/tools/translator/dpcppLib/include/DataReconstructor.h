@@ -4,7 +4,7 @@
 #include<vector>
 #include<algorithm>
 #include<map>
-#include "/data/zjx/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
+#include "Tensor.hpp"
 #include "dacInfo.h"
 #include "sub_template.h"
 

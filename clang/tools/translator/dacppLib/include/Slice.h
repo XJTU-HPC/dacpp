@@ -11,10 +11,7 @@ namespace dacpp {
 
 // 降维算子
 class index {
-private:
-    std::string variable_;
 public:
-    index(std::string variable) : variable_(variable) {}
     const index operator+(const int &R)const;
     const index operator-(const int &R)const;
 };
@@ -33,6 +30,7 @@ public:
 }; 
 
 
+// 保形算子
 class conformal {};
 
 

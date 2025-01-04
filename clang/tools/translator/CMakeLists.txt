@@ -1,6 +1,9 @@
 ﻿set(LLVM_LINK_COMPONENTS support)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dacppLib/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dacppLib/include/exception.h)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dacppLib/include/FuncTensor.h)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dacppLib/include/ReconTensor.h)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dacppLib/include/Slice.h)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/parser/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/rewriter/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/parseDebug)

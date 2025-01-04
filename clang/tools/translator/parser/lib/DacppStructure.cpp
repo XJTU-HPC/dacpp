@@ -92,6 +92,7 @@ FunctionDecl* dacppTranslator::Expression::getFatherFunc() {
 dacppTranslator::DacppFile::DacppFile() {
     setHeaderFile("<sycl/sycl.hpp>");
     setHeaderFile("\"DataReconstructor.h\"");
+    setHeaderFile("\"ParameterGeneration.h\"");
     setNameSpace("sycl");
 }
 
