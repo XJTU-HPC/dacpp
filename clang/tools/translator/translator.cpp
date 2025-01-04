@@ -120,7 +120,7 @@ public:
         rewriter->setDacppFile(dacppFile);
         //dacppTranslator::printDacppFileInfo(dacppFile);
         //rewriter->rewriteDac();
-        rewriter->rewriteDac_usm();
+        rewriter->rewriteDac_Soft();
 
         /*
         this will output to screen as what you got.

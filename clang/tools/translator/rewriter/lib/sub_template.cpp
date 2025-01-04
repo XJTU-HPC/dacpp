@@ -591,7 +591,14 @@ std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::s
 }
 
 std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string tensor_name){
-	return "";
+	return templateString(OP_REGULAR_SLICE_INIT_Template2,
+	{
+		{"{{OP_NAME}}",    opName},
+		{"{{SIZE}}",       size},
+		{"{{STRIDE}}",     stride},
+		{"{{DIM_ID}}",     dim_id}, //需要通过dimId来计算算子的划分数了
+		{"{{TENSOR_NAME}}",     tensor_name}
+	});
 }
 
 //新的 降维算子初始化
@@ -623,6 +630,16 @@ std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string
 		{"{{DIM_ID}}", dim_id}, //需要通过dimId来计算算子的划分数
 		{"{{TENSOR_NAME}}", TENSOR_NAME}
 	});
+}
+
+std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string TENSOR_NAME){
+	return templateString(OP_INDEX_INIT_Template2,
+	{
+		{"{{OP_NAME}}",    opName},
+		{"{{DIM_ID}}", dim_id}, //需要通过dimId来计算算子的划分数
+		{"{{TENSOR_NAME}}", TENSOR_NAME}
+	});
+
 }
 
 //生成算子划分数的模板 在初始化算子时直接进行划分数的赋值了

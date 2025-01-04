@@ -18,6 +18,7 @@ set(OpenCL_LIBRARY "/data/qinian/share/intel/oneapi2025/compiler/latest/lib/libO
 include_directories(${SYCL_PATH})
 
 # 添加源文件
+add_executable(test.sycl.cpp test.sycl.cpp)
 add_executable(syclBlockMatMul0 blockMatMul0.sycl.cpp)
 add_executable(syclBlockMatMul1 blockMatMul1.sycl.cpp)
 add_executable(syclBlockMatMul2 blockMatMul2.sycl.cpp)
@@ -30,6 +31,10 @@ add_executable(stencilStandardSycl stencilStandardSycl.cpp)
 add_executable(waveEquation.dac waveEquation.dac_sycl.cpp)
 add_executable(waveEquationStandardSycl waveEquationStandardSycl.cpp)
 
+
+set_target_properties(test.sycl.cpp PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
 set_target_properties(syclBlockMatMul0 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
@@ -65,6 +70,7 @@ set_target_properties(waveEquationStandardSycl PROPERTIES
 )
 
 # 链接库到可执行文件
+target_link_libraries(test.sycl.cpp PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(syclBlockMatMul1 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(syclBlockMatMul0 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(syclBlockMatMul2 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)

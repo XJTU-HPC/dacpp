@@ -115,26 +115,30 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
                 dacShellParams += ", ";
             }
         }
+
         //算子初始化
         std::string opInit = "";
-        std::vector<bool> visited(shell->getNumShellParams(), false);
+        std::set<std::string> HadInit;
+        // std::vector<bool> visited(shell->getNumShellParams(), false);
         for(int NumShellParam = 0; NumShellParam < shell->getNumShellParams(); NumShellParam++){
             ShellParam* shellParam = shell->getShellParam(NumShellParam);
             for(int NumSplit = 0; NumSplit < shellParam->getNumSplit(); NumSplit++){
                 Split* split = shellParam->getSplit(NumSplit);
                 if(split->type.compare("IndexSplit") == 0){
                     IndexSplit* indexSplit = static_cast<IndexSplit*>(split);
-                    opInit += CodeGen_IndexInit2(indexSplit->getId(),std::to_string(NumSplit),shellParam->getName(),visited[NumShellParam*shell->getNumShellParams()+NumSplit]);
-                    visited[NumShellParam*shell->getNumShellParams()+NumSplit] = true;
+                    opInit += CodeGen_IndexInit2(indexSplit->getId(),std::to_string(NumSplit),shellParam->getName(),HadInit.count(indexSplit->getId()));
+                    HadInit.insert(indexSplit->getId());
+                    // opInit += CodeGen_IndexInit2(indexSplit->getId()+"_"+std::to_string(NumShellParam)+"_"+std::to_string(NumSplit),std::to_string(NumSplit),shellParam->getName());
+                    // visited[NumShellParam*shell->getNumShellParams()+NumSplit] = true;
                 }
                 else if(split->type.compare("RegularSplit") == 0){
                     RegularSplit* regularSplit = static_cast<RegularSplit*>(split);
                     opInit += CodeGen_RegularSliceInit2(regularSplit->getId(),std::to_string(regularSplit->getSplitSize()),
-                    std::to_string(regularSplit->getSplitStride()),std::to_string(NumSplit),shellParam->getName(),visited[NumShellParam*shell->getNumShellParams()+NumSplit]);
-                    visited[NumShellParam*shell->getNumShellParams()+NumSplit] = true;
+                    std::to_string(regularSplit->getSplitStride()),std::to_string(NumSplit),shellParam->getName(),HadInit.count(regularSplit->getId()));
+                    HadInit.insert(regularSplit->getId());
+                    // visited[NumShellParam*shell->getNumShellParams()+NumSplit] = true;
                 }
             }
-
         }
         // std::cout << opInit;
         
@@ -150,7 +154,6 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
             dataOpsInit += CodeGen_DataOpsInit2(shellParam->getName()+"_OPS",add2Op);
             add2Op = "";
         }
-        // std::cout << dataOpsInit;
 
         //划分输入输出算子
         std::string add2Op_inops = "";
@@ -238,7 +241,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
         std::string item_number = CodeGen_Init_Work_Item_Number("Item_Size","In_OPS");
         // std::cout << item_number;
 
-        std::string InitOPS = opInit + dataOpsInit + dataOpsInit_inops + dataOpsInit_outops + dataOpsInit_reductions;
+        std::string InitOPS = dataOpsInit + dataOpsInit_inops + dataOpsInit_outops + dataOpsInit_reductions;
 
             //生成归约中Split_size中的大小
         std::string Init_Reduction_Split_Size = CodeGen_Init_Reduction_Split_Size("Reduction_Split_Size","In_ops","Out_ops");
