@@ -4800,8 +4800,7 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
         param->setRw(inputOrOutput(calcFunc->getParamDecl(paramsCount)->getType().getAsString()));
 
         // 设置参数类型
-        std::string type = calcFunc->getParamDecl(paramsCount)->getType().getAsString();
-        param->setType(type);
+        param->setType(calcFunc->getParamDecl(paramsCount)->getType());
         
         // 设置参数名称
         param->setName(calcFunc->getParamDecl(paramsCount)->getNameAsString());

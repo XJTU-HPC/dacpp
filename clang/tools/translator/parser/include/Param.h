@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "clang/AST/Type.h"
 
 #include "Split.h"
 
@@ -15,8 +16,6 @@ class Param {
 
 private:
     bool rw; // 读写属性
-    std::string type; // 参数包装类型
-    std::string basicType; // 参数基本类型
     std::string name; // 参数名
     std::vector<int> shape; // 参数形状
 
@@ -26,7 +25,7 @@ public:
     void setRw(bool rw);
     bool getRw();
 
-    void setType(std::string type);
+    void setType(clang::QualType newType);
     std::string getType();
     std::string getBasicType();
 
@@ -40,6 +39,9 @@ public:
 
     /* 维度：通过tensor的第二个模版参数获取。  */
     int dim;
+
+    /* 参数类型、参数基本类型。  */
+    clang::QualType newType, BasicType;
 };
 
 

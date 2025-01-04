@@ -1,7 +1,11 @@
-#include "llvm/Support/raw_ostream.h"
 #include <string>
-#include <iostream>
-
+#include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/Type.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/raw_ostream.h"
+#include "clang/AST/TemplateName.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/Basic/LLVM.h"
 #include "Param.h"
 
 /*
@@ -18,102 +22,104 @@ bool dacppTranslator::Param::getRw() {
     return rw;
 }
 
-void dacppTranslator::Param::setType(std::string type) {
-    this->type = type;
-    if (type.find("Tensor") == -1) {
-        if (type.find("int") != -1) {
-            this->basicType = "int";
-        } else if (type.find("float") != -1) {
-            this->basicType = "float";
-        } else if (type.find("double") != -1) {
-            this->basicType = "double";
-        } else {
-            this->basicType = "void";
+// When printing a reference, the referenced type might also be a reference.
+// If so, we want to skip that before printing the inner type.
+static clang::QualType skipTopLevelReferences(clang::QualType T) {
+  if (auto *Ref = T->getAs<clang::ReferenceType>())
+    return skipTopLevelReferences(Ref->getPointeeTypeAsWritten());
+  return T;
+}
+
+static clang::QualType GetBaseType(clang::QualType T) {
+  // FIXME: This should be on the Type class!
+  clang::QualType BaseType = T;
+  while (!BaseType->isSpecifierType()) {
+    if (const clang::PointerType *PTy = BaseType->getAs<clang::PointerType>())
+      BaseType = PTy->getPointeeType();
+    else if (const clang::ObjCObjectPointerType *OPT =
+                 BaseType->getAs<clang::ObjCObjectPointerType>())
+      BaseType = OPT->getPointeeType();
+    else if (const clang::BlockPointerType *BPy = BaseType->getAs<clang::BlockPointerType>())
+      BaseType = BPy->getPointeeType();
+    else if (const clang::ArrayType *ATy = dyn_cast<clang::ArrayType>(BaseType))
+      BaseType = ATy->getElementType();
+    else if (const clang::FunctionType *FTy = BaseType->getAs<clang::FunctionType>())
+      BaseType = FTy->getReturnType();
+    else if (const clang::VectorType *VTy = BaseType->getAs<clang::VectorType>())
+      BaseType = VTy->getElementType();
+    else if (const clang::ReferenceType *RTy = BaseType->getAs<clang::ReferenceType>())
+      BaseType = RTy->getPointeeType();
+    else if (const clang::AutoType *ATy = BaseType->getAs<clang::AutoType>())
+      BaseType = ATy->getDeducedType();
+    else if (const clang::ParenType *PTy = BaseType->getAs<clang::ParenType>())
+      BaseType = PTy->desugar();
+    else
+      // This must be a syntax error.
+      break;
+  }
+  return BaseType;
+}
+
+void dacppTranslator::Param::setType(clang::QualType newType) {
+  this->newType = newType;
+  clang::SplitQualType split;
+  split = newType.split();
+  const clang::Type *ty = split.Ty;
+  bool found_p = false;
+  if (const clang::LValueReferenceType *LRT =
+          dyn_cast<clang::LValueReferenceType>(ty)) {
+    clang::QualType Inner =
+        skipTopLevelReferences(LRT->getPointeeTypeAsWritten());
+    clang::SplitQualType Split = Inner.split();
+    if (const auto *ET = dyn_cast<clang::ElaboratedType>(Split.Ty)) {
+      if (!ET->getOwnedTagDecl()) {
+        Split = ET->getNamedType().split();
+        if (const auto *SpecTy =
+                dyn_cast<clang::TemplateSpecializationType>(Split.Ty)) {
+          std::string BSBuf;
+          llvm::raw_string_ostream BSStream(BSBuf);
+          SpecTy->getTemplateName().print(BSStream, clang::LangOptions(),
+                                          clang::TemplateName::Qualified::None);
+          if (!strcmp("Tensor", BSBuf.c_str())) {
+            found_p = true;
+            clang::TemplateDecl *TD =
+                SpecTy->getTemplateName().getAsTemplateDecl();
+            llvm::ArrayRef<clang::TemplateArgument> Args =
+                SpecTy->template_arguments();
+            const clang::TemplateParameterList *TPL =
+                TD ? TD->getTemplateParameters() : nullptr;
+            bool __attribute__((unused)) FirstArg = true;
+            for (const auto &Arg : Args) {
+              // Print the argument into a string.
+              llvm::SmallString<128> Buf;
+              llvm::raw_svector_ostream ArgOS(Buf);
+              const clang::TemplateArgument &Argument = (Arg);
+              if (Argument.getKind() == clang::TemplateArgument::Pack) {
+              } else {
+                if (clang::TemplateArgument::Type == Argument.getKind()) {
+                  newType = Argument.getAsType();
+                }
+              }
+              if (!FirstArg)
+                llvm_unreachable("unreachable");
+              FirstArg = false;
+            }
+          }
         }
-    } else {
-        if (type.find("int") != -1) {
-            this->basicType = "int";
-        } else if (type.find("float") != -1) {
-            this->basicType = "float";
-        } else if (type.find("double") != -1) {
-            this->basicType = "double";
-        } else {
-            this->basicType = "void";
-        }
+      }
     }
-    // const char *temp;
-    // const char *begin;
-    // const char *end;
-    // const char *comma;
-    // char *btype, *dim;
-    // int i;
-    
-    // /* example: Tensor<int, 2>  */
-    // temp = type.c_str();
-    // begin = strchr (temp, '<');
-    // end = strrchr (temp, '>');
-    // comma = strrchr (temp, ',');
-
-    // /* NO error output, just check.  */
-    // if (strncmp (temp, "Tensor", 6) && 
-    //     strncmp (temp, "const Tensor", strlen ("const Tensor"))) {
-    //         int len = strlen (temp);
-    //         if (len && temp[len - 1] == '*') {
-    //             btype = (char *)malloc(sizeof(char) * len);
-    //             for (i = 0; i < len - 1; ++i)
-    //                 btype[i] = temp[i];
-    //             btype[i] = '\0';
-    //             this->basicType = btype;
-    //             free(btype);
-    //         }
-    //     else {
-    //         this->basicType = temp;
-    //     }
-    //     return;
-    // }
-
-
-    // assert (begin && end && begin < end);
-
-
-    // if (!comma || strchr(comma, '<') || strchr(comma, '(') ||
-    //     strchr(comma, '{') ||
-    //     (strchr(comma, '>') && end != strchr(comma, '>')) ||
-    //     strchr(comma, ')') || strchr(comma, '}')) {
-    //   /* Tensor has only 1 argument.  */
-    //   btype = (char *)malloc(sizeof(char) * (end - begin));
-    //   for (i = 1; begin + i < end; ++i)
-    //     btype[i - 1] = begin[i];
-    //   btype[i - 1] = '\0';
-    //   this->basicType = btype;
-    //   free(btype);
-    // } else {
-    //   /* Tensor has 2 arguments.  */
-
-    //   /* parse the first argument.  */
-    //   btype = (char *)malloc(sizeof(char) * (comma - begin));
-    //   for (i = 1; begin + i < comma; ++i)
-    //     btype[i - 1] = begin[i];
-    //   btype[i - 1] = '\0';
-    //   this->basicType = btype;
-    //   free(btype);
-
-    //   /* parse the second argument.  */
-    //   dim = (char *)malloc(sizeof(char) * (end - comma));
-    //   for (i = 1; comma + i < end; ++i)
-    //     dim[i - 1] = comma[i];
-    //   dim[i - 1] = '\0';
-    //   this->dim = atoi(dim);
-    //   free(dim);
-    // }
+  }
+  if (!found_p)
+    newType = GetBaseType (newType);
+  this->BasicType = newType;
 }
 
 std::string dacppTranslator::Param::getType() {
-    return type;
+    return newType.getAsString();
 }
 
 std::string dacppTranslator::Param::getBasicType() {
-    return basicType;
+    return BasicType.getAsString();
 }
 
 void dacppTranslator::Param::setName(std::string name) {
