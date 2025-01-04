@@ -25,7 +25,7 @@ add_executable(syclBlockMatMul2 blockMatMul2.sycl.cpp)
 add_executable(syclVectorMul0 vectorMul0.sycl.cpp)
 add_executable(outputSyclBlockMatrixMultiplication blockMatrixMultiplication_sycl.cpp)
 add_executable(FOuLadac FOuLadac_sycl.cpp)
-add_executable(liuliangdac liuliangdac_sycl.cpp)
+# add_executable(liuliangdac liuliangdac_sycl.cpp)
 add_executable(stencil.dac stencil.dac_sycl.cpp)
 add_executable(stencilStandardSycl stencilStandardSycl.cpp)
 add_executable(waveEquation.dac waveEquation.dac_sycl.cpp)
@@ -52,9 +52,9 @@ set_target_properties(outputSyclBlockMatrixMultiplication PROPERTIES
 set_target_properties(FOuLadac PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
-set_target_properties(liuliangdac PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
-)
+# set_target_properties(liuliangdac PROPERTIES
+#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+# )
 set_target_properties(stencil.dac PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
@@ -76,7 +76,7 @@ target_link_libraries(syclBlockMatMul2 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib R
 target_link_libraries(syclVectorMul0 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(outputSyclBlockMatrixMultiplication PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(FOuLadac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
-target_link_libraries(liuliangdac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+# target_link_libraries(liuliangdac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(stencil.dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(stencilStandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(waveEquation.dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)

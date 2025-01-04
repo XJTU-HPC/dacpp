@@ -9,7 +9,7 @@
 #include <fstream>
 #include <queue>
 #include "Slice.h"
-#include "Tensor.hpp"
+#include "ReconTensor.h"
 
 using dacpp::Tensor;
 

@@ -11,7 +11,6 @@
 #include "universal_template.h"
 // #include "usm_template.h"
 #include "buffer_template.h"
-#include "test.h"
 
 
 void dacppTranslator::Rewriter::rewriteDac_buffer() {

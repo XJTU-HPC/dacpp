@@ -15,7 +15,6 @@
 #include "Param.h"
 #include "DacppStructure.h"
 #include "Rewriter.h"
-#include "test.h"
 #include "ASTParse.h"
 
 using namespace clang;
