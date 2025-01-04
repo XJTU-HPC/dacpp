@@ -73,6 +73,12 @@ public:
 
     void rewriteDac();
 
+    void rewriteDac_buffer();
+
+    void rewriteDac_usm();
+    
+    void rewriteDac_Soft();
+
     void rewriteMain();
 };
 

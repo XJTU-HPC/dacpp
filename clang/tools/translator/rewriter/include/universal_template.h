@@ -5,6 +5,9 @@
 #include<iostream>
 #include<fstream>
 #include<vector>
+#include <set>
+#include <unordered_map>
+#include <string>
 #include"dacInfo.h"
 
 namespace UNIVERSAL_TEMPLATE{
@@ -16,7 +19,6 @@ namespace UNIVERSAL_TEMPLATE{
     extern const char *DATA_RECON_Template;
     extern const char *INDEX_INIT_Template;
     extern const char *CALC_EMBED_Template;
-
 
     void replaceTextInString(std::string& text, const std::string &find, const std::string &replace);
     
@@ -33,6 +35,8 @@ namespace UNIVERSAL_TEMPLATE{
     std::string CodeGen_DataReconstruct(std::string type,std::string name,std::string size,std::string dataOpsInit);
 
     std::string CodeGen_IndexInit(Dac_Ops ops);
+
+    std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vector<std::string> offsets);
 
     std::string CodeGen_CalcEmbed(std::string Name,Args args);
 }
