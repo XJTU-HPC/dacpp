@@ -417,7 +417,7 @@ namespace dacpp {
     }
     template<class ImplType, int N>
     TensorProxy<ImplType, N - 1> Tensor<ImplType, N> :: operator[](Index sp) const {
-        return TensorProxy<ImplType, N-1>();
+        return TensorProxy<ImplType, N-1>(*this, this->current_dim, 0);
     }
     template<class ImplType, int N>
     Tensor<ImplType, N-1> Tensor<ImplType, N> :: slice(int dimIdx, int idx) const {
@@ -628,7 +628,7 @@ namespace dacpp {
     template<class ImplType>
     TensorProxy<ImplType, 1> Base :: operator[](RegularSplit sp) const {return TensorProxy<ImplType, 1>(*this, 0, 0, this->shape_.get()[this->current_dim], 1, 0);}
     template<class ImplType>
-    ImplType& Base :: operator[](Index sp) const{}
+    ImplType& Base :: operator[](Index sp) const{return slice(this->current_dim, 0);}
     template<class ImplType>
     ImplType& Base :: slice(int dimIdx, int idx) const {
         if(dimIdx >= this->dim_ || idx >= this->shape_.get()[dimIdx]) 
@@ -669,9 +669,33 @@ namespace dacpp {
         TensorProxy<ImplType, N - 1> operator[](Index sp) const;
         TensorProxy<ImplType, N-1> Pslice(int dimIdx, int idx) const;
         TensorProxy<ImplType, N> Pslice(int dimIdx, int start, int end, int sliceStride = 1 , int ModifyDim = 0) const;
-        TensorProxy(TensorProxy&&)noexcept = default;
-        TensorProxy(TensorProxy&)noexcept = default;
-
+        TensorProxy(const TensorProxy&& x){
+            this->data_ = x.getDataPtr();
+            this->offset_ = x.getOffset();
+            this->dim_ = x.getDim();
+            this->shape_ = x.getShapePtr();
+            this->stride_ = x.getStridePtr();
+            this->current_dim = 0;
+        };
+        TensorProxy(const TensorProxy& x){
+            std::vector<ImplType> data;
+            x.tensor2Array(data);
+            this->data_.reset(new ImplType[data.size()]);   
+            this->dim_ = x.getDim();
+            this->offset_ = 0;
+            this->current_dim = 0;
+            this->shape_.reset(new int[this->dim_]);
+            this->stride_.reset(new int[this->dim_]);
+            for(int i = this->dim_ - 1; i >=0; i--){
+                this->shape_.get()[i] = x.getShape(i);
+                if(i == this->dim_ - 1)
+                    this->stride_.get()[i] = 1;
+                else
+                    this->stride_.get()[i] = this->stride_.get()[i + 1] * this->shape_.get()[i + 1];
+            }
+            for(int i = 0; i < data.size(); i++)
+                this->data_.get()[i] = data[i];
+        }
         template<int M>
         TensorProxy<ImplType, N>& operator =(const TensorProxy<ImplType, M>& operand);
         template<int M>
@@ -778,7 +802,7 @@ namespace dacpp {
     }
     template<class ImplType, int N>
     TensorProxy<ImplType, N - 1> Base :: operator[](Index sp) const {
-        return TensorProxy<ImplType, N-1>();
+        return Pslice(this->current_dim, 0);
     }
     template<class ImplType, int N>
     TensorProxy<ImplType, N-1> Base :: Pslice(int dimIdx, int idx) const {
@@ -865,8 +889,33 @@ namespace dacpp {
         ImplType& operator[](Index sp) const;
         ImplType& Pslice(int dimIdx, int idx) const;
         TensorProxy<ImplType, 1> Pslice(int dimIdx, int start, int end, int sliceStride = 1 , int ModifyDim = 0) const;
-        TensorProxy(TensorProxy&&)noexcept = default;
-        TensorProxy(TensorProxy&)noexcept = default;
+        TensorProxy(const TensorProxy&& x){
+            this->data_ = x.getDataPtr();
+            this->offset_ = x.getOffset();
+            this->dim_ = x.getDim();
+            this->shape_ = x.getShapePtr();
+            this->stride_ = x.getStridePtr();
+            this->current_dim = 0;
+        }
+        TensorProxy(const TensorProxy& x){
+            std::vector<ImplType> data;
+            x.tensor2Array(data);
+            this->data_.reset(new ImplType[data.size()]);   
+            this->dim_ = x.getDim();
+            this->offset_ = 0;
+            this->current_dim = 0;
+            this->shape_.reset(new int[this->dim_]);
+            this->stride_.reset(new int[this->dim_]);
+            for(int i = this->dim_ - 1; i >=0; i--){
+                this->shape_.get()[i] = x.getShape(i);
+                if(i == this->dim_ - 1)
+                    this->stride_.get()[i] = 1;
+                else
+                    this->stride_.get()[i] = this->stride_.get()[i + 1] * this->shape_.get()[i + 1];
+            }
+            for(int i = 0; i < data.size(); i++)
+                this->data_.get()[i] = data[i];
+        }
 
         template<int M>
         TensorProxy& operator =(const TensorProxy<ImplType, M>& operand);
@@ -972,7 +1021,9 @@ namespace dacpp {
         return *this;
     }
     template<class ImplType>
-    ImplType& Base :: operator[](Index sp) const{}
+    ImplType& Base :: operator[](Index sp) const{
+        return Pslice(this->current_dim, 0);
+    }
     template<class ImplType>
     ImplType& Base ::Pslice(int dimIdx, int idx) const {
         if(dimIdx >= this->dim_ || idx >= this->shape_.get()[dimIdx]) 
