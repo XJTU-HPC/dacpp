@@ -290,17 +290,16 @@ bool Visitor::VisitVarDecl (VarDecl *D)
         0) {
       dacppTranslator::RegularSplit *sp = new dacppTranslator::RegularSplit(nullptr);
       sp->setId(curVarDecl->getNameAsString());
-      CXXConstructExpr *CCE =
-          dacppTranslator::getNode<CXXConstructExpr>(curVarDecl->getInit());
+      CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(curVarDecl->getInit());
       int count = 0;
       for (CXXConstructExpr::arg_iterator I = CCE->arg_begin(),
                                           E = CCE->arg_end();
            I != E; ++I) {
-        if (count == 1) {
+        if (count == 0) {
           /* TODO: 计算常量表达式的值。  */
           sp->setSplitSize(std::stoi(
               toString((dyn_cast<IntegerLiteral>(*I))->getValue(), 10, true)));
-        } else if (count == 2) {
+        } else if (count == 1) {
           /* TODO: 计算常量表达式的值。  */
           sp->setSplitStride(std::stoi(
               toString((dyn_cast<IntegerLiteral>(*I))->getValue(), 10, true)));
