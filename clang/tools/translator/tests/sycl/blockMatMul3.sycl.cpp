@@ -223,25 +223,25 @@ void blockMatMul(dacpp::Tensor<int,2> &matA, dacpp::Tensor<int,2> &matB, dacpp::
 
 
     // 归约
-//     q.submit([&](handler &h) {
-//         h.parallel_for(
-//         range<1>(reduction_split_size * reduction_size),
-//         reduction(span<int,reduction_size>(reduction_matC,reduction_size), 
-//         sycl::plus<>(),
-//         property::reduction::initialize_to_identity()),
-//         [=](id<1> i,auto &reducer) {
-//             reducer[i % reduction_split_length + i/(reduction_split_length*reduction_split_size)*reduction_split_length].combine(d_matC[i]);
-//         });
-//  }).wait();
-    // q.memcpy(d_matC,reduction_matC, reduction_size*sizeof(int)).wait();
+    q.submit([&](handler &h) {
+        h.parallel_for(
+        range<1>(reduction_split_size * reduction_size),
+        reduction(span<int,reduction_size>(reduction_matC,reduction_size), 
+        sycl::plus<>(),
+        property::reduction::initialize_to_identity()),
+        [=](id<1> i,auto &reducer) {
+            reducer[i % reduction_split_length + i/(reduction_split_length*reduction_split_size)*reduction_split_length].combine(d_matC[i]);
+        });
+ }).wait();
+    q.memcpy(d_matC,reduction_matC, reduction_size*sizeof(int)).wait();
 
 
-    // // 归约结果返回
-    // q.memcpy(r_matC,d_matC, 1*sizeof(int)).wait();
-    // matC_tool.UpdateData(r_matC,matC);
+    // 归约结果返回
+    q.memcpy(r_matC,d_matC, 1*sizeof(int)).wait();
+    matC_tool.UpdateData(r_matC,matC);
 
-    // std::cout <<  "归约后计算结果(归并):\n";
-    // matC.print();
+    std::cout <<  "归约后计算结果(归并):\n";
+    matC.print();
 
     // 内存释放
     
