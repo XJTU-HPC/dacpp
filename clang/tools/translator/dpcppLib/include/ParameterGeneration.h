@@ -166,6 +166,6 @@ class ParameterGeneration
         //逻辑是某个算子组（输出算子组）最后一个算子的划分数
         int init_reduction_split_length(Dac_Ops ops)
         {
-            return ops.DacOps[ops.size].split_length;//返回最后一个算子的划分数
+            return ops.DacOps[ops.size - 1].split_length;//返回最后一个算子的划分数
         }       
 };
