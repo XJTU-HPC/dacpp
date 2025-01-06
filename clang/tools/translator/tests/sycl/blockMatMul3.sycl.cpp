@@ -277,17 +277,29 @@ void blockMatMul(dacpp::Tensor<int,2> &matA, dacpp::Tensor<int,2> &matB, dacpp::
     std::cout<<std::endl;   
 
     // 归约
-    q.submit([&](handler &h) {
-        h.parallel_for(
-        range<1>(reduction_split_size * reduction_size),
-        //reduction(span<int,reduction_size>(reduction_matC,reduction_size), 
-        reduction(span<int,16>(reduction_matC,16), 
-        sycl::plus<>(),
-        property::reduction::initialize_to_identity()),
-        [=](id<1> i,auto &reducer) {
-            reducer[i % reduction_split_length + i/(reduction_split_length*reduction_split_size)*reduction_split_length].combine(d_matC[i]);
-        });
- }).wait();
+    for(int i=0;i<reduction_size;i++) {
+        q.submit([&](handler &h) {
+            h.parallel_for(
+            range<1>(reduction_split_size),
+            reduction(reduction_matC+i,
+            sycl::plus<>(),
+            property::reduction::initialize_to_identity()),
+            [=](id<1> idx,auto &reducer) {
+                reducer.combine(d_matC[(i/reduction_split_length)*reduction_split_length*reduction_split_size+i%reduction_split_length+idx*reduction_split_length]);
+            });
+    }).wait();
+    }
+//     q.submit([&](handler &h) {
+//         h.parallel_for(
+//         range<1>(reduction_split_size * reduction_size),
+//         //reduction(span<int,reduction_size>(reduction_matC,reduction_size), 
+//         reduction(span<int,16>(reduction_matC,16), 
+//         sycl::plus<>(),
+//         property::reduction::initialize_to_identity()),
+//         [=](id<1> i,auto &reducer) {
+//             reducer[i % reduction_split_length + i/(reduction_split_length*reduction_split_size)*reduction_split_length].combine(d_matC[i]);
+//         });
+//  }).wait();
 
  //上面现在除了 reduction(span<int,16>(reduction_matC,16)这个16需要填成常量外，其余的计算没有出现问题
  //下面这块参数调用的有些乱
@@ -301,13 +313,9 @@ void blockMatMul(dacpp::Tensor<int,2> &matA, dacpp::Tensor<int,2> &matB, dacpp::
 //end
 
 //参照blockMatMul1.sycl.cpp调用
-    q.memcpy(r_matC,reduction_matC, 16*sizeof(int)).wait();
-    std::cout <<  "归约后计算结果(未归并):\n";
-    for(int i=0;i<16;i++) {
-        std::cout << r_matC[i] << " ";
-        if(i%4==3) std::cout<<"\n";
-    }
+    q.memcpy(d_matC,reduction_matC, 16*sizeof(int)).wait();
 
+    q.memcpy(r_matC,d_matC, 16*sizeof(int)).wait();
     matC_tool.UpdateData(r_matC,matC);
     std::cout <<  "归约后计算结果(归并):\n";
     matC.print();
