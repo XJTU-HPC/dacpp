@@ -101,21 +101,25 @@ const char *INDEX_INIT_Template = R"~~~(
 
 std::string CodeGen_IndexInit(Dac_Ops ops){
 	int len = ops.size;
+	std::vector<std::string> index_expression_vector;
 	for(int i=0;i<len;i++){
 		std::string sub_expression = "item_id";
 		for(int j=i+1;j<len;j++){
 			sub_expression = sub_expression + "/" + std::to_string(ops[j].split_size);
 		}
 		sub_expression = sub_expression + "%" + std::to_string(ops[i].split_size);
-		ops[i].setExp(sub_expression);
+		//ops[i].setExp(sub_expression);
+		index_expression_vector.push_back(sub_expression);
 	}
 
 	std::string expression = "";
 	for(int i=0;i<len;i++){
+		std::string opsname = ops[i].name;
+		std::string index_i_expression = index_expression_vector[i];		
 		expression = expression + templateString(INDEX_INIT_Template,
 		{
-			{"{{NAME}}", ops[i].name},
-			{"{{EXPRESSION}}", ops[i].getExp()}
+			{"{{NAME}}", opsname + "_"},
+			{"{{EXPRESSION}}", index_i_expression}
 		});
 	}
 
@@ -130,7 +134,9 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 	for(int i=0;i<len;i++){
 		std::string IndexComb="(";
 		for(int j=0;j<args[i].ops.size;j++){
-			IndexComb+= args[i].ops[j].name + "*" + std::to_string(args[i].ops[j].split_length);
+			std::string opsname = args[i].ops[j].name;
+			//IndexComb+= args[i].ops[j].name + "*" + std::to_string(args[i].ops[j].split_length);
+			IndexComb+= opsname + "*" + std::to_string(args[i].ops[j].split_length);
 			if(j!=args[i].ops.size-1) IndexComb+="+";
 		}
 		IndexComb+=")";
