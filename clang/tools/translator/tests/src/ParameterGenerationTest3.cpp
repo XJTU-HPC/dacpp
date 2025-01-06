@@ -65,7 +65,7 @@ int main()
 
     ParameterGeneration<int,2> para_gene_tool;
 
-    int DataReconstructorSize = para_gene_tool.init_device_memory_size(tensor_in,matC,ops_in,ops_out);
+    //int DataReconstructorSize = para_gene_tool.init_device_memory_size(tensor_in,matC,ops_in,ops_out);
 
-    std::cout << "DataReconstructorSize: " << DataReconstructorSize << std::endl;//应该输出32
+    //std::cout << "DataReconstructorSize: " << DataReconstructorSize << std::endl;//应该输出32
 }
