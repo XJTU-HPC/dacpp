@@ -290,7 +290,12 @@ bool Visitor::VisitVarDecl (VarDecl *D)
         0) {
       dacppTranslator::RegularSplit *sp = new dacppTranslator::RegularSplit(nullptr);
       sp->setId(curVarDecl->getNameAsString());
-      CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(curVarDecl->getInit());
+      CXXConstructExpr *CCE = nullptr;
+      if (isa<CXXConstructExpr>(curVarDecl->getInit())) {
+        CCE = dyn_cast<CXXConstructExpr>(curVarDecl->getInit());
+      } else {
+        CCE = dacppTranslator::getNode<CXXConstructExpr>(curVarDecl->getInit());
+      }
       int count = 0;
       for (CXXConstructExpr::arg_iterator I = CCE->arg_begin(),
                                           E = CCE->arg_end();
@@ -321,8 +326,7 @@ bool Visitor::VisitVarDecl (VarDecl *D)
     InitListExpr *ILE =
         dacppTranslator::getNode<InitListExpr>(curVarDecl->getInit());
     for (unsigned int i = 0; i < ILE->getNumInits(); i++) {
-      dacppTranslator::ShellParam *shellParam =
-          new dacppTranslator::ShellParam();
+      dacppTranslator::ShellParam *shellParam = new dacppTranslator::ShellParam();
       Expr *curExpr = ILE->getInit(i);
       std::vector<Expr *> astExprs;
 
@@ -342,10 +346,11 @@ bool Visitor::VisitVarDecl (VarDecl *D)
                                                .getAsString()));
         shellParam->setType(sh->getParam(paramsCount)->newType);
         shellParam->setName(sh->getParam(paramsCount)->getName());
-        for (int shapeIdx = 0; shapeIdx < sh->getParam(paramsCount)->getDim();
-             shapeIdx++) {
-          shellParam->setShape(sh->getParam(paramsCount)->getShape(shapeIdx));
+        /*
+        for (int shapeIdx = 0; shapeIdx < sh->getParam(paramsCount)->getDim(); shapeIdx++) {
+            shellParam->setShape(sh->getParam(paramsCount)->getShape(shapeIdx));
         }
+        */
       }
       for (unsigned int i = 0; i < astExprs.size(); i++) {
         if (dacppTranslator::getNode<DeclRefExpr>(astExprs[i])) {
@@ -358,8 +363,12 @@ bool Visitor::VisitVarDecl (VarDecl *D)
             sp->type = "RegularSplit";
             sp->setId(vd->getNameAsString());
             sp->setDimIdx(i);
-            CXXConstructExpr *CCE =
+            CXXConstructExpr *CCE = nullptr;
+            if (isa<CXXConstructExpr>(vd->getInit())) {
+              CCE = dyn_cast<CXXConstructExpr>(vd->getInit());
+            } else {
                 dacppTranslator::getNode<CXXConstructExpr>(vd->getInit());
+            }
             int count = 0;
             for (CXXConstructExpr::arg_iterator I = CCE->arg_begin(),
                                                 E = CCE->arg_end();
@@ -376,9 +385,7 @@ bool Visitor::VisitVarDecl (VarDecl *D)
               count++;
             }
             /* TODO: 处理除不尽的情况。  */
-            sp->setSplitNumber((shellParam->getShape(i) - sp->getSplitSize()) /
-                                   sp->getSplitStride() +
-                               1);
+            // sp->setSplitNumber((shellParam->getShape(i) - sp->getSplitSize()) / sp->getSplitStride() + 1);
             for (int m = 0; m < sh->getNumSplits(); m++) {
               if (sh->getSplit(m)->getId().compare(sp->getId()) == 0 &&
                   sh->getSplit(m)->type.compare("RegularSplit") == 0) {
@@ -394,7 +401,7 @@ bool Visitor::VisitVarDecl (VarDecl *D)
             sp->type = "IndexSplit";
             sp->setId(vd->getNameAsString());
             sp->setDimIdx(i);
-            sp->setSplitNumber(shellParam->getShape(i));
+            // sp->setSplitNumber(shellParam->getShape(i));
             for (int m = 0; m < sh->getNumSplits(); m++) {
               if (sh->getSplit(m)->getId().compare(sp->getId()) == 0 &&
                   sh->getSplit(m)->type.compare("IndexSplit") == 0) {

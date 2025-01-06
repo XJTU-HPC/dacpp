@@ -3546,7 +3546,7 @@ void DeclPrinter::VisitBinaryOperator(BinaryOperator *Node) {
     for (int paramCount = 0; paramCount < calc->getNumParams(); paramCount++) {
       dacppTranslator::Param *param = calc->getParam(paramCount);
       for (int dimCount = 0; dimCount < param->getDim(); dimCount++) {
-        shapes[paramCount].push_back(param->getShape(dimCount));
+        // shapes[paramCount].push_back(param->getShape(dimCount));
       }
     }
     calc->setExpr(Node, shapes);
@@ -4816,7 +4816,7 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
             } else if(sp->type.compare("IndexSplit") == 0) {
                 IndexSplit* isp = static_cast<IndexSplit*>(sp);
             } else {
-                param->setShape(shellParam->getShape(i));
+                // param->setShape(shellParam->getShape(i));
             }
         }
         if (param->getDim() == 0) {
