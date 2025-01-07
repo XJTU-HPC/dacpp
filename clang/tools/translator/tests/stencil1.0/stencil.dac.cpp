@@ -27,7 +27,7 @@ const float dt_stability = (dx * dx * dy * dy) / (2.0f * alpha * (dx * dx + dy *
 const float delta_t = 0.4f * dt_stability; // 选择一个更严格的时间步长以确保稳定性
 
 shell dacpp::list stencilShell(const dacpp::Tensor<float>& matIn, Tensor<float>& matOut) {
-    dacpp::RegularSplit sp1("S1",3, 1), sp2("S2",3, 1);
+    dacpp::RegularSplit sp1("sp1",3, 1), sp2("sp2",3, 1);
     dacpp::Index idx1("idx1"), idx2("idx2");
     binding(sp1, idx1);
     binding(sp2, idx2);

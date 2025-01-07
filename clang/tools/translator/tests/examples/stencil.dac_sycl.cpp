@@ -1,8 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
+#include "Slice.h"
+#include "Tensor.hpp"
 
 
 using namespace std;
@@ -31,7 +31,7 @@ const float delta_t = 0.4f * dt_stability; // 选择一个更严格的时间步�
 
 
 #include <sycl/sycl.hpp>
-#include "DataReconstructor.h"
+#include "/data/qinian/ice/dacpp/clang/tools/translator/dpcppLib/include/DataReconstructor.old.h"
 
 using namespace sycl;
 

@@ -25,7 +25,7 @@ float dy = Ly / (NY - 1);
 float dt = 0.5f * std::fmin(dx, dy) / c; // 满足稳定性条件
 
 shell dacpp::list waveEqShell(const dacpp::Tensor<float>& matCur, const dacpp::Tensor<float>& matPrev, dacpp::Tensor<float>& matNext) {
-    dacpp::RegularSplit sp1("S1",3, 1), sp2("S2",3, 1);
+    dacpp::RegularSplit sp1("sp1",3, 1), sp2("sp2",3, 1);
     dacpp::Index idx1("idx1"), idx2("idx2");
     binding(sp1, idx1);
     binding(sp2, idx2);

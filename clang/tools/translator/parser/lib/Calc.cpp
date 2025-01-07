@@ -1,4 +1,4 @@
-﻿#include <string>
+#include <string>
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclFriend.h"
@@ -14,6 +14,8 @@
 #include "Param.h"
 #include "Shell.h"
 
+#include <string>
+#include <iostream>
 
 namespace {
 
@@ -3544,7 +3546,7 @@ void DeclPrinter::VisitBinaryOperator(BinaryOperator *Node) {
     for (int paramCount = 0; paramCount < calc->getNumParams(); paramCount++) {
       dacppTranslator::Param *param = calc->getParam(paramCount);
       for (int dimCount = 0; dimCount < param->getDim(); dimCount++) {
-        shapes[paramCount].push_back(param->getShape(dimCount));
+        // shapes[paramCount].push_back(param->getShape(dimCount));
       }
     }
     calc->setExpr(Node, shapes);
@@ -4798,8 +4800,7 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
         param->setRw(inputOrOutput(calcFunc->getParamDecl(paramsCount)->getType().getAsString()));
 
         // 设置参数类型
-        std::string type = calcFunc->getParamDecl(paramsCount)->getType().getAsString();
-        param->setType(type);
+        param->setType(calcFunc->getParamDecl(paramsCount)->getType());
         
         // 设置参数名称
         param->setName(calcFunc->getParamDecl(paramsCount)->getNameAsString());
@@ -4815,7 +4816,7 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
             } else if(sp->type.compare("IndexSplit") == 0) {
                 IndexSplit* isp = static_cast<IndexSplit*>(sp);
             } else {
-                param->setShape(shellParam->getShape(i));
+                // param->setShape(shellParam->getShape(i));
             }
         }
         if (param->getDim() == 0) {
@@ -4824,4 +4825,15 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
         setParam(param);
     }
     setBody(calcFunc->getBody());
+
+    std::string functionBody = this->body[0];
+    functionBody = functionBody.substr(functionBody.find("{") + 1, functionBody.find("}") - 1);
+    int end = functionBody.find("@Expression;");
+    while (end != -1) {
+      this->blocks.push_back(functionBody.substr(0, end));
+      this->blocks.push_back("@Expression;");
+      functionBody.erase(functionBody.begin(), functionBody.begin() + end + 12);
+      end = functionBody.find("@Expression");
+    }
+    this->blocks.push_back(functionBody);
 }

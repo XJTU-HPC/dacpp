@@ -3,6 +3,7 @@
 #include<fstream>
 #include<vector>
 #include"dacInfo.h"
+#include<cstring>
 
 Dac_Op::Dac_Op(){}
 
@@ -10,7 +11,8 @@ Dac_Op::Dac_Op(){}
 	通过 算子名称，算子划分数，算子作用的维度 创建算子。
 */
 Dac_Op::Dac_Op(std::string Name,int SplitSize,int dimId){
-	this->name = Name;
+	strcpy(this->name,Name.c_str());
+	//this->name = Name.c_str();
 	this->split_size = SplitSize;
 	this->dimId = dimId;
 }
@@ -37,23 +39,29 @@ void Dac_Op::SetSplitSize(int split_size) {
 /*
 	设置 算子对应索引的计算表达式。
 */
-void Dac_Op::setExp(std::string expression){
-	this->expression = expression;
-}
+// void Dac_Op::setExp(std::string expression){
+// 	this->expression = expression;
+// }
 /*
 	得到 算子对应索引的计算表达式。
 */
-std::string Dac_Op::getExp(){
-	return this->expression;
-}
+// std::string Dac_Op::getExp(){
+// 	return this->expression;
+// }
 
 
 Dac_Ops::Dac_Ops(){
 	this->size = 0;
 }
-void Dac_Ops::push_back(Dac_Op x){
-	this->DacOps.push_back(x);
+void Dac_Ops::push_back(Dac_Op op){
+	this->DacOps.push_back(op);
 	this->size++;
+}
+void Dac_Ops::push_back(Dac_Ops ops){
+	for(int i=0;i<ops.size;i++){
+		this->DacOps.push_back(ops[i]);
+		this->size++;
+	}
 }
 
 void Dac_Ops::pop_back() {
@@ -138,13 +146,15 @@ DacData& Args::operator[](int i){
 }
 
 RegularSlice::RegularSlice(std::string name, int size, int stride) {
-	this->name = name;
+	strcpy(this->name,name.c_str());
+	//this->name = name;
 	this->stride = stride;
 	this->size = size;
 }
 
 Index::Index(std::string name) {
-	this->name = name;
+	strcpy(this->name,name.c_str());
+	//this->name = name;
 	this->stride = 1;
 	this->size = 1;
 }
