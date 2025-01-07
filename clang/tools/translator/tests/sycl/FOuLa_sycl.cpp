@@ -275,7 +275,6 @@ std::cout << "8" << std::endl;
     sycl::free(d_u_kin, q);
     sycl::free(d_u_kout, q);
     sycl::free(d_r, q);
-    std::cout << "17" << std::endl;
 }
 
 int main() {
@@ -338,11 +337,11 @@ int main() {
         dacpp::Tensor<int,1> u_test1 = u_tensor.slice(1,k);
         // std::cout << typeid(u_tensor[{}][k]) << std::endl;
         PDE(u_test1, middle_tensor, R);
-        middle_tensor.print();
+        std::cout << middle_tensor
         //计算完毕后，替换第1到4个点
         for (int i = 1; i <= 4; i++) {
             std::cout << "middle_tensor[" << i << "][0] = " << middle_tensor[i-1] << std::endl;
-            u_tensor[i][k+1] = middle_tensor[i-1];
+            u_tensor[i][k+1] = middle_tensor[i];
         }
 
     }
