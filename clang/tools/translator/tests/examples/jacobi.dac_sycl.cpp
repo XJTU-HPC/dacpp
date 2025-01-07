@@ -2,13 +2,11 @@
 #include <vector>
 #include <cmath>
 #include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
 
 // 定义矩阵大小
 const int N = 100; // 可以修改 N 的值来改变矩阵大小
 const int max_iter = 100;
 const float tolerance = 1e-6;
-using dacpp::Tensor;
 
 namespace dacpp {
     typedef std::vector<std::any> list;
@@ -21,6 +19,7 @@ namespace dacpp {
 
 #include <sycl/sycl.hpp>
 #include "/data/qinian/ice/dacpp/clang/tools/translator/dpcppLib/include/DataReconstructor.old.h"
+using dacpp::Tensor;
 
 using namespace sycl;
 
