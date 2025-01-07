@@ -756,7 +756,7 @@ std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string DATA_INF
     return templateString(DEVICE_MEM_SIZE_Generate_Template1,
 	{
         {"{{NAME}}",        NAME}, //设备内存的名字 
-		{"{{TENSOR_NAME}}",     DATA_INFO_NAME}, //tensor的名字
+		{"{{DATA_INFO_NAME}}",     DATA_INFO_NAME}, //tensor的名字
 		{"{{DACOPS_NAME}}",        DACOPS_NAME} //算子组的名字
 	});
 }

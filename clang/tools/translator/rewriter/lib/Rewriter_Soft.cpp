@@ -142,7 +142,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
                 }
             }
         }
-        code += infoInit;
+        opInit = infoInit + opInit;
         // std::cout << opInit;
         
         //获取算子与作用数据块的关系
@@ -206,11 +206,11 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
         for(int NumShellParam = 0; NumShellParam < shell->getNumShellParams(); NumShellParam++){
             ShellParam* shellParam = shell->getShellParam(NumShellParam);
             if(shellParam->getRw() == 1){
-                divice_memory += CodeGen_DeviceMemSizeGenerate(shellParam->getName()+"_Size","In_Ops","Out_Ops",shellParam->getName());
-                divice_memory += CodeGen_DeviceMemSizeGenerate("Reduction_Size","info_"shellParam->getName(),"Reduction_Ops");
+                divice_memory += CodeGen_DeviceMemSizeGenerate(shellParam->getName()+"_Size","In_Ops","Out_Ops","info_"+shellParam->getName());
+                divice_memory += CodeGen_DeviceMemSizeGenerate("Reduction_Size","info_"+shellParam->getName(),"Reduction_Ops");
             }
             else{
-                divice_memory += CodeGen_DeviceMemSizeGenerate(shellParam->getName()+"_Size",shellParam->getName(),shellParam->getName()+"_Ops");
+                divice_memory += CodeGen_DeviceMemSizeGenerate(shellParam->getName()+"_Size","info_"+shellParam->getName(),shellParam->getName()+"_Ops");
             }
         }
         // std::cout << divice_memory;
