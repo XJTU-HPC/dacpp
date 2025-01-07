@@ -325,21 +325,27 @@ const char *INDEX_INIT_Template = R"~~~(
 std::string CodeGen_IndexInit(Dac_Ops ops)
 {
 	int len = ops.size;
+	std::vector<std::string> index_expression;//增加
 	for(int i=0;i<len;i++){
 		std::string sub_expression = "item_id";
 		for(int j=i+1;j<len;j++){
 			sub_expression = sub_expression + "/" + std::to_string(ops[j].split_size);
 		}
 		sub_expression = sub_expression + "%" + std::to_string(ops[i].split_size);
-		ops[i].setExp(sub_expression);
+		index_expression.push_back(sub_expression);//增加
+		//ops[i].setExp(sub_expression);
 	}
 
 	std::string expression = "";
 	for(int i=0;i<len;i++){
+		std::string ops_i_name = ops[i].name;
+		std::string index_i_expression = index_expression[i];
 		expression = expression + templateString(INDEX_INIT_Template,
 		{
-			{"{{NAME}}", ops[i].name},
-			{"{{EXPRESSION}}", ops[i].getExp()}
+			//{"{{NAME}}", ops[i].name},
+			{"{{NAME}}", ops_i_name},
+			//{"{{EXPRESSION}}", ops[i].getExp()}
+			{"{{EXPRESSION}}", index_i_expression}
 		});
 	}
 
@@ -376,21 +382,27 @@ std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vec
 
     //下面根据偏移量来计算各个算子对应的索引
     int len = ops.size;
+	std::vector<std::string> index_expression_vector;//新增加
     for(int i = 0;i < len;i ++)
     {
         std::string index_expression = "(";
         index_expression = index_expression + sets_sub_expression[sets[i]];//得到集合的索引
         index_expression = index_expression + "+" + "(" + offsets[i] + ")" + "+" + std::to_string(ops[i].split_size) + ")";//加上偏移量和划分数 防止出现负数
 		index_expression = index_expression + "%" + std::to_string(ops[i].split_size);//偏移之后再取模
-        ops[i].setExp(index_expression);
+        //ops[i].setExp(index_expression);
+		index_expression_vector.push_back(index_expression);//新增加
     }
 
 	std::string expression = "";
 	for(int i=0;i<len;i++){
+		std::string opsname = ops[i].name;
+		std::string index_i_expression = index_expression_vector[i];
 		expression = expression + templateString(INDEX_INIT_Template,
 		{
-			{"{{NAME}}", ops[i].name},
-			{"{{EXPRESSION}}", ops[i].getExp()}
+			//{"{{NAME}}", ops[i].name},
+			{"{{NAME}}", opsname},
+			//{"{{EXPRESSION}}", ops[i].getExp()}
+			{"{{EXPRESSION}}", index_i_expression}
 		});
 	}
 	return expression;
@@ -405,7 +417,9 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 	for(int i=0;i<len;i++){
 		std::string IndexComb="(";
 		for(int j=0;j<args[i].ops.size;j++){
-			IndexComb+= args[i].ops[j].name + "*" + std::to_string(args[i].ops[j].split_length);
+			std::string opsname = args[i].ops[j].name;
+			//IndexComb+= args[i].ops[j].name + "*" + std::to_string(args[i].ops[j].split_length);
+			IndexComb+= opsname + "*" + std::to_string(args[i].ops[j].split_length);
 			if(j!=args[i].ops.size-1) IndexComb+="+";
 		}
 		IndexComb+=")";
@@ -454,16 +468,18 @@ std::string CodeGen_Reduction(std::string SplitSize,std::string Name,std::string
 
 const char *REDUCTION_Template_Span = R"~~~(
     // 归约
-    q.submit([&](handler &h) {
-    	h.parallel_for(
-        range<1>({{SPLIT_SIZE}} * {{SPAN_SIZE}}),
-        reduction(span<{{TYPE}},{{SPAN_SIZE}}>(reduction_{{NAME}},{{SPAN_SIZE}}), 
-        {{REDUCTION_RULE}},
-        property::reduction::initialize_to_identity()),
-        [=](id<1> i,auto &reducer) {
-            reducer[i % {{SPLIT_LENGTH}} + i/({{SPLIT_LENGTH}}*{{SPLIT_SIZE}})*{{SPLIT_LENGTH}}].combine(d_{{NAME}}[i]);
-     	});
- }).wait();
+    for(int i=0;i<{{SPAN_SIZE}};i++) {
+        q.submit([&](handler &h) {
+    	    h.parallel_for(
+            range<1>({{SPLIT_SIZE}}),
+            reduction(reduction_{{NAME}}+i, 
+            {{REDUCTION_RULE}},
+            property::reduction::initialize_to_identity()),
+            [=](id<1> idx,auto &reducer) {
+                reducer.combine(d_{{NAME}}[(i/{{SPLIT_LENGTH}})*{{SPLIT_LENGTH}}*{{SPLIT_SIZE}}+i%{{SPLIT_LENGTH}}+idx*{{SPLIT_LENGTH}}]);
+     	    });
+     }).wait();
+    }
     q.memcpy(d_{{NAME}},reduction_{{NAME}}, {{SPAN_SIZE}}*sizeof({{TYPE}})).wait();
 )~~~";
 
@@ -922,29 +938,29 @@ std::string CodeGen_Init_Reduction_Split_Length(std::string NAME,std::string OPS
 }
 
 //aborted 上面弃用的那个索引生成的修改
-std::string CodeGen_IndexInit2(Dac_Ops ops)
-{
-	int len = ops.size;
-	for(int i=0;i<len;i++){
-		std::string sub_expression = "item_id";
-		for(int j=i+1;j<len;j++){
-			sub_expression = sub_expression + "/" + ops[j].name + ".spilit_size";
-		}
-		sub_expression = sub_expression + "%" + ops[i].name + ".spilit_size";
-		ops[i].setExp(sub_expression);
-	}
+// std::string CodeGen_IndexInit2(Dac_Ops ops)
+// {
+// 	int len = ops.size;
+// 	for(int i=0;i<len;i++){
+// 		std::string sub_expression = "item_id";
+// 		for(int j=i+1;j<len;j++){
+// 			sub_expression = sub_expression + "/" + ops[j].name + ".spilit_size";
+// 		}
+// 		sub_expression = sub_expression + "%" + ops[i].name + ".spilit_size";
+// 		ops[i].setExp(sub_expression);
+// 	}
 
-	std::string expression = "";
-	for(int i=0;i<len;i++){
-		expression = expression + templateString(INDEX_INIT_Template,
-		{
-			{"{{NAME}}", ops[i].name + "_"},
-			{"{{EXPRESSION}}", ops[i].getExp()}
-		});
-	}
+// 	std::string expression = "";
+// 	for(int i=0;i<len;i++){
+// 		expression = expression + templateString(INDEX_INIT_Template,
+// 		{
+// 			{"{{NAME}}", ops[i].name + "_"},
+// 			{"{{EXPRESSION}}", ops[i].getExp()}
+// 		});
+// 	}
 
-	return expression;
-}
+// 	return expression;
+// }
 
 //新的索引生成模板 相当于现在的ops能用的只有算子的名字了 算子的划分数是不会改变的
 std::string CodeGen_IndexInit2(Dac_Ops ops,std::vector<std::string> sets,std::vector<std::string> offsets)//sets表示每个算子属于的集合的名字 offsets表示每个算子相对于集合的偏移量
@@ -954,11 +970,12 @@ std::string CodeGen_IndexInit2(Dac_Ops ops,std::vector<std::string> sets,std::ve
     std::vector<std::string> sets_split;//记录了不同集合对应的划分数，与集合名相对应： idx的划分数 idy的划分数 idz的划分数 
     for (int i = 0; i < sets.size(); ++i) 
     {
+		std::string ops_i_name = ops[i].name;
         if (sets_map.find(sets[i]) == sets_map.end())//如果容器里没有
         {
             sets_map.insert(sets[i]);//将集合插入容器
             sets_order.push_back(sets[i]);//将集合放入到集合的数组中
-            sets_split.push_back(ops[i].name + ".split_size");//将集合对应的划分数放入数组中
+            sets_split.push_back(ops_i_name + ".split_size");//将集合对应的划分数放入数组中
         }
     }
     
@@ -977,6 +994,7 @@ std::string CodeGen_IndexInit2(Dac_Ops ops,std::vector<std::string> sets,std::ve
 
     //下面根据偏移量来计算各个算子对应的索引
     int len = ops.size;
+	std::vector<std::string> index_expression_vector;
     for(int i = 0;i < len;i ++)
     {
         std::string index_expression = "(";
@@ -984,15 +1002,19 @@ std::string CodeGen_IndexInit2(Dac_Ops ops,std::vector<std::string> sets,std::ve
         //index_expression = index_expression + "+" + "(" + offsets[i] + ")" + "+" + std::to_string(ops[i].split_size) + ")";//加上偏移量和划分数 防止出现负数
 		index_expression = index_expression + "+" + "(" + offsets[i] + ")" + ")";
 		index_expression = index_expression + "%" + ops[i].name + ".split_size";
-        ops[i].setExp(index_expression);
+		index_expression_vector.push_back(index_expression);
+        //ops[i].setExp(index_expression);
     }
 
 	std::string expression = "";
 	for(int i=0;i<len;i++){
+		std::string opsname = ops[i].name;
+		std::string index_i_expression = index_expression_vector[i];
 		expression = expression + templateString(INDEX_INIT_Template,
 		{
-			{"{{NAME}}", ops[i].name + "_"},//注意这里加了下划线
-			{"{{EXPRESSION}}", ops[i].getExp()}
+			{"{{NAME}}", opsname + "_"},//注意这里加了下划线
+			//{"{{EXPRESSION}}", ops[i].getExp()}
+			{"{{EXPRESSION}}", index_i_expression}
 		});
 	}
 	return expression;
@@ -1005,7 +1027,9 @@ std::string CodeGen_CalcEmbed2(std::string Name,Args args){
 	for(int i=0;i<len;i++){
 		std::string IndexComb="(";
 		for(int j=0;j<args[i].ops.size;j++){
-			IndexComb+= args[i].ops[j].name + "_" + "*" + "SplitLength[" + std::to_string(i) + "][" + std::to_string(j) + "]";
+			std::string opsname = args[i].ops[j].name;
+			//IndexComb+= args[i].ops[j].name + "_" + "*" + "SplitLength[" + std::to_string(i) + "][" + std::to_string(j) + "]";
+			IndexComb+= opsname + "_" + "*" + "SplitLength[" + std::to_string(i) + "][" + std::to_string(j) + "]";
 			if(j!=args[i].ops.size-1) IndexComb+="+";
 		}
 		IndexComb+=")";
