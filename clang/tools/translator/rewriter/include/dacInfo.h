@@ -14,7 +14,6 @@ class Dac_Op{
 		//std::string name;         // 算子名称
 		char* name = new char[5];
 		std::string type;         //算子类型
-		std::string name;         // 算子名称
 		int split_size;           // 划分数    算子作用于不同数据划分数一致
 		int split_length;         // 每份长度  算子作用于不同数据划分长度可以不同
 		int dimId;                // 算子作用的维度
