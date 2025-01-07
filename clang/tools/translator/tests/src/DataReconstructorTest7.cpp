@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
+#include "Slice.h"
 
 using namespace std;
 
