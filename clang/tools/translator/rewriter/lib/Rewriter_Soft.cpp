@@ -118,10 +118,12 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
 
         //算子初始化
         std::string opInit = "";
+        std::string infoInit = "";
         std::set<std::string> HadInit;
         // std::vector<bool> visited(shell->getNumShellParams(), false);
         for(int NumShellParam = 0; NumShellParam < shell->getNumShellParams(); NumShellParam++){
             ShellParam* shellParam = shell->getShellParam(NumShellParam);
+            infoInit += CodeGen_DataInfoInit(shellParam->getName());
             for(int NumSplit = 0; NumSplit < shellParam->getNumSplit(); NumSplit++){
                 if(shellParam->getSplit(NumSplit)->getId() == "void") { continue;}
                 Split* split = shellParam->getSplit(NumSplit);
@@ -244,7 +246,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
         std::string item_number = CodeGen_Init_Work_Item_Number("Item_Size","In_Ops");
         // std::cout << item_number;
 
-        std::string InitOPS = dataOpsInit + dataOpsInit_inops + dataOpsInit_outops + dataOpsInit_reductions;
+        std::string InitOPS = infoInit + dataOpsInit + dataOpsInit_inops + dataOpsInit_outops + dataOpsInit_reductions;
 
             //生成归约中Split_size中的大小
         std::string Init_Reduction_Split_Size = CodeGen_Init_Reduction_Split_Size("Reduction_Split_Size","In_Ops","Out_Ops");

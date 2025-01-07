@@ -42,7 +42,7 @@ void pde(int* u_kin, int* u_kout, int* r)
 
 
 // 生成函数调用
-void PDE(const dacpp::Tensor<int, 1> & u_kin, dacpp::Tensor<int, 1> & u_kout, const dacpp::Tensor<int, 1> & r) { 
+void PDE(const dacpp::Tensor<int, 2> & u_kin, dacpp::Tensor<int, 2> & u_kout, const dacpp::Tensor<int, 2> & r) { 
     // 设备选择
     auto selector = gpu_selector_v;
     queue q(selector);
@@ -50,7 +50,7 @@ void PDE(const dacpp::Tensor<int, 1> & u_kin, dacpp::Tensor<int, 1> & u_kout, co
     // 算子初始化
     
     // 规则分区算子初始化
-    RegularSlice s = RegularSlice("s", 1, 32544);
+    RegularSlice s = RegularSlice("s", 1, 32589);
     s.setDimId(0);
     s.SetSplitSize(para_gene_tool.init_operetor_splitnumber(s,u_kin));
 
@@ -63,6 +63,14 @@ void PDE(const dacpp::Tensor<int, 1> & u_kin, dacpp::Tensor<int, 1> & u_kout, co
 	
     // 参数生成 提前计算后面需要用到的参数	
 	
+    // 数据信息初始化
+    DataInfo info_u_kin;
+    info_u_kin.dim = u_kin.getDim();
+    for(int i = 0; i < info_u_kin.dim; i++) info_u_kin.dimLength.push_back(u_kin.getShape(i));
+    // 数据信息初始化
+    DataInfo info_u_kout;
+    info_u_kout.dim = u_kout.getDim();
+    for(int i = 0; i < info_u_kout.dim; i++) info_u_kout.dimLength.push_back(u_kout.getShape(i));
     // 算子组初始化
     Dac_Ops u_kin_Ops;
     
@@ -137,7 +145,7 @@ void PDE(const dacpp::Tensor<int, 1> & u_kin, dacpp::Tensor<int, 1> & u_kout, co
 
 
 	// 生成划分长度的二维矩阵
-    int SplitLength[3][0] = {0};
+    int SplitLength[3][0] = {};
     para_gene_tool.init_split_length_martix(3,0,&SplitLength[0][0],ops_s);
 
 	

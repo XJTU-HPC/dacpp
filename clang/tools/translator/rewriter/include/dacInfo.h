@@ -11,12 +11,12 @@
 */
 class Dac_Op{
 	public:
-		std::string type;         //算子类型
-		std::string name;         // 算子名称
+		//std::string name;         // 算子名称
+		char* name = new char[5];
 		int split_size;           // 划分数    算子作用于不同数据划分数一致
 		int split_length;         // 每份长度  算子作用于不同数据划分长度可以不同
 		int dimId;                // 算子作用的维度
-		std::string expression;   // 算子对应索引的计算表达式
+		//std::string expression;   // 算子对应索引的计算表达式
 
 		int stride;               // 步长
 		int size;                 // 作用维度上的每份长度
@@ -42,21 +42,21 @@ class Dac_Op{
 		/*
 			设置 算子对应索引的计算表达式。
 		*/
-		void setExp(std::string expression);
+		//void setExp(std::string expression);
 		/*
 			得到 算子对应索引的计算表达式。
 		*/
-		std::string getExp();
+		//std::string getExp();
 
-		std::string toString() {
-        return "name: " + name + "\n" +
-               "split_size: " + std::to_string(split_size) + "\n" +
-               "split_length: " + std::to_string(split_length) + "\n" +
-               "dimId: " + std::to_string(dimId) + "\n" +
-               "expression: " + expression + "\n" +
-               "stride: " + std::to_string(stride) + "\n" +
-               "size: " + std::to_string(size);
-    }
+	// 	std::string toString() {
+    //     return "name: " + name + "\n" +
+    //            "split_size: " + std::to_string(split_size) + "\n" +
+    //            "split_length: " + std::to_string(split_length) + "\n" +
+    //            "dimId: " + std::to_string(dimId) + "\n" +
+    //            "expression: " + expression + "\n" +
+    //            "stride: " + std::to_string(stride) + "\n" +
+    //            "size: " + std::to_string(size);
+    // }
 };
 /*
 	Dac 算子组。
