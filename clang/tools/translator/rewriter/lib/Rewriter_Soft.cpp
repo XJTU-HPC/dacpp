@@ -189,6 +189,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
                     add2Op_inops += CodeGen_AddOp2Ops(split->getId(),std::to_string(inflag),"In_Ops");
                     Dac_Op op = Dac_Op(split->getId(),0,inflag);
                     inflag++;
+                    std::cout<<inflag<<std::endl;
                     Inops.push_back(op);
                     setIn.insert(split->getId());
                 }
@@ -240,7 +241,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
         }
         std::string DeclareDacOpsVector = CodeGen_Declare_DacOps_Vector("ops_s",AddDacOps2Vector);
         // std::cout << std::to_string(shell->getNumShellParams()) << std::to_string(inflag) << std::endl;
-        std::string InitSplitLengthMatrix = CodeGen_Init_Split_Length_Matrix(DeclareDacOpsVector,std::to_string(shell->getNumShellParams()),std::to_string(inflag-1),"ops_s");
+        std::string InitSplitLengthMatrix = CodeGen_Init_Split_Length_Matrix(DeclareDacOpsVector,std::to_string(shell->getNumShellParams()),std::to_string(inflag),"ops_s");
 
         //计算工作分配数量
         std::string item_number = CodeGen_Init_Work_Item_Number("Item_Size","In_Ops");
@@ -315,7 +316,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
             ShellParam* shellParam = shell->getShellParam(NumShellParam);
             if(shellParam->getRw() == 1){
                 Reduction = CodeGen_Reduction_Span("Reduction_Size","Reduction_Split_Size","Reduction_Split_Length",shellParam->getName(),shellParam->getBasicType(),ReductionRule);
-	            D2HMemMove = CodeGen_D2HMemMov(shellParam->getName(),shellParam->getBasicType(),"Reduction_Size",false);
+	            D2HMemMove = CodeGen_D2HMemMov(shellParam->getName(),shellParam->getBasicType(),shellParam->getName()+"_Size",false);
             }
         }
         // std::cout << Reduction;

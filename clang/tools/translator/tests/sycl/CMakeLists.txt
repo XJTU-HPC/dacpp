@@ -18,18 +18,24 @@ set(OpenCL_LIBRARY "/data/qinian/share/intel/oneapi2025/compiler/latest/lib/libO
 include_directories(${SYCL_PATH})
 
 # 添加源文件
-# add_executable(FOuLadac FOuLa_sycl.cpp)
-# set_target_properties(FOuLadac PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
-# )
-# target_link_libraries(FOuLadac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 
-# add_executable(blockMatMul3.sycl.cpp blockMatMul3.sycl.cpp)
-# set_target_properties(blockMatMul3.sycl.cpp PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
-# )
-# target_link_libraries(blockMatMul3.sycl.cpp PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+add_executable(FOuLadac FOuLa_sycl.cpp)
+set_target_properties(FOuLadac PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+target_link_libraries(FOuLadac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 
+add_executable(blockMatMul3.sycl.cpp blockMatMul3.sycl.cpp)
+set_target_properties(blockMatMul3.sycl.cpp PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+target_link_libraries(blockMatMul3.sycl.cpp PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+
+add_executable(FOuLadac1 FOuLadac_sycl.cpp)
+set_target_properties(FOuLadac1 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+target_link_libraries(FOuLadac1 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 # add_executable(matMul matMul_sycl.cpp)
 # add_executable(syclBlockMatMul0 blockMatMul0.sycl.cpp)
 # add_executable(syclBlockMatMul1 blockMatMul1.sycl.cpp)

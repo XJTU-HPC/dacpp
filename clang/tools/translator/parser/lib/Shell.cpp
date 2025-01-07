@@ -373,11 +373,11 @@ bool Visitor::VisitVarDecl (VarDecl *D)
             for (CXXConstructExpr::arg_iterator I = CCE->arg_begin(),
                                                 E = CCE->arg_end();
                  I != E; ++I) {
-              if (count == 1) {
+              if (count == 0) {
                 /* TODO: 计算常量表达式的值。  */
                 sp->setSplitSize(std::stoi(toString(
                     (dyn_cast<IntegerLiteral>(*I))->getValue(), 10, true)));
-              } else if (count == 2) {
+              } else if (count == 1) {
                 /* TODO: 计算常量表达式的值。  */
                 sp->setSplitStride(std::stoi(toString(
                     (dyn_cast<IntegerLiteral>(*I))->getValue(), 10, true)));

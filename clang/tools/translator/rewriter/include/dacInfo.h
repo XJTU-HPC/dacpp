@@ -130,7 +130,7 @@ class RegularSlice : public Dac_Op {
 	public:
 
 		RegularSlice();
-		std::string type = "RegularSlice";
+		// std::string type = "RegularSlice";
 		/*
 			通过 算子名称，步长，作用维度上的每份长度 创建规则分区算子。
 		*/
@@ -144,7 +144,7 @@ class Index : public Dac_Op {
 	public:
 
 		Index();
-		std::string type = "Index";
+		// std::string type = "Index";
 		/*
 			通过 算子名称，步长，作用维度上的每份长度 创建规则分区算子。
 		*/

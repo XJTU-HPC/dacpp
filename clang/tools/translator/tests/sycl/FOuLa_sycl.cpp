@@ -42,23 +42,28 @@ void pde(int* u_kin, int* u_kout, int* r)
 
 
 // 生成函数调用
-void PDE(const dacpp::Tensor<int, 2> & u_kin, dacpp::Tensor<int, 2> & u_kout, const dacpp::Tensor<int, 2> & r) { 
+void PDE(const dacpp::Tensor<int, 1> & u_kin, dacpp::Tensor<int, 1> & u_kout, const dacpp::Tensor<int, 1> & r) { 
+    u_kin.print();
+    u_kout.print();
+
     // 设备选择
     auto selector = gpu_selector_v;
     queue q(selector);
-    ParameterGeneration<int,2> para_gene_tool; //参数生成工具
+    std::cout << "1" << std::endl;
+    ParameterGeneration<int,1> para_gene_tool; //参数生成工具
     // 算子初始化
-    
+    std::cout << "2" << std::endl;
     // 规则分区算子初始化
-    RegularSlice s = RegularSlice("s", 1, 32589);
+    RegularSlice s = RegularSlice("s", 3, 1);
     s.setDimId(0);
     s.SetSplitSize(para_gene_tool.init_operetor_splitnumber(s,u_kin));
-
+    std::cout << "s.getSplitSize() = " << para_gene_tool.init_operetor_splitnumber(s,u_kin) << std::endl;
     // 降维算子初始化
     Index i = Index("i");
     i.setDimId(0);
     i.SetSplitSize(para_gene_tool.init_operetor_splitnumber(i,u_kout));
-
+    std::cout << "i.getSplitSize() = " << i.split_size << std::endl;
+    std::cout << "3" << std::endl;
     //参数生成
 	
     // 参数生成 提前计算后面需要用到的参数	
@@ -71,6 +76,11 @@ void PDE(const dacpp::Tensor<int, 2> & u_kin, dacpp::Tensor<int, 2> & u_kout, co
     DataInfo info_u_kout;
     info_u_kout.dim = u_kout.getDim();
     for(int i = 0; i < info_u_kout.dim; i++) info_u_kout.dimLength.push_back(u_kout.getShape(i));
+    // 数据信息初始化
+    DataInfo info_r;
+    info_r.dim = r.getDim();
+    for(int i = 0; i < info_r.dim; i++) info_r.dimLength.push_back(r.getShape(i));
+    std::cout << "4" << std::endl;
     // 算子组初始化
     Dac_Ops u_kin_Ops;
     
@@ -110,7 +120,7 @@ void PDE(const dacpp::Tensor<int, 2> & u_kin, dacpp::Tensor<int, 2> & u_kout, co
     Reduction_Ops.push_back(i);
 
 
-	
+	std::cout << "5" << std::endl;
     //生成设备内存分配大小
     int u_kin_Size = para_gene_tool.init_device_memory_size(u_kin,u_kin_Ops);
 
@@ -122,31 +132,30 @@ void PDE(const dacpp::Tensor<int, 2> & u_kin, dacpp::Tensor<int, 2> & u_kout, co
 
     //生成设备内存分配大小
     int r_Size = para_gene_tool.init_device_memory_size(r,r_Ops);
-
+    std::cout << "6" << std::endl;
 	
     // 计算算子组里面的算子的划分长度
     para_gene_tool.init_op_split_length(u_kin_Ops,u_kin_Size);
-
+std::cout << "7" << std::endl;
     // 计算算子组里面的算子的划分长度
     para_gene_tool.init_op_split_length(In_Ops,u_kout_Size);
-
+std::cout << "8" << std::endl;
     // 计算算子组里面的算子的划分长度
-    para_gene_tool.init_op_split_length(r_Ops,r_Size);
+    // para_gene_tool.init_op_split_length(r_Ops,r_Size);
 
 	
 	
     std::vector<Dac_Ops> ops_s;
-	
     ops_s.push_back(u_kin_Ops);
 
     ops_s.push_back(In_Ops);
 
     ops_s.push_back(r_Ops);
-
+    std::cout << "11" << std::endl;
 
 	// 生成划分长度的二维矩阵
-    int SplitLength[3][0] = {};
-    para_gene_tool.init_split_length_martix(3,0,&SplitLength[0][0],ops_s);
+    int SplitLength[3][1] = {0};
+    para_gene_tool.init_split_length_martix(3,1,&SplitLength[0][0],ops_s);
 
 	
     // 计算工作项的大小
@@ -159,7 +168,7 @@ void PDE(const dacpp::Tensor<int, 2> & u_kin, dacpp::Tensor<int, 2> & u_kout, co
 	
     // 计算归约中split_length的大小
     int Reduction_Split_Length = para_gene_tool.init_reduction_split_length(Out_Ops);
-
+    std::cout << "12" << std::endl;
 
     // 设备内存分配
     
@@ -172,7 +181,7 @@ void PDE(const dacpp::Tensor<int, 2> & u_kin, dacpp::Tensor<int, 2> & u_kout, co
     // 设备内存分配
     int *d_r=malloc_device<int>(r_Size,q);
     // 数据关联计算
-    
+    std::cout << "13" << std::endl;
     
     // 数据重组
     DataReconstructor<int> u_kin_tool;
@@ -202,6 +211,7 @@ void PDE(const dacpp::Tensor<int, 2> & u_kin, dacpp::Tensor<int, 2> & u_kout, co
     DataReconstructor<int> r_tool;
     int* r_r=(int*)malloc(sizeof(int)*r_Size);
     
+    std::cout << "14" << std::endl;
     // 数据算子组初始化
     Dac_Ops r_ops;
     
@@ -230,31 +240,42 @@ void PDE(const dacpp::Tensor<int, 2> & u_kin, dacpp::Tensor<int, 2> & u_kout, co
         });
     }).wait();
     
-
+    std::cout << "15" << std::endl;
 	
-    // 归约
-    q.submit([&](handler &h) {
-    	h.parallel_for(
-        range<1>(Reduction_Split_Size * Reduction_Size),
-        reduction(span<int,Reduction_Size>(reduction_u_kout,Reduction_Size), 
-        sycl::plus<>(),
-        property::reduction::initialize_to_identity()),
-        [=](id<1> i,auto &reducer) {
-            reducer[i % Reduction_Split_Length + i/(Reduction_Split_Length*Reduction_Split_Size)*Reduction_Split_Length].combine(d_u_kout[i]);
-     	});
- }).wait();
-    q.memcpy(d_u_kout,reduction_u_kout, Reduction_Size*sizeof(int)).wait();
-
+    // // 归约
+    // for(int i=0;i<Reduction_Size;i++) {
+    //     std::cout << i << std::endl;
+        std::cout << "Reduction_Split_Size: " << Reduction_Split_Size << std::endl;
+        std::cout << "Reduction_Split_Length: " << Reduction_Split_Length << std::endl;
+        std::cout << "Reduction_Size: " << Reduction_Size << std::endl;
+    //     q.submit([&](handler &h) {
+    // 	    h.parallel_for(
+    //         range<1>(Reduction_Split_Size),
+    //         reduction(reduction_u_kout+i, 
+    //         sycl::plus<>(),
+    //         property::reduction::initialize_to_identity()),
+    //         [=](id<1> idx,auto &reducer) {
+    //             reducer.combine(d_u_kout[(i/ Reduction_Split_Length) * Reduction_Split_Length * Reduction_Split_Size +
+    //             i % Reduction_Split_Length+idx * Reduction_Split_Length]);
+    //  	    });
+    //  }).wait();
+    // std::cout << i << " is end!"<< std::endl;
+    // }
+    // std::cout << "15" << std::endl;
+    // q.memcpy(d_u_kout,reduction_u_kout, Reduction_Size*sizeof(int)).wait();
+    // std::cout << "16" << std::endl;
 	
     // 归并结果返回
+    std::cout << "u_kout_Size" << u_kout_Size << std::endl;
+    std::cout << "Reduction_Size" << Reduction_Size << std::endl;
     q.memcpy(r_u_kout, d_u_kout, Reduction_Size*sizeof(int)).wait();
-    u_kout = u_kout_tool.UpdateData(r_u_kout,u_kout);
-
+    u_kout_tool.UpdateData(r_u_kout,u_kout);
     // 内存释放
     
     sycl::free(d_u_kin, q);
     sycl::free(d_u_kout, q);
     sycl::free(d_r, q);
+    std::cout << "17" << std::endl;
 }
 
 int main() {
@@ -266,8 +287,8 @@ int main() {
     double tau = 1.0 / n; //时间步长
     double *x,*t,**u;
     
-    //r=a*tau/(h*h);  //网比
-    //printf("r=%.4f.\n",r);
+    // r=a*tau/(h*h);  //网比
+    // printf("r=%.4f.\n",r);
     
     x = (double*)malloc(sizeof(double)*(m+1));
     for (int i=0;i<=m;i++) {
@@ -317,10 +338,11 @@ int main() {
         dacpp::Tensor<int,1> u_test1 = u_tensor.slice(1,k);
         // std::cout << typeid(u_tensor[{}][k]) << std::endl;
         PDE(u_test1, middle_tensor, R);
-        
+        middle_tensor.print();
         //计算完毕后，替换第1到4个点
         for (int i = 1; i <= 4; i++) {
-            u_tensor[i][k+1] = middle_tensor[i];
+            std::cout << "middle_tensor[" << i << "][0] = " << middle_tensor[i-1] << std::endl;
+            u_tensor[i][k+1] = middle_tensor[i-1];
         }
 
     }

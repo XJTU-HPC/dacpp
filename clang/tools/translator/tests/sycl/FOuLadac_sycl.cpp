@@ -9,9 +9,6 @@
 #include <fstream>
 #include <queue>
 #include "Slice.h"
-#include "ReconTensor.h"
-
-using dacpp::Tensor;
 
 namespace dacpp {
     typedef std::vector<std::any> list;
@@ -45,6 +42,7 @@ double exact(double x, double t) {
 
 #include <sycl/sycl.hpp>
 #include "/data/qinian/ice/dacpp/clang/tools/translator/dpcppLib/include/DataReconstructor.old.h"
+using dacpp::Tensor;
 
 using namespace sycl;
 
