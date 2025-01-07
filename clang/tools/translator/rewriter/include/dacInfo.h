@@ -13,7 +13,6 @@ class Dac_Op{
 	public:
 		//std::string name;         // 算子名称
 		char* name = new char[5];
-		std::string type;         //算子类型
 		int split_size;           // 划分数    算子作用于不同数据划分数一致
 		int split_length;         // 每份长度  算子作用于不同数据划分长度可以不同
 		int dimId;                // 算子作用的维度
@@ -130,7 +129,7 @@ class RegularSlice : public Dac_Op {
 	public:
 
 		RegularSlice();
-		std::string type = "RegularSlice";
+
 		/*
 			通过 算子名称，步长，作用维度上的每份长度 创建规则分区算子。
 		*/
@@ -144,7 +143,7 @@ class Index : public Dac_Op {
 	public:
 
 		Index();
-		std::string type = "Index";
+
 		/*
 			通过 算子名称，步长，作用维度上的每份长度 创建规则分区算子。
 		*/

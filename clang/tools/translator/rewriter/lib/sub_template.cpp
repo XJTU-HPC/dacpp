@@ -579,35 +579,8 @@ const char *OP_REGULAR_SLICE_INIT_Template2 = R"~~~(
     {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}}));
 )~~~";
 
-const char *OP_REGULAR_SLICE_INIT_Template2_Redefinition = R"~~~(
-    // 规则分区算子初始化
-    {{OP_NAME}}.setDimId({{DIM_ID}});
-    {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}}));
-)~~~";
-
-std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string tensor_name,bool Redefinition){
-    if(!Redefinition){
-		return templateString(OP_REGULAR_SLICE_INIT_Template2,
-	{
-		{"{{OP_NAME}}",    opName},
-		{"{{SIZE}}",       size},
-		{"{{STRIDE}}",     stride},
-		{"{{DIM_ID}}",     dim_id}, //需要通过dimId来计算算子的划分数了
-		{"{{TENSOR_NAME}}",     tensor_name}
-	});
-	}
-	return templateString(OP_REGULAR_SLICE_INIT_Template2_Redefinition,
-	{	
-		{"{{OP_NAME}}",    opName},
-		{"{{SIZE}}",       size},
-		{"{{STRIDE}}",     stride},
-		{"{{DIM_ID}}",     dim_id}, //需要通过dimId来计算算子的划分数了
-		{"{{TENSOR_NAME}}",     tensor_name}
-	});
-}
-
 std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string tensor_name){
-	return templateString(OP_REGULAR_SLICE_INIT_Template2,
+    return templateString(OP_REGULAR_SLICE_INIT_Template2,
 	{
 		{"{{OP_NAME}}",    opName},
 		{"{{SIZE}}",       size},
@@ -625,37 +598,13 @@ const char *OP_INDEX_INIT_Template2 = R"~~~(
     {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}}));
 )~~~";
 
-const char *OP_INDEX_INIT_Template2_Redefinition = R"~~~(
-    // 降维算子初始化
-    {{OP_NAME}}.setDimId({{DIM_ID}});
-    {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}}));
-)~~~";
-
-std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string TENSOR_NAME,bool Redefinition){
-    if(!Redefinition){
-	return templateString(OP_INDEX_INIT_Template2,
-	{
-		{"{{OP_NAME}}",    opName},
-		{"{{DIM_ID}}", dim_id}, //需要通过dimId来计算算子的划分数
-		{"{{TENSOR_NAME}}", TENSOR_NAME}
-	});
-	}
-	return templateString(OP_INDEX_INIT_Template2_Redefinition,
-	{	
-		{"{{OP_NAME}}",    opName},
-		{"{{DIM_ID}}", dim_id}, //需要通过dimId来计算算子的划分数
-		{"{{TENSOR_NAME}}", TENSOR_NAME}
-	});
-}
-
 std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string TENSOR_NAME){
-	return templateString(OP_INDEX_INIT_Template2,
+    return templateString(OP_INDEX_INIT_Template2,
 	{
 		{"{{OP_NAME}}",    opName},
 		{"{{DIM_ID}}", dim_id}, //需要通过dimId来计算算子的划分数
 		{"{{TENSOR_NAME}}", TENSOR_NAME}
 	});
-
 }
 
 //生成算子划分数的模板 在初始化算子时直接进行划分数的赋值了
@@ -1053,101 +1002,3 @@ std::string CodeGen_CalcEmbed2(std::string Name,Args args){
 		{"{{DAC_CALC_ARGS}}",    DacCalcArgs}
 	});
 }
-const char *REDUCTION_Template_Span2 = R"~~~(
-    // 归约
-    q.submit([&](handler &h) {
-    	h.parallel_for(
-        range<1>({{SPLIT_SIZE}} * {{SPAN_SIZE}}),
-        reduction(span<{{TYPE}},{{SPAN_SIZE}}>(reduction_{{NAME}},{{SPAN_SIZE}}), 
-        {{REDUCTION_RULE}},
-        property::reduction::initialize_to_identity()),
-        [=](id<1> i,auto &reducer) {
-            reducer[i % {{SPLIT_LENGTH}} + i/({{SPLIT_LENGTH}}*{{SPLIT_SIZE}})*{{SPLIT_LENGTH}}].combine(d_{{NAME}}[i]);
-     	});
- }).wait();
-    q.memcpy(d_{{NAME}},reduction_{{NAME}}, {{SPAN_SIZE}}*sizeof({{TYPE}})).wait();
-)~~~";
-
-std::string CodeGen_Reduction_Span2(std::string SpanSize,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule) {
-    return templateString(REDUCTION_Template_Span,
-	{
-        {"{{SPAN_SIZE}}",        SpanSize},   
-		{"{{SPLIT_SIZE}}",       SplitSize},
-		{"{{SPLIT_LENGTH}}",     SplitLength},
-		{"{{TYPE}}",             Type},
-		{"{{NAME}}",             Name},
-		{"{{REDUCTION_RULE}}",   ReductionRule}
-	});
-}
-
-const char *D2H_MEM_MOV_1_Template2 = R"~~~(
-    // 归并结果返回
-    q.memcpy(r_{{NAME}}, d_{{NAME}}, reduction_size*sizeof({{TYPE}})).wait();
-    {{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}});)~~~";
-
-const char *D2H_MEM_MOV_2_Template2 = R"~~~(
-    // 归约结果返回
-    q.memcpy(r_{{NAME}},d__{{NAME}}, reduction_size*sizeof({{TYPE}})).wait();
-    {{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}});)~~~";
-
-std::string CodeGen_D2HMemMov(std::string Name,std::string Type,bool isReduction){
-    if(isReduction){
-		return templateString(D2H_MEM_MOV_2_Template2,
-		{
-			{"{{TYPE}}",            Type},
-			{"{{NAME}}",            Name},
-		});
-	}
-	else{
-		return templateString(D2H_MEM_MOV_1_Template2,
-		{
-			{"{{TYPE}}",            Type},
-			{"{{NAME}}",            Name},
-		});
-	}
-}
-
-
-// int main(){
-// 	std::cout<<"******************dac2sycl CodeGen test******************\n\n";
-// 	Dac_Op i = Dac_Op("i",3,0);
-// 	Dac_Op j = Dac_Op("j",3,0);
-	
-// 	Dac_Ops ops;
-// 	ops.push_back(i);
-// 	ops.push_back(j);
-// 	std::string IndexInit = CodeGen_IndexInit(ops);
-
-// 	i.setSplitLength(1);
-// 	Dac_Ops vecA_ops;
-// 	vecA_ops.push_back(i);
-// 	DacData d_vecA = DacData("d_vecA",1,vecA_ops);
-// 	d_vecA.setDimLength(0,3);
-
-// 	j.setSplitLength(1);
-// 	Dac_Ops vecB_ops;
-// 	vecB_ops.push_back(j);
-// 	DacData d_vecB = DacData("d_vecB",1,vecB_ops);
-// 	d_vecB.setDimLength(0,3);
-
-// 	Dac_Ops dotProduct_ops;
-// 	i.setSplitLength(3);
-// 	j.setSplitLength(3);
-// 	j.setDimId(1);
-// 	dotProduct_ops.push_back(i);
-// 	dotProduct_ops.push_back(j);
-// 	DacData d_dotProduct = DacData("d_dotProduct",2,dotProduct_ops);
-// 	d_dotProduct.setDimLength(0,3);
-// 	d_dotProduct.setDimLength(1,3);
-
-// 	Args args = Args();
-// 	args.push_back(d_vecA);
-// 	args.push_back(d_vecB);
-// 	args.push_back(d_dotProduct);
-// 	std::string CalcEmbed = CodeGen_CalcEmbed("mat_mul",args);
-
-// 	std::string KernelExecute = CodeGen_KernelExecute("9",IndexInit,CalcEmbed);
-
-// 	std::cout<<KernelExecute;
-// 	return 0;
-// }
