@@ -1,3 +1,6 @@
+#ifndef DATARECONSTRUCTOR_H
+#define DATARECONSTRUCTOR_H
+
 #include<string>
 #include<iostream>
 #include<fstream>
@@ -176,3 +179,5 @@ class DataReconstructor{
             std::sort(this->posNumberList.begin(),this->posNumberList.end(),[](PosNumber a,PosNumber b){return (a.number==b.number)?a.pos<b.pos:a.number<b.number;});
        }
 };
+
+#endif

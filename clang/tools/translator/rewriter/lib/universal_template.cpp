@@ -136,7 +136,7 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 		for(int j=0;j<args[i].ops.size;j++){
 			std::string opsname = args[i].ops[j].name;
 			//IndexComb+= args[i].ops[j].name + "*" + std::to_string(args[i].ops[j].split_length);
-			IndexComb+= opsname + "*" + std::to_string(args[i].ops[j].split_length);
+			IndexComb+= opsname + "_" + "*" + std::to_string(args[i].ops[j].split_length);
 			if(j!=args[i].ops.size-1) IndexComb+="+";
 		}
 		IndexComb+=")";

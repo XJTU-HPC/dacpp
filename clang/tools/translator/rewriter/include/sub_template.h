@@ -73,9 +73,13 @@ std::string CodeGen_MemFree(std::string Name);
 
 //下面是新增的
 
-std::string CodeGen_DAC2SYCL2(std::string dacShellName, std::string dacShellParams, std::string opInit, std::string parameter_generate, std::string deviceMemAlloc, std::string dataAssocComp, std::string memFree);
+std::string CodeGen_DAC2SYCL2(std::string dacShellName, std::string dacShellParams,std::string opInit, std::string parameter_generate, std::string deviceMemAlloc, std::string dataAssocComp, std::string memFree);
 
-std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string tensor_name);
+//std::string CodeGen_DAC2SYCL2(std::string dacShellName, std::string dacShellParams, std::string opInit, std::string parameter_generate, std::string deviceMemAlloc, std::string dataAssocComp, std::string memFree);
+
+//std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string tensor_name);
+
+std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string DATA_INFO_NAME);
 
 std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME,std::string DACOPS_NAME);
 
@@ -108,4 +112,6 @@ std::string CodeGen_Init_Reduction_Split_Length(std::string NAME,std::string OPS
 std::string CodeGen_ParameterGenerate(std::string InitOPS,std::string InitDeviceMemorySize,std::string InitSplitLength,std::string InitSpilitLengthMatrix,std::string ItemNumber,std::string InitReductionSplitSize,std::string InitReductionSplitLength);
 
 std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string TENSOR_NAME);
+
+std::string CodeGen_InitParameterTool(std::string DIM_NUM);
 #endif
