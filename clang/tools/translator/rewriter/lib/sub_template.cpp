@@ -468,18 +468,16 @@ std::string CodeGen_Reduction(std::string SplitSize,std::string Name,std::string
 
 const char *REDUCTION_Template_Span = R"~~~(
     // 归约
-    for(int i=0;i<{{SPAN_SIZE}};i++) {
-        q.submit([&](handler &h) {
-    	    h.parallel_for(
-            range<1>({{SPLIT_SIZE}}),
-            reduction(reduction_{{NAME}}+i, 
-            {{REDUCTION_RULE}},
-            property::reduction::initialize_to_identity()),
-            [=](id<1> idx,auto &reducer) {
-                reducer.combine(d_{{NAME}}[(i/{{SPLIT_LENGTH}})*{{SPLIT_LENGTH}}*{{SPLIT_SIZE}}+i%{{SPLIT_LENGTH}}+idx*{{SPLIT_LENGTH}}]);
-     	    });
-     }).wait();
-    }
+    q.submit([&](handler &h) {
+    	h.parallel_for(
+        range<1>({{SPLIT_SIZE}} * {{SPAN_SIZE}}),
+        reduction(span<{{TYPE}},{{SPAN_SIZE}}>(reduction_{{NAME}},{{SPAN_SIZE}}), 
+        {{REDUCTION_RULE}},
+        property::reduction::initialize_to_identity()),
+        [=](id<1> i,auto &reducer) {
+            reducer[i % {{SPLIT_LENGTH}} + i/({{SPLIT_LENGTH}}*{{SPLIT_SIZE}})*{{SPLIT_LENGTH}}].combine(d_{{NAME}}[i]);
+     	});
+ }).wait();
     q.memcpy(d_{{NAME}},reduction_{{NAME}}, {{SPAN_SIZE}}*sizeof({{TYPE}})).wait();
 )~~~";
 
