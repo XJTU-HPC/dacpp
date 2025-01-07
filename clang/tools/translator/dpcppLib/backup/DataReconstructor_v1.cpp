@@ -4,8 +4,8 @@
 #include<vector>
 #include<algorithm>
 #include<map>
-#include "dacppLib/sub_template.h"
-#include "dacppLib/Tensor.hpp"
+#include "sub_template.h"
+#include "Tensor.hpp"
 
 /*
     维度类，用于表示数据某一维度的信息。

@@ -224,8 +224,8 @@ namespace dacpp {
         Tensor<ImplType, N>& operator=(const Tensor<ImplType, N>& operand); 
         TensorProxy<ImplType, N> operator[](std::initializer_list<int> idx);
         TensorProxy<ImplType, N-1> operator[](int idx) const;
-        TensorProxy<ImplType, N> operator[](RegularSplit sp) const;
-        TensorProxy<ImplType, N - 1> operator[](Index sp) const;
+        TensorProxy<ImplType, N> operator[](split sp) const;
+        TensorProxy<ImplType, N - 1> operator[](index sp) const;
         Tensor<ImplType, N-1> slice(int dimIdx, int idx) const;
         Tensor<ImplType, N> slice(int dimIdx, int start, int end, int sliceStride = 1 , int ModifyDim = 0) const;
         Tensor<ImplType, N> operator+(const Tensor<ImplType, N>& operand) const{};
@@ -412,11 +412,11 @@ namespace dacpp {
         return TensorProxy<ImplType, N - 1>(*this, this->current_dim, idx);
     }
     template<class ImplType, int N>
-    TensorProxy<ImplType, N> Tensor<ImplType, N> :: operator[](RegularSplit sp) const {
+    TensorProxy<ImplType, N> Tensor<ImplType, N> :: operator[](split sp) const {
         return TensorProxy<ImplType, N>(*this, 0, 0, this->shape_.get()[this->current_dim], 1, 0);
     }
     template<class ImplType, int N>
-    TensorProxy<ImplType, N - 1> Tensor<ImplType, N> :: operator[](Index sp) const {
+    TensorProxy<ImplType, N - 1> Tensor<ImplType, N> :: operator[](index sp) const {
         return TensorProxy<ImplType, N-1>(*this, this->current_dim, 0);
     }
     template<class ImplType, int N>
@@ -482,8 +482,8 @@ namespace dacpp {
 
         TensorProxy<ImplType, 1> operator[](std::initializer_list<int> idx);
         ImplType& operator[](int idx);
-        TensorProxy<ImplType, 1> operator[](RegularSplit sp) const;
-        ImplType& operator[](Index sp) const;
+        TensorProxy<ImplType, 1> operator[](split sp) const;
+        ImplType& operator[](index sp) const;
         ImplType& slice(int dimIdx, int idx) const;
         Tensor<ImplType, 1> slice(int dimIdx, int start, int end, int sliceStride = 1 , int ModifyDim = 0) const;
         Tensor<ImplType, 1> operator+(const Tensor<ImplType, 1>& operand) const{};
@@ -626,9 +626,9 @@ namespace dacpp {
     template<class ImplType>
     ImplType& Base :: operator[](int idx) {return slice(this->current_dim, idx);}
     template<class ImplType>
-    TensorProxy<ImplType, 1> Base :: operator[](RegularSplit sp) const {return TensorProxy<ImplType, 1>(*this, 0, 0, this->shape_.get()[this->current_dim], 1, 0);}
+    TensorProxy<ImplType, 1> Base :: operator[](split sp) const {return TensorProxy<ImplType, 1>(*this, 0, 0, this->shape_.get()[this->current_dim], 1, 0);}
     template<class ImplType>
-    ImplType& Base :: operator[](Index sp) const{return slice(this->current_dim, 0);}
+    ImplType& Base :: operator[](index sp) const{return slice(this->current_dim, 0);}
     template<class ImplType>
     ImplType& Base :: slice(int dimIdx, int idx) const {
         if(dimIdx >= this->dim_ || idx >= this->shape_.get()[dimIdx]) 
@@ -665,8 +665,8 @@ namespace dacpp {
         TensorProxy(std::shared_ptr<ImplType> data, int offset, int dim, std::shared_ptr<int> shape, std::shared_ptr<int> stride, int currentdim);
         TensorProxy<ImplType, N> operator[](std::initializer_list<int> idx);
         TensorProxy<ImplType, N-1> operator[](int idx) const;
-        TensorProxy<ImplType, N> operator[](RegularSplit sp) const;
-        TensorProxy<ImplType, N - 1> operator[](Index sp) const;
+        TensorProxy<ImplType, N> operator[](split sp) const;
+        TensorProxy<ImplType, N - 1> operator[](index sp) const;
         TensorProxy<ImplType, N-1> Pslice(int dimIdx, int idx) const;
         TensorProxy<ImplType, N> Pslice(int dimIdx, int start, int end, int sliceStride = 1 , int ModifyDim = 0) const;
         TensorProxy(const TensorProxy&& x){
@@ -797,11 +797,11 @@ namespace dacpp {
         return Pslice(this->current_dim, idx);
     }
     template<class ImplType, int N>
-    TensorProxy<ImplType, N> Base :: operator[](RegularSplit sp) const {
+    TensorProxy<ImplType, N> Base :: operator[](split sp) const {
         return *this;
     }
     template<class ImplType, int N>
-    TensorProxy<ImplType, N - 1> Base :: operator[](Index sp) const {
+    TensorProxy<ImplType, N - 1> Base :: operator[](index sp) const {
         return Pslice(this->current_dim, 0);
     }
     template<class ImplType, int N>
@@ -885,8 +885,8 @@ namespace dacpp {
         TensorProxy(std::shared_ptr<ImplType> data, int offset, int dim, std::shared_ptr<int> shape, std::shared_ptr<int> stride, int currentdim);
         TensorProxy<ImplType, 1> operator[](std::initializer_list<int> idx);
         ImplType& operator[](int idx);
-        TensorProxy<ImplType, 1> operator[](RegularSplit sp)const;
-        ImplType& operator[](Index sp) const;
+        TensorProxy<ImplType, 1> operator[](split sp)const;
+        ImplType& operator[](index sp) const;
         ImplType& Pslice(int dimIdx, int idx) const;
         TensorProxy<ImplType, 1> Pslice(int dimIdx, int start, int end, int sliceStride = 1 , int ModifyDim = 0) const;
         TensorProxy(const TensorProxy&& x){
@@ -964,7 +964,7 @@ namespace dacpp {
     }
     template<class ImplType>
     Base :: TensorProxy(const dacpp::Tensor<ImplType, 1> &tensor, int dimIdx, int start, int end, int sliceStride, int ModifyDim){
-        if(dimIdx >= tensor.getDim || start >= tensor.getShape(dimIdx) || end > tensor.getShape(dimIdx)
+        if(dimIdx >= tensor.getDim() || start >= tensor.getShape(dimIdx) || end > tensor.getShape(dimIdx)
         || start < 0 || end < 0 || start > end) 
             throw std::runtime_error("[{}] operates on dimensions that exceed those of TensorProxy.");
         int offset = start * tensor.getStride(dimIdx);
@@ -1017,11 +1017,11 @@ namespace dacpp {
         return Pslice(this->current_dim, idx);
     }
     template<class ImplType>
-    TensorProxy<ImplType, 1> Base :: operator[](RegularSplit sp) const {
+    TensorProxy<ImplType, 1> Base :: operator[](split sp) const {
         return *this;
     }
     template<class ImplType>
-    ImplType& Base :: operator[](Index sp) const{
+    ImplType& Base :: operator[](index sp) const{
         return Pslice(this->current_dim, 0);
     }
     template<class ImplType>

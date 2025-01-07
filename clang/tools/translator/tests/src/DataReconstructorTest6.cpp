@@ -7,9 +7,13 @@ void debug(int num){
 int main(){
     // 数据包装
     std::vector<int> dataB{1,5,9,13,2,6,10,14,3,7,11,15,4,8,12,16};
-    std::vector<int> shapeB{4,4};
-    dacpp::Tensor<int> matB(dataB,shapeB);
+    // std::vector<int> shapeB{4,4};
+    dacpp::Tensor<int,2> matB({4,4},dataB);
     matB.print();
+
+    DataInfo info_matB;
+    info_matB.dim = matB.getDim();
+    for(int i = 0; i < info_matB.dim; i++) info_matB.dimLength.push_back(matB.getShape(i));
     
     // 算子初始化
     RegularSlice si = RegularSlice("idx1", 2, 2);
@@ -29,8 +33,8 @@ int main(){
     sj.setDimId(1);
     sj.setSplitLength(4);
     matB_ops.push_back(sj);
-    matB_tool.init(matB,matB_ops);
-    matB_tool.Reconstruct(r_matB);
+    matB_tool.init(info_matB,matB_ops);
+    matB_tool.Reconstruct(r_matB,matB);
     
     std::cout <<  "加入sk、sj算子,，matB重组结果:\n";
     for(int i=0;i<4;i++){
@@ -52,7 +56,7 @@ int main(){
     j.setDimId(1);
     j.setSplitLength(2);
     matB_tool.push_back(j);
-    matB_tool.Reconstruct(r_matB);
+    matB_tool.Reconstruct(r_matB,matB);
     
     std::cout <<  "加入j算子，matB重组结果:\n";
     for(int i=0;i<4;i++){
@@ -72,7 +76,7 @@ int main(){
     k.setDimId(1);
     k.setSplitLength(1);
     matB_tool.push_back(k);
-    matB_tool.Reconstruct(r_matB);
+    matB_tool.Reconstruct(r_matB,matB);
 
     std::cout <<  "加入k算子，matB重组结果:\n";
     for(int i=0;i<4;i++){
@@ -85,7 +89,7 @@ int main(){
     // ------------------------------------------------------分割线，退回层calc kernel-----------------------------------------------------------------------------
     
     matB_tool.pop_back();
-    matB_tool.Reconstruct(r_matB);
+    matB_tool.Reconstruct(r_matB,matB);
 
     std::cout <<  "去掉k算子，matB重组结果:\n";
     for(int i=0;i<4;i++){
@@ -97,7 +101,7 @@ int main(){
     
     // ------------------------------------------------------分割线，退回层calc kernel-----------------------------------------------------------------------------
     matB_tool.pop_back();
-    matB_tool.Reconstruct(r_matB);
+    matB_tool.Reconstruct(r_matB,matB);
 
     std::cout <<  "去掉i算子，matB重组结果:\n";
     for(int i=0;i<4;i++){

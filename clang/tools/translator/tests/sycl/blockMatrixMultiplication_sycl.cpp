@@ -17,10 +17,23 @@ void multiplication(int* mat1, int* mat2, int* mat3) {
 }
 
 // 生成函数调用
-void split(const Tensor<int> & matA, const Tensor<int> & matB, Tensor<int> & matC) { 
+void split(const Tensor<int,2> & matA, const Tensor<int,2> & matB, Tensor<int,2> & matC) { 
     // 设备选择
     auto selector = gpu_selector_v;
     queue q(selector);
+
+    DataInfo info_matA;
+    info_matA.dim = matA.getDim();
+    for(int i = 0; i < info_matA.dim; i++) info_matA.dimLength.push_back(matA.getShape(i));
+
+    DataInfo info_matB;
+    info_matB.dim = matB.getDim();
+    for(int i = 0; i < info_matB.dim; i++) info_matB.dimLength.push_back(matB.getShape(i));
+
+    DataInfo info_matC;
+    info_matC.dim = matC.getDim();
+    for(int i = 0; i < info_matC.dim; i++) info_matC.dimLength.push_back(matC.getShape(i));
+
     // 算子初始化
     
     // 规则分区算子初始化
@@ -47,8 +60,8 @@ void split(const Tensor<int> & matA, const Tensor<int> & matB, Tensor<int> & mat
     s3.setDimId(1);
     s3.setSplitLength(4);
     matA_ops.push_back(s3);
-    matA_tool.init(matA,matA_ops);
-    matA_tool.Reconstruct(r_matA);
+    matA_tool.init(info_matA,matA_ops);
+    matA_tool.Reconstruct(r_matA,matA);
     // 数据重组
     DataReconstructor<int> matB_tool;
     int* r_matB=(int*)malloc(sizeof(int)*16);
@@ -62,8 +75,8 @@ void split(const Tensor<int> & matA, const Tensor<int> & matB, Tensor<int> & mat
     s2.setDimId(1);
     s2.setSplitLength(4);
     matB_ops.push_back(s2);
-    matB_tool.init(matB,matB_ops);
-    matB_tool.Reconstruct(r_matB);
+    matB_tool.init(info_matB,matB_ops);
+    matB_tool.Reconstruct(r_matB,matB);
     // 数据重组
     DataReconstructor<int> matC_tool;
     int* r_matC=(int*)malloc(sizeof(int)*16);
@@ -77,8 +90,8 @@ void split(const Tensor<int> & matA, const Tensor<int> & matB, Tensor<int> & mat
     s2.setDimId(1);
     s2.setSplitLength(4);
     matC_ops.push_back(s2);
-    matC_tool.init(matC,matC_ops);
-    matC_tool.Reconstruct(r_matC);
+    matC_tool.init(info_matC,matC_ops);
+    matC_tool.Reconstruct(r_matC,matC);
     // 设备内存分配
     
     // 设备内存分配
@@ -153,16 +166,13 @@ void split(const Tensor<int> & matA, const Tensor<int> & matB, Tensor<int> & mat
 
 int main() {
     std::vector<int> dataA{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-    std::vector<int> shapeA{4, 4}; 
-    Tensor<int> matA(dataA, shapeA);
+    Tensor<int,2> matA({4,4},dataA);
 
     std::vector<int> dataB{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-    std::vector<int> shapeB{4, 4};
-    Tensor<int> matB(dataB, shapeB);
+    Tensor<int,2> matB({4,4},dataB);
 
     std::vector<int> dataC{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-    std::vector<int> shapeC{4, 4};
-    Tensor<int> matC(dataC, shapeC);
+    Tensor<int,2> matC({4,4},dataC);
 
     split(matA, matB, matC);
 

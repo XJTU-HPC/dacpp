@@ -3,7 +3,6 @@
 
 #include <exception>
 #include <cstdio>
-
 namespace dacpp {
 
 struct Error: public std::exception {
