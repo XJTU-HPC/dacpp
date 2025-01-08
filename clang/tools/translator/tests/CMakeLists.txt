@@ -6,4 +6,4 @@ project(Dac2SyclTest)
 
 add_subdirectory(src)
 add_subdirectory(sycl)
-add_subdirectory(examples)
+# add_subdirectory(examples)
