@@ -1,28 +1,40 @@
 #!/usr/bin/env bash
 
-exec 2>/dev/null
+# exec 2>/dev/null
 
-#Delelte all tmporary files
+# Delete all temporary files
 rm -rf ./tmp
 mkdir ./tmp
 
 # Edit examples here
 examples=("matMul"
     # "block_mat_mul"
-    "waveEquation1.0"
-    "stencil1.0"
-    "jacobi1.0"
+    # "waveEquation1.0"
+    # "stencil1.0"
+    # "jacobi1.0"
     "FOuLa1.0"
 )
 
 
 WORK_DIR=../../../../clang/tools/translator
+# INCLUDE_DIRS=("$WORK_DIR/dpcppLib/include/"
+#     "$WORK_DIR/dacppLib/include/"
+#     "$WORK_DIR/rewriter/include/"
+# )
 INCLUDE_DIRS=("$WORK_DIR/dpcppLib/include/"
     "$WORK_DIR/dacppLib/include/"
     "$WORK_DIR/rewriter/include/"
+    "/data/zjx/dacpp/clang/include/"
+    "/data/zjx/dacpp/llvm/include/"
+    "/data/zjx/dacpp/utils/bazel/llvm-project-overlay/llvm/include/"
 )
-SRC_DIRS=("$WORK_DIR/dpcppLib/lib/"
+# SRC_DIRS=("$WORK_DIR/dpcppLib/lib/"
+#     "$WORK_DIR/rewriter/lib/"
+#     )
+SRC_DIRS=(
     "$WORK_DIR/rewriter/lib/"
+    "/data/zjx/dacpp/clang/lib/"
+    "/data/zjx/dacpp/llvm/lib/"
     )
 SRC_FILES=()
 for dir in ${SRC_DIRS[@]}; do
