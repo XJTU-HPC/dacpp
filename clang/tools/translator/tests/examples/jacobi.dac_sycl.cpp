@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
+#include "Slice.h"
 
 // 定义矩阵大小
 const int N = 100; // 可以修改 N 的值来改变矩阵大小

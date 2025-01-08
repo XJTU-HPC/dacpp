@@ -1,7 +1,12 @@
+#ifndef PARAMETERGENERATION_H
+#define PARAMETERGENERATION_H
+
 #include <iostream>
 #include <string>
 #include <unordered_set>
+// #include "/data/zjx/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
 #include "sub_template.h"
+#include "DataReconstructor.h"
 #include "ReconTensor.h"
 
 template <typename ImplType,int N>
@@ -32,6 +37,13 @@ class ParameterGeneration
             return split_num;
         }
 
+        int init_operetor_splitnumber(Dac_Op si,DataInfo data_info)
+        {
+            //int split_num = (tensor.getShape(si.dimId) - si.size) / si.stride + 1;
+            int split_num = (data_info.dimLength[si.dimId] - si.size) / si.stride + 1;
+            return split_num;
+        }
+
         //生成设备内存的分配大小 支持情况：mat[分区][分区] mat[分区][降维] mat[分区][] mat[降维][]
         //同时也是设备和主机之间内存移动大小 q.memcpy()里面的SIZE
         int init_device_memory_size(dacpp::Tensor<ImplType,N> tensor,Dac_Ops ops)
@@ -57,10 +69,44 @@ class ParameterGeneration
             return result;
         }
 
+        int init_device_memory_size(DataInfo data_info,Dac_Ops ops)
+        {
+            int result = 1;//初始化结果为1 
+            std::unordered_set<int> mySet;//用来存储算子作用的维度
+            for(int i = 0;i < ops.size;i ++)
+            {
+                int dimId = ops[i].dimId;//拿到算子的维度
+                mySet.insert(dimId);//将算子作用的维度放入集合中
+                int split_num = (data_info.dimLength[dimId] - ops[i].size) / ops[i].stride + 1;//计算算子的划分数
+                int length = split_num * ops[i].size;//划分数乘以划分的大小
+                result *= length;
+            }
+            for(int i = 0;i < data_info.dim;i ++)
+            {
+                if (mySet.find(i) == mySet.end()) 
+                {
+                    //i不存在也就是说算子没有作用这个维度 这个维度是保型算子
+                    result *= data_info.dimLength[i];
+                }
+            }
+            return result;
+        }
+
         //生成设备内存分配大小 支持情况：mat[][]
         int init_device_memory_size(dacpp::Tensor<ImplType,N> tensor)
         {
             return tensor.getSize();
+        }
+
+        int init_device_memory_size(DataInfo data_info)
+        {
+            int result = 1;
+            for(int i = 0;i <= data_info.dim;i ++)
+            {
+                result *= data_info.dimLength[i]; 
+            }
+            return result;
+            //return tensor.getSize();
         }
 
         /*下面函数已废弃  接口太复杂了*/
@@ -109,6 +155,21 @@ class ParameterGeneration
             return init_device_memory_size(tensor_out,ops_out) * in_op_product / out_op_product;
         }
 
+        int init_device_memory_size(Dac_Ops ops_in,Dac_Ops ops_out,DataInfo data_info)
+        {
+            int in_op_product = 1;//输入算子划分数的乘积
+            for(int i = 0;i < ops_in.size;i ++)
+            {
+                in_op_product *= ops_in.DacOps[i].split_size; //spilit在前面初始化算子的时候已经完成
+            }
+            int out_op_product = 1;//输出算子划分数的乘积
+            for(int i = 0;i < ops_out.size;i ++)
+            {
+                out_op_product *= ops_out.DacOps[i].split_size; //spilit在前面初始化算子的时候已经完成
+            }
+            return init_device_memory_size(data_info,ops_out) * in_op_product / out_op_product;
+        }
+
         //生成开辟工作项多少 localsize
         //实际上是输入算子所有划分数的乘积 或者说数据元组的个数（数据单元组成数据元组）
         //由后端对算子组进行去重
@@ -126,6 +187,7 @@ class ParameterGeneration
         //两个参数分别是算子组和重组之后的数据大小
         void init_op_split_length(Dac_Ops& ops,int size)
         {
+            if(ops.size == 0) return;
             ops.DacOps[0].setSplitLength(size / ops.DacOps[0].split_size);//第0维的划分长度是重组后的数据大小除以第0维的划分数
             for(int i = 1;i < ops.size;i ++)
             {
@@ -166,5 +228,22 @@ class ParameterGeneration
         int init_reduction_split_length(Dac_Ops ops)
         {
             return ops.DacOps[ops.size - 1].split_length;//返回最后一个算子的划分数
-        }       
+        }
+
+        // bool judge_reduction(Dac_Ops ops_in,Dac_Ops ops_out)
+        // {
+        //     int in_op_product = 1;//输入算子划分数的乘积
+        //     for(int i = 0;i < ops_in.size;i ++)
+        //     {
+        //         in_op_product *= ops_in.DacOps[i].split_size; //spilit在前面初始化算子的时候已经完成
+        //     }
+        //     int out_op_product = 1;//输出算子划分数的乘积
+        //     for(int i = 0;i < ops_out.size;i ++)
+        //     {
+        //         out_op_product *= ops_out.DacOps[i].split_size; //spilit在前面初始化算子的时候已经完成
+        //     }
+        //     return (in_op_product / out_op_product > 1);
+        // }
 };
+
+#endif

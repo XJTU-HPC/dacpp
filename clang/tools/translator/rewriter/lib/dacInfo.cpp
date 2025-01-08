@@ -53,9 +53,15 @@ void Dac_Op::SetSplitSize(int split_size) {
 Dac_Ops::Dac_Ops(){
 	this->size = 0;
 }
-void Dac_Ops::push_back(Dac_Op x){
-	this->DacOps.push_back(x);
+void Dac_Ops::push_back(Dac_Op op){
+	this->DacOps.push_back(op);
 	this->size++;
+}
+void Dac_Ops::push_back(Dac_Ops ops){
+	for(int i=0;i<ops.size;i++){
+		this->DacOps.push_back(ops[i]);
+		this->size++;
+	}
 }
 
 void Dac_Ops::pop_back() {

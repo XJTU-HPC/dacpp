@@ -68,7 +68,8 @@ class Dac_Ops{
 		int size;
 
 		Dac_Ops();
-		void push_back(Dac_Op x);
+		void push_back(Dac_Op op);
+		void push_back(Dac_Ops ops);
 		void pop_back();
 		void clear();
 		Dac_Op& operator[](int i);
@@ -129,7 +130,6 @@ class RegularSlice : public Dac_Op {
 	public:
 
 		RegularSlice();
-
 		/*
 			通过 算子名称，步长，作用维度上的每份长度 创建规则分区算子。
 		*/
@@ -143,7 +143,6 @@ class Index : public Dac_Op {
 	public:
 
 		Index();
-
 		/*
 			通过 算子名称，步长，作用维度上的每份长度 创建规则分区算子。
 		*/

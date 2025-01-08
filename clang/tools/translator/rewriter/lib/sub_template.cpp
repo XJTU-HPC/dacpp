@@ -468,19 +468,23 @@ std::string CodeGen_Reduction(std::string SplitSize,std::string Name,std::string
 
 const char *REDUCTION_Template_Span = R"~~~(
     // 归约
-    for(int i=0;i<{{SPAN_SIZE}};i++) {
-        q.submit([&](handler &h) {
-    	    h.parallel_for(
-            range<1>({{SPLIT_SIZE}}),
-            reduction(reduction_{{NAME}}+i, 
-            {{REDUCTION_RULE}},
-            property::reduction::initialize_to_identity()),
-            [=](id<1> idx,auto &reducer) {
-                reducer.combine(d_{{NAME}}[(i/{{SPLIT_LENGTH}})*{{SPLIT_LENGTH}}*{{SPLIT_SIZE}}+i%{{SPLIT_LENGTH}}+idx*{{SPLIT_LENGTH}}]);
-     	    });
-     }).wait();
+    if({{SPLIT_SIZE}} > 1)
+    {
+        for(int i=0;i<{{SPAN_SIZE}};i++) {
+            q.submit([&](handler &h) {
+    	        h.parallel_for(
+                range<1>({{SPLIT_SIZE}}),
+                reduction(reduction_{{NAME}}+i, 
+                {{REDUCTION_RULE}},
+                property::reduction::initialize_to_identity()),
+                [=](id<1> idx,auto &reducer) {
+                    reducer.combine(d_{{NAME}}[(i/{{SPLIT_LENGTH}})*{{SPLIT_LENGTH}}*{{SPLIT_SIZE}}+i%{{SPLIT_LENGTH}}+idx*{{SPLIT_LENGTH}}]);
+     	        });
+         }).wait();
+        }
+        q.memcpy(d_{{NAME}},reduction_{{NAME}}, {{SPAN_SIZE}}*sizeof({{TYPE}})).wait();
     }
-    q.memcpy(d_{{NAME}},reduction_{{NAME}}, {{SPAN_SIZE}}*sizeof({{TYPE}})).wait();
+
 )~~~";
 
 std::string CodeGen_Reduction_Span(std::string SpanSize,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule) {
@@ -498,12 +502,12 @@ std::string CodeGen_Reduction_Span(std::string SpanSize,std::string SplitSize,st
 const char *D2H_MEM_MOV_1_Template = R"~~~(
     // 归并结果返回
     q.memcpy(r_{{NAME}}, d_{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();
-    {{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}},{{NAME}});)~~~";
+    {{NAME}}_tool.UpdateData(r_{{NAME}},{{NAME}});)~~~";
 
 const char *D2H_MEM_MOV_2_Template = R"~~~(
     // 归约结果返回
     q.memcpy(r_{{NAME}},d__{{NAME}}, {{SIZE}}*sizeof({{TYPE}})).wait();
-    {{NAME}} = {{NAME}}_tool.UpdateData(r_{{NAME}},{{NAME}});)~~~";
+    {{NAME}}_tool.UpdateData(r_{{NAME}},{{NAME}});)~~~";
 
 std::string CodeGen_D2HMemMov(std::string Name,std::string Type,std::string Size,bool isReduction){
     if(isReduction){
@@ -539,13 +543,15 @@ std::string CodeGen_MemFree(std::string Name){
 /*下面是新增加以及修改的模板 之前的模板未做更改*/
 
 //新的总的生成模板，调整了顺序 先算子初始化再去计算参数
+
 const char *DAC2SYCL_Template_2 = R"~~~(
 // 生成函数调用
 void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) { 
     // 设备选择
     auto selector = gpu_selector_v;
     queue q(selector);
-    ParameterGeneration<int,2> para_gene_tool; //参数生成工具
+    //声明参数生成工具
+    ParameterGeneration<int,2> para_gene_tool;
     // 算子初始化
     {{OP_INIT}}
     //参数生成
@@ -558,9 +564,9 @@ void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) {
     {{MEM_FREE}}
 })~~~";
 
-std::string CodeGen_DAC2SYCL2(std::string dacShellName, std::string dacShellParams, std::string opInit, std::string parameter_generate, std::string deviceMemAlloc, std::string dataAssocComp, std::string memFree){
+std::string CodeGen_DAC2SYCL2(std::string dacShellName, std::string dacShellParams,std::string opInit, std::string parameter_generate, std::string deviceMemAlloc, std::string dataAssocComp, std::string memFree){
     return templateString(DAC2SYCL_Template_2,
-	{
+	{	
 		{"{{DAC_SHELL_NAME}}",    dacShellName},
 		{"{{DAC_SHELL_PARAMS}}",  dacShellParams},
 		{"{{OP_INIT}}",           opInit},
@@ -571,22 +577,87 @@ std::string CodeGen_DAC2SYCL2(std::string dacShellName, std::string dacShellPara
 	});
 }
 
+// const char *DAC2SYCL_Template_2 = R"~~~(
+// // 生成函数调用
+// void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) { 
+//     // 设备选择
+//     auto selector = gpu_selector_v;
+//     queue q(selector);
+//     //声明参数生成工具
+//     {{ParameterTool}}
+//     // 算子初始化
+//     {{OP_INIT}}
+//     //参数生成
+// 	{{ParameterGenerate}}
+//     // 设备内存分配
+//     {{DEVICE_MEM_ALLOC}}
+//     // 数据关联计算
+//     {{DATA_ASSOC_COMP}}
+//     // 内存释放
+//     {{MEM_FREE}}
+// })~~~";
+
+// std::string CodeGen_DAC2SYCL2(std::string dacShellName, std::string dacShellParams,std::string parameter_tool, std::string opInit, std::string parameter_generate, std::string deviceMemAlloc, std::string dataAssocComp, std::string memFree){
+//     return templateString(DAC2SYCL_Template_2,
+// 	{	
+// 		{"{{DAC_SHELL_NAME}}",    dacShellName},
+// 		{"{{DAC_SHELL_PARAMS}}",  dacShellParams},
+// 		{"{{ParameterTool}}",     parameter_tool},
+// 		{"{{OP_INIT}}",           opInit},
+// 		{"{{ParameterGenerate}}", parameter_generate},
+// 		{"{{DEVICE_MEM_ALLOC}}",  deviceMemAlloc},
+// 		{"{{DATA_ASSOC_COMP}}",   dataAssocComp},
+//         {"{{MEM_FREE}}",          memFree}
+// 	});
+// }
+
+// 下面已经不需要了
+// //参数生成工具的声明 Tensor是几维的这个就应该是几维的
+// const char *INIT_PARAMETER_TOOL_Template = R"~~~(
+//     ParameterGeneration<int,{{DIM_NUM}}> para_gene_tool{{NUM}};
+// )~~~";
+
+// std::string CodeGen_InitParameterTool(std::string DIM_NUM){
+//     return templateString(INIT_PARAMETER_TOOL_Template,
+// 	{
+// 		{"{{DIM_NUM}}",    DIM_NUM}
+// 	});
+// }
+
 //新的 规则分区算子初始化
+// const char *OP_REGULAR_SLICE_INIT_Template2 = R"~~~(
+//     // 规则分区算子初始化
+//     RegularSlice {{OP_NAME}} = RegularSlice("{{OP_NAME}}", {{SIZE}}, {{STRIDE}});
+//     {{OP_NAME}}.setDimId({{DIM_ID}});
+//     {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}}));
+// )~~~";
+
+// std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string tensor_name){
+//     return templateString(OP_REGULAR_SLICE_INIT_Template2,
+// 	{
+// 		{"{{OP_NAME}}",    opName},
+// 		{"{{SIZE}}",       size},
+// 		{"{{STRIDE}}",     stride},
+// 		{"{{DIM_ID}}",     dim_id}, //需要通过dimId来计算算子的划分数了
+// 		{"{{TENSOR_NAME}}",     tensor_name}
+// 	});
+// }
+
 const char *OP_REGULAR_SLICE_INIT_Template2 = R"~~~(
     // 规则分区算子初始化
     RegularSlice {{OP_NAME}} = RegularSlice("{{OP_NAME}}", {{SIZE}}, {{STRIDE}});
     {{OP_NAME}}.setDimId({{DIM_ID}});
-    {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}}));
+    {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{DATA_INFO_NAME}}));
 )~~~";
 
-std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string tensor_name){
+std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string DATA_INFO_NAME){
     return templateString(OP_REGULAR_SLICE_INIT_Template2,
 	{
 		{"{{OP_NAME}}",    opName},
 		{"{{SIZE}}",       size},
 		{"{{STRIDE}}",     stride},
 		{"{{DIM_ID}}",     dim_id}, //需要通过dimId来计算算子的划分数了
-		{"{{TENSOR_NAME}}",     tensor_name}
+		{"{{DATA_INFO_NAME}}",     DATA_INFO_NAME}
 	});
 }
 
@@ -595,15 +666,15 @@ const char *OP_INDEX_INIT_Template2 = R"~~~(
     // 降维算子初始化
     Index {{OP_NAME}} = Index("{{OP_NAME}}");
     {{OP_NAME}}.setDimId({{DIM_ID}});
-    {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}}));
+    {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{DATA_INFO_NAME}}));
 )~~~";
 
-std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string TENSOR_NAME){
+std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string DATA_INFO_NAME){
     return templateString(OP_INDEX_INIT_Template2,
 	{
 		{"{{OP_NAME}}",    opName},
 		{"{{DIM_ID}}", dim_id}, //需要通过dimId来计算算子的划分数
-		{"{{TENSOR_NAME}}", TENSOR_NAME}
+		{"{{DATA_INFO_NAME}}", DATA_INFO_NAME}
 	});
 }
 
@@ -678,14 +749,14 @@ std::string CodeGen_ParameterGenerate(std::string InitOPS,std::string InitDevice
 //生成设备内存分配大小的模板 对应mat[分区][分区] mat[分区][降维] mat[分区][] mat[降维][]
 const char *DEVICE_MEM_SIZE_Generate_Template1 = R"~~~(
     //生成设备内存分配大小
-    int {{NAME}} = para_gene_tool.init_device_memory_size({{TENSOR_NAME}},{{DACOPS_NAME}});
+    int {{NAME}} = para_gene_tool.init_device_memory_size({{DATA_INFO_NAME}},{{DACOPS_NAME}});
 )~~~";
 
-std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME,std::string DACOPS_NAME){
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string DATA_INFO_NAME,std::string DACOPS_NAME){
     return templateString(DEVICE_MEM_SIZE_Generate_Template1,
 	{
         {"{{NAME}}",        NAME}, //设备内存的名字 
-		{"{{TENSOR_NAME}}",     TENSOR_NAME}, //tensor的名字
+		{"{{DATA_INFO_NAME}}",     DATA_INFO_NAME}, //tensor的名字
 		{"{{DACOPS_NAME}}",        DACOPS_NAME} //算子组的名字
 	});
 }
@@ -693,14 +764,14 @@ std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_N
 //生成设备内存分配大小的模板 对应mat[][]
 const char *DEVICE_MEM_SIZE_Generate_Template2 = R"~~~(
     //生成设备内存分配大小
-    int {{NAME}} = para_gene_tool.init_device_memory_size({{TENSOR_NAME}});
+    int {{NAME}} = para_gene_tool.init_device_memory_size({{DATA_INFO_NAME}});
 )~~~";
 
-std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME){
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string DATA_INFO_NAME){
     return templateString(DEVICE_MEM_SIZE_Generate_Template2,
 	{
         {"{{NAME}}",        NAME}, //设备内存的名字
-		{"{{TENSOR_NAME}}",     TENSOR_NAME} //tensor的名字
+		{"{{DATA_INFO_NAME}}",     DATA_INFO_NAME} //tensor的名字
 	});
 }
 
@@ -726,16 +797,16 @@ std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_N
 //生成设备内存分配的大小 对应数据重组需要分配的大小 
 const char *DEVICE_MEM_SIZE_Generate_Template3 = R"~~~(
     //生成设备内存分配大小
-    int {{NAME}} = para_gene_tool.init_device_memory_size({{IN_DAC_OPS_NAME}},{{OUT_DAC_OPS_NAME}},{{TENSOR_OUT}});
+    int {{NAME}} = para_gene_tool.init_device_memory_size({{IN_DAC_OPS_NAME}},{{OUT_DAC_OPS_NAME}},{{DATA_INFO_NAME}});
 )~~~";
 
-std::string CodeGen_DeviceMemSizeGenerate(std::string NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME,std::string TENSOR_OUT){
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME,std::string DATA_INFO_NAME){
     return templateString(DEVICE_MEM_SIZE_Generate_Template3,
 	{
 		{"{{NAME}}",            NAME}, //这个名字要注意 因为要和后面的名字对应
 		{"{{IN_DAC_OPS_NAME}}", IN_DAC_OPS_NAME},//输入算子组的名字
 		{"{{OUT_DAC_OPS_NAME}}",OUT_DAC_OPS_NAME},//输出算子组的名字
-		{"{{TENSOR_OUT}}",      TENSOR_OUT}//输出数据TENSOR的名字
+		{"{{DATA_INFO_NAME}}",      DATA_INFO_NAME}//输出数据TENSOR的名字
 	});
 }
 

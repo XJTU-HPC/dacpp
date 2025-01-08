@@ -41,19 +41,22 @@ void blockMatMul(dacpp::Tensor<int,2> &matA, dacpp::Tensor<int,2> &matB, dacpp::
     // 规则分区算子初始化
     RegularSlice si = RegularSlice("si", 2, 2);
     si.setDimId(0);
-    si.SetSplitSize(para_gene_tool.init_operetor_splitnumber(si,matA));
+    //si.SetSplitSize(para_gene_tool.init_operetor_splitnumber(si,matA));
+    si.SetSplitSize(para_gene_tool.init_operetor_splitnumber(si,info_matA));
     std::cout << "si.split_size: " << si.split_size << std::endl;
 
     // 规则分区算子初始化
     RegularSlice sj = RegularSlice("sj", 2, 2);
     sj.setDimId(1);
-    sj.SetSplitSize(para_gene_tool.init_operetor_splitnumber(sj,matB));
+    //sj.SetSplitSize(para_gene_tool.init_operetor_splitnumber(sj,matB));
+    sj.SetSplitSize(para_gene_tool.init_operetor_splitnumber(sj,info_matB));
     std::cout << "sj.split_size: " << sj.split_size << std::endl;
 
     // 规则分区算子初始化
     RegularSlice sk = RegularSlice("sk", 2, 2);
     sk.setDimId(1);
-    sk.SetSplitSize(para_gene_tool.init_operetor_splitnumber(sk,matA));
+    //sk.SetSplitSize(para_gene_tool.init_operetor_splitnumber(sk,matA));
+    sk.SetSplitSize(para_gene_tool.init_operetor_splitnumber(sk,info_matA));
     std::cout << "sk.split_size: " << sk.split_size << std::endl;
     // 参数生成 提前计算后面需要用到的参数
 
@@ -95,19 +98,23 @@ void blockMatMul(dacpp::Tensor<int,2> &matA, dacpp::Tensor<int,2> &matB, dacpp::
     reduction_ops.push_back(sj);
 
     //生成设备内存分配大小
-    int matA_size = para_gene_tool.init_device_memory_size(matA,matA_ops);
+    //int matA_size = para_gene_tool.init_device_memory_size(matA,matA_ops);
+    int matA_size = para_gene_tool.init_device_memory_size(info_matA,matA_ops);
     std::cout << "matA_size: " << matA_size << std::endl;
 
     //生成设备内存分配大小
-    int matB_size = para_gene_tool.init_device_memory_size(matB,matB_ops);
+    //int matB_size = para_gene_tool.init_device_memory_size(matB,matB_ops);
+    int matB_size = para_gene_tool.init_device_memory_size(info_matB,matB_ops);
     std::cout << "matB_size: " << matB_size << std::endl;
 
     //生成设备内存分配大小
-    int matC_size = para_gene_tool.init_device_memory_size(In_ops,Out_ops,matC);
+    //int matC_size = para_gene_tool.init_device_memory_size(In_ops,Out_ops,matC);
+    int matC_size = para_gene_tool.init_device_memory_size(In_ops,Out_ops,info_matC);
     std::cout << "matC_size: " << matC_size << std::endl;
 
     //生成设备内存分配大小
-    int reduction_size = para_gene_tool.init_device_memory_size(matC,reduction_ops);
+    //int reduction_size = para_gene_tool.init_device_memory_size(matC,reduction_ops);
+    int reduction_size = para_gene_tool.init_device_memory_size(info_matC,reduction_ops);
     std::cout << "reduction_size: " << reduction_size << std::endl;
 
     // 计算算子组里面的算子的划分长度
@@ -147,7 +154,7 @@ void blockMatMul(dacpp::Tensor<int,2> &matA, dacpp::Tensor<int,2> &matB, dacpp::
     ops_s.push_back(matB_ops);
     ops_s.push_back(In_ops);
 
-     // 生成划分长度的二维矩阵
+    // 生成划分长度的二维矩阵
     int SplitLength[3][3] = {0};
     para_gene_tool.init_split_length_martix(3,3,&SplitLength[0][0],ops_s);
     std::cout << "split_length_martix: " << std::endl;
