@@ -1,10 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
-
-using dacpp::Tensor;
+#include "ReconTensor.h"
 using namespace std;
 
 namespace dacpp {
@@ -16,135 +13,252 @@ const int NY = 8;    // y方向网格数量
 const float Lx = 10.0f; // x方向长度
 const float Ly = 10.0f; // y方向长度
 const float c = 1.0f;   // 波速
-const int TIME_STEPS = 1000; // 时间步数
+const int TIME_STEPS = 1; // 时间步数
 // 网格步长
-const float dx = Lx / (NX - 1);
-const float dy = Ly / (NY - 1);
+float dx = Lx / (NX - 1);
+float dy = Ly / (NY - 1);
 
 // CFL条件
-// const float dt = 0.5 * std::fmin(dx, dy) / c; // 满足稳定性条件
+float dt = 0.5f * std::fmin(dx, dy) / c; // 满足稳定性条件
 
 
 
 
 
 #include <sycl/sycl.hpp>
-#include "/data/qinian/ice/dacpp/clang/tools/translator/dpcppLib/include/DataReconstructor.old.h"
+#include "DataReconstructor.h"
+#include "ParameterGeneration.h"
 
 using namespace sycl;
 
 void waveEq(float* cur, float* prev, float* next) 
 {
-    float dt = 0.5 * std::fmin(dx, dy) / c;
-    // float u_xx = (cur[(1+1) * 3 + 1] - 2.0f * cur[1 * 3 + 1] + cur[(1-1) * 3 + 1]) / (dx * dx);
-    // float u_yy = (cur[1 * 3 + (1+1)] - 2.0f * cur[1 * 3 + 1] + cur[1 * 3 + (1-1)]) / (dy * dy);
-    float u_xx = (cur[(1+1) * 3 + 1] - 2.0f * cur[1 * 3 + 1] + cur[(1-1) * 3 + 1])/ (dx * dx);
-    float u_yy = (cur[1 * 3 + (1+1)] - 2.0f * cur[1 * 3 + 1] + cur[1 * 3 + (1-1)])/ (dy * dy);
-    //next[0] = 2.0f * cur[1 * 3 + 1] - prev[0] + c * c * dt * dt * ((cur[2 * 3 + 1] - 2.0f * cur[1 * 3 + 1] + cur[0 * 3 + 1] / (dx * dx)) + (cur[1 * 3 + 2] - 2.0f * cur[1 * 3 + 1] + cur[1 * 3 + 0] / (dy * dy)));
-    // next[0] = cur[1 * 3 + 1] + 1;
-    next[0]=2.0f*cur[1 * 3 + 1]-prev[0]+(c * c)*dt*dt*(u_xx+u_yy);
+    next[0] = 2.F * cur[1][1] - prev[0] + c * c * dt * dt * ((cur[2][1] - 2.F * cur[1][1] + cur[0][1] / (dx * dx)) + (cur[1][2] - 2.F * cur[1][1] + cur[1][0] / (dy * dy)));
 }
 
 
 // 生成函数调用
-void waveEqShell(const dacpp::Tensor<float> & matCur, const dacpp::Tensor<float> & matPrev, dacpp::Tensor<float> & matNext) { 
-
+void waveEqShell(const dacpp::Tensor<float, 2> & matCur, const dacpp::Tensor<float, 2> & matPrev, dacpp::Tensor<float, 2> & matNext) { 
     // 设备选择
     auto selector = gpu_selector_v;
     queue q(selector);
+    //声明参数生成工具
+    ParameterGeneration<int,2> para_gene_tool;
     // 算子初始化
     
+    // 数据信息初始化
+    DataInfo info_matCur;
+    info_matCur.dim = matCur.getDim();
+    for(int i = 0; i < info_matCur.dim; i++) info_matCur.dimLength.push_back(matCur.getShape(i));
+    // 数据信息初始化
+    DataInfo info_matPrev;
+    info_matPrev.dim = matPrev.getDim();
+    for(int i = 0; i < info_matPrev.dim; i++) info_matPrev.dimLength.push_back(matPrev.getShape(i));
+    // 数据信息初始化
+    DataInfo info_matNext;
+    info_matNext.dim = matNext.getDim();
+    for(int i = 0; i < info_matNext.dim; i++) info_matNext.dimLength.push_back(matNext.getShape(i));
     // 规则分区算子初始化
     RegularSlice sp1 = RegularSlice("sp1", 3, 1);
-    sp1.SetSplitSize(6);
+    sp1.setDimId(0);
+    sp1.SetSplitSize(para_gene_tool.init_operetor_splitnumber(sp1,info_matCur));
+
     // 规则分区算子初始化
     RegularSlice sp2 = RegularSlice("sp2", 3, 1);
-    sp2.SetSplitSize(6);
+    sp2.setDimId(1);
+    sp2.SetSplitSize(para_gene_tool.init_operetor_splitnumber(sp2,info_matCur));
+
     // 降维算子初始化
     Index idx1 = Index("idx1");
-    idx1.SetSplitSize(6);
+    idx1.setDimId(0);
+    idx1.SetSplitSize(para_gene_tool.init_operetor_splitnumber(idx1,info_matPrev));
+
     // 降维算子初始化
     Index idx2 = Index("idx2");
-    idx2.SetSplitSize(6);
-    // 数据重组
+    idx2.setDimId(1);
+    idx2.SetSplitSize(para_gene_tool.init_operetor_splitnumber(idx2,info_matPrev));
+
+    //参数生成
+	
+    // 参数生成 提前计算后面需要用到的参数	
+	
+    // 算子组初始化
+    Dac_Ops matCur_Ops;
+    
+    sp1.setDimId(0);
+    matCur_Ops.push_back(sp1);
+
+    sp2.setDimId(1);
+    matCur_Ops.push_back(sp2);
+
+
+    // 算子组初始化
+    Dac_Ops matPrev_Ops;
+    
+    idx1.setDimId(0);
+    matPrev_Ops.push_back(idx1);
+
+    idx2.setDimId(1);
+    matPrev_Ops.push_back(idx2);
+
+
+    // 算子组初始化
+    Dac_Ops matNext_Ops;
+    
+    idx1.setDimId(0);
+    matNext_Ops.push_back(idx1);
+
+    idx2.setDimId(1);
+    matNext_Ops.push_back(idx2);
+
+
+    // 算子组初始化
+    Dac_Ops In_Ops;
+    
+    sp1.setDimId(0);
+    In_Ops.push_back(sp1);
+
+    sp2.setDimId(1);
+    In_Ops.push_back(sp2);
+
+
+    // 算子组初始化
+    Dac_Ops Out_Ops;
+    
+    idx1.setDimId(0);
+    Out_Ops.push_back(idx1);
+
+    idx2.setDimId(1);
+    Out_Ops.push_back(idx2);
+
+
+    // 算子组初始化
+    Dac_Ops Reduction_Ops;
+    
+    idx1.setDimId(0);
+    Reduction_Ops.push_back(idx1);
+
+    idx2.setDimId(1);
+    Reduction_Ops.push_back(idx2);
+
+
+	
+    //生成设备内存分配大小
+    int matCur_Size = para_gene_tool.init_device_memory_size(info_matCur,matCur_Ops);
+
+    //生成设备内存分配大小
+    int matPrev_Size = para_gene_tool.init_device_memory_size(info_matPrev,matPrev_Ops);
+
+    //生成设备内存分配大小
+    int matNext_Size = para_gene_tool.init_device_memory_size(In_Ops,Out_Ops,info_matNext);
+
+    //生成设备内存分配大小
+    int Reduction_Size = para_gene_tool.init_device_memory_size(info_matNext,Reduction_Ops);
+
+	
+    // 计算算子组里面的算子的划分长度
+    para_gene_tool.init_op_split_length(matCur_Ops,matCur_Size);
+
+    // 计算算子组里面的算子的划分长度
+    para_gene_tool.init_op_split_length(matPrev_Ops,matPrev_Size);
+
+    // 计算算子组里面的算子的划分长度
+    para_gene_tool.init_op_split_length(In_Ops,matNext_Size);
+
+	
+	
+    std::vector<Dac_Ops> ops_s;
+	
+    ops_s.push_back(matCur_Ops);
+
+    ops_s.push_back(matPrev_Ops);
+
+    ops_s.push_back(In_Ops);
+
+
+	// 生成划分长度的二维矩阵
+    int SplitLength[3][2] = {0};
+    para_gene_tool.init_split_length_martix(3,2,&SplitLength[0][0],ops_s);
+
+	
+    // 计算工作项的大小
+    int Item_Size = para_gene_tool.init_work_item_size(In_Ops);
+
+	
+    // 计算归约中split_size的大小
+    int Reduction_Split_Size = para_gene_tool.init_reduction_split_size(In_Ops,Out_Ops);
+
+	
+    // 计算归约中split_length的大小
+    int Reduction_Split_Length = para_gene_tool.init_reduction_split_length(Out_Ops);
+
+
+    // 设备内存分配
+    
+    // 设备内存分配
+    float *d_matCur=malloc_device<float>(matCur_Size,q);
+    // 设备内存分配
+    float *d_matPrev=malloc_device<float>(matPrev_Size,q);
+    // 设备内存分配
+    float *d_matNext=malloc_device<float>(matNext_Size,q);
+    // 归约设备内存分配
+    float *reduction_matNext = malloc_device<float>(Reduction_Size,q);
+    // 数据关联计算
+    
     
     // 数据重组
     DataReconstructor<float> matCur_tool;
-    float* r_matCur=(float*)malloc(sizeof(float)*324);
+    float* r_matCur=(float*)malloc(sizeof(float)*matCur_Size);
     
     // 数据算子组初始化
     Dac_Ops matCur_ops;
+    
     sp1.setDimId(0);
-    sp1.setSplitLength(54);
+    sp1.setSplitLength(8);
     matCur_ops.push_back(sp1);
     sp2.setDimId(1);
-    sp2.setSplitLength(9);
+    sp2.setSplitLength(8);
     matCur_ops.push_back(sp2);
-    
-    matCur_tool.init(matCur,matCur_ops);
-    matCur_tool.Reconstruct(r_matCur);
-
-    // std::cout<<"重组后的 r_matCur:\n";
-    // for(int i = 0; i < 36; i++) {
-    //     for (size_t j = 0; j < 9; j++){
-    //         std::cout<<r_matCur[i*9+j]<<" ";
-    //     }
-    //     std::cout<<"\n";
-    // }
-
+    matCur_tool.init(info_matCur,matCur_ops);
+    matCur_tool.Reconstruct(r_matCur,matCur);
     // 数据重组
     DataReconstructor<float> matPrev_tool;
-    float* r_matPrev=(float*)malloc(sizeof(float)*36);
+    float* r_matPrev=(float*)malloc(sizeof(float)*matPrev_Size);
     
-
-
     // 数据算子组初始化
     Dac_Ops matPrev_ops;
     
     idx1.setDimId(0);
-    idx1.setSplitLength(6);
+    idx1.setSplitLength(8);
     matPrev_ops.push_back(idx1);
     idx2.setDimId(1);
-    idx2.setSplitLength(1);
+    idx2.setSplitLength(8);
     matPrev_ops.push_back(idx2);
-    matPrev_tool.init(matPrev,matPrev_ops);
-    matPrev_tool.Reconstruct(r_matPrev);
+    matPrev_tool.init(info_matPrev,matPrev_ops);
+    matPrev_tool.Reconstruct(r_matPrev,matPrev);
     // 数据重组
     DataReconstructor<float> matNext_tool;
-    float* r_matNext=(float*)malloc(sizeof(float)*36);
+    float* r_matNext=(float*)malloc(sizeof(float)*matNext_Size);
     
     // 数据算子组初始化
     Dac_Ops matNext_ops;
     
     idx1.setDimId(0);
-    idx1.setSplitLength(6);
+    idx1.setSplitLength(8);
     matNext_ops.push_back(idx1);
     idx2.setDimId(1);
-    idx2.setSplitLength(1);
+    idx2.setSplitLength(8);
     matNext_ops.push_back(idx2);
-    matNext_tool.init(matNext,matNext_ops);
-    matNext_tool.Reconstruct(r_matNext);
-
-    // 设备内存分配
-    
-    // 设备内存分配
-    float *d_matCur=malloc_device<float>(324,q);
-    // 设备内存分配
-    float *d_matPrev=malloc_device<float>(36,q);
-    // 设备内存分配
-    float *d_matNext=malloc_device<float>(36,q);
-    // 数据移动
+    matNext_tool.init(info_matNext,matNext_ops);
+    matNext_tool.Reconstruct(r_matNext,matNext);
     
     // 数据移动
-    q.memcpy(d_matCur,r_matCur,324*sizeof(float)).wait();
+    q.memcpy(d_matCur,r_matCur,matCur_Size*sizeof(float)).wait();
     // 数据移动
-    q.memcpy(d_matPrev,r_matPrev,36*sizeof(float)).wait();
-    // 数据初始化
-    q.memset(d_matNext,0,36*sizeof(float)).wait();  
-    // 内核执行
-    
+    q.memcpy(d_matPrev,r_matPrev,matPrev_Size*sizeof(float)).wait();
+	
     //工作项划分
-    sycl::range<3> local(1, 1, 36);
+    sycl::range<3> local(1, 1, Item_Size);
     sycl::range<3> global(1, 1, 1);
     //队列提交命令组
     q.submit([&](handler &h) {
@@ -152,34 +266,42 @@ void waveEqShell(const dacpp::Tensor<float> & matCur, const dacpp::Tensor<float>
             const auto item_id = item.get_local_id(2);
             // 索引初始化
 			
-            const auto sp1=(item_id/6+(0)+6)%6;
-            const auto idx1=(item_id/6+(0)+6)%6;
-            const auto sp2=(item_id+(0)+6)%6;
-            const auto idx2=(item_id+(0)+6)%6;
+            const auto sp1_=(item_id/sp2.split_size+(0))%sp1.split_size;
+            const auto idx1_=(item_id/sp2.split_size+(0))%idx1.split_size;
+            const auto sp2_=(item_id+(0))%sp2.split_size;
+            const auto idx2_=(item_id+(0))%idx2.split_size;
             // 嵌入计算
 			
-
-            waveEq(d_matCur+(sp1*54+sp2*9),d_matPrev+(idx1*6+idx2*1),d_matNext+(idx1*6+idx2*1));
+            waveEq(d_matCur+(sp1_*SplitLength[0][0]+sp2_*SplitLength[0][1]),d_matPrev+(idx1_*SplitLength[1][0]+idx2_*SplitLength[1][1]),d_matNext+(sp1_*SplitLength[2][0]+sp2_*SplitLength[2][1]));
         });
     }).wait();
     
-    
-    // 归约
-    
-    // 返回计算结果
-    
-    // 归并结果返回
-    q.memcpy(r_matNext, d_matNext, 36*sizeof(float)).wait();
 
-    std::cout<<"r_nxt cur:\n";
-    for (int i = 0; i < 6; i++) {
-        for(int j = 0; j <6; j++){
-            std::cout<<r_matNext[(i)*6+(j)]<<" ";
+	
+    // 归约
+    if(Reduction_Split_Size > 1)
+    {
+        for(int i=0;i<Reduction_Size;i++) {
+            q.submit([&](handler &h) {
+    	        h.parallel_for(
+                range<1>(Reduction_Split_Size),
+                reduction(reduction_matNext+i, 
+                sycl::plus<>(),
+                property::reduction::initialize_to_identity()),
+                [=](id<1> idx,auto &reducer) {
+                    reducer.combine(d_matNext[(i/Reduction_Split_Length)*Reduction_Split_Length*Reduction_Split_Size+i%Reduction_Split_Length+idx*Reduction_Split_Length]);
+     	        });
+         }).wait();
         }
-        std::cout<<"\n";
+        q.memcpy(d_matNext,reduction_matNext, Reduction_Size*sizeof(float)).wait();
     }
 
-    matNext = matNext_tool.UpdateData(r_matNext);
+
+	
+    // 归并结果返回
+    q.memcpy(r_matNext, d_matNext, matNext_Size*sizeof(float)).wait();
+    matNext_tool.UpdateData(r_matNext,matNext);
+
     // 内存释放
     
     sycl::free(d_matCur, q);
@@ -188,7 +310,12 @@ void waveEqShell(const dacpp::Tensor<float> & matCur, const dacpp::Tensor<float>
 }
 
 int main() {
-    auto start_time = std::chrono::high_resolution_clock::now(); // 开始时间测量
+    // 网格步长
+    float dx = Lx / (NX - 1);
+    float dy = Ly / (NY - 1);
+    
+    // CFL条件
+    float dt = 0.5f * std::fmin(dx, dy) / c; // 满足稳定性条件
     
     // 初始化波场
     vector<float> u_prev(NX * NY, 0.0f); // 前一步
@@ -204,113 +331,83 @@ int main() {
             float x = i * dx;
             float y = j * dy;
             u_prev[i*NX+j] = std::exp(-((x - Lx/2)*(x - Lx/2) + (y - Ly/2)*(y - Ly/2)) / (2 * sigma * sigma));
-            //u_prev[i*NX+j] = i*NX+j;
         }
     }
 
-
-
-    std::vector<int> shape_u_curr = {8, 8};
-    Tensor<float> u_curr_tensor(u_curr, shape_u_curr);
-    std::vector<float> u_prev_middle_points;
-    for (int i = 1; i <= 6; i++) {
-        std::vector<float> row;
-        for (int j = 1; j <= 6; j++) {  
-            u_prev_middle_points.push_back(static_cast<float>(u_prev[i*NY+j]));  
+    for(int i = 0; i < 1; i++){
+        for(int j = 0; j < NY; j++){
+            std::cout << u_prev[i * NX + j] << " " ;
         }
-        
+        std::cout << std::endl;
     }
-    std::vector<int> shape2= {6, 6};
-    Tensor<float> u_prev_middle_tensor(u_prev_middle_points, shape2);
 
-    std::vector<float> u_next_middle_points;
-    for (int i = 1; i <= 6; i++) {
-        std::vector<float> row;
-        for (int j = 1; j <= 6; j++) {  
-            u_next_middle_points.push_back(static_cast<float>(u_next[i*NY+j]));  
-        }
-    }
-    std::vector<int> shape1= {6, 6};
-    Tensor<float> u_next_middle_tensor(u_next_middle_points, shape1);
+  
 
+    //std::vector<int> shape_u_curr = {8, 8};
+    dacpp::Tensor<float, 2> u_curr_tensor({8, 8}, u_curr);
+
+
+    
     for(int i = 0;i < TIME_STEPS; i++) {
-        std::cout<<i<<" step:\n";
-
-        float* tmp = new float[64];
-        std::cout<<"now cur:\n";
-        u_curr_tensor.tensor2Array(tmp);
-        for (int i = 0; i < 8; i++) {
-            for(int j = 0; j <8; j++){
-                std::cout<<tmp[(i)*8+(j)]<<" ";
-            }
-            std::cout<<"\n";
-        }
-
-        // u_curr_tensor.print();
-        //u_prev_middle_tensor.print();
-        waveEqShell(u_curr_tensor, u_prev_middle_tensor, u_next_middle_tensor);
-        // u_next_middle_tensor.print();
-
+        std::vector<float> u_prev_middle_points;
         for (int i = 1; i <= 6; i++) {
-            for(int j = 1; j <=6; j++){
-                float* data = new float[1];
-                u_curr_tensor[i][j].tensor2Array(data);
-                u_prev_middle_tensor[i-1][j-1].array2Tensor(data);
+            std::vector<float> row;
+            for (int j = 1; j <= 6; j++) {  
+                u_prev_middle_points.push_back(static_cast<float>(u_prev[i*NY+j]));  
             }
+            
         }
-
+        //std::vector<int> shape2= {6, 6};
+        dacpp::Tensor<float, 2> u_prev_middle_tensor({6, 6}, u_prev_middle_points);
+        //u_next取点
+        std::vector<float> u_next_middle_points;
         for (int i = 1; i <= 6; i++) {
-            for(int j = 1; j <=6; j++){
-                float* data = new float[1];
-                u_next_middle_tensor[i-1][j-1].tensor2Array(data);
-                u_curr_tensor[i][j].array2Tensor(data);
+            std::vector<float> row;
+            for (int j = 1; j <= 6; j++) {  
+                u_next_middle_points.push_back(static_cast<float>(u_next[i*NY+j]));  
             }
+            
         }
+        //std::vector<int> shape1= {6, 6};
+        dacpp::Tensor<float, 2> u_next_middle_tensor({6, 6}, u_next_middle_points);
+
+
         
+        waveEqShell(u_curr_tensor, u_prev_middle_tensor, u_next_middle_tensor);
 
- 
+        u_next_middle_tensor.print();
+
+        for (int i = 1; i <= 30; i++) {
+            for(int j = 1; j <=30; j++){
+                u_prev_middle_tensor[i-1][j-1]=u_curr_tensor[i][j];
+            }
+        }
+
+        for (int i = 1; i <= 30; i++) {
+            for(int j = 1; j <=30; j++){
+                u_curr_tensor[i][j]=u_next_middle_tensor[i-1][j-1];
+            }
+        }
+
         // 处理边界条件（绝热边界：导数为零）
 
 
-        for (int i = 0; i < NX; ++i) {
-            float* data = new float{0};
-            u_curr_tensor[i][0].array2Tensor(data);             
-            u_curr_tensor[i][NY-1].array2Tensor(data);
+        for (int i = 0; i < NX; ++i) {       
+            u_curr_tensor[i][NY-1]=u_curr_tensor[i][0];
         }
         for (int j = 0; j < NY; ++j) {
-            float* data = new float{0};
-            u_curr_tensor[0][j].array2Tensor(data);              // 顶部边界
-            u_curr_tensor[NX - 1][j].array2Tensor(data);
+            u_curr_tensor[NX - 1][j]=u_curr_tensor[0][j];
              // 底部边界
         }
-        
-        float* tmp1 = new float[64];
-        std::cout<<"nxt cur:\n";
-        u_curr_tensor.tensor2Array(tmp1);
-        for (int i = 0; i < 8; i++) {
-            for(int j = 0; j <8; j++){
-                std::cout<<tmp1[(i)*8+(j)]<<" ";
-            }
-            std::cout<<"\n";
-        }
+
         
     }
-    //u_curr_tensor.print();
-    // float* tmp = new float[64];
-    // u_curr_tensor.tensor2Array(tmp);
-    // for (int i = 0; i < 8; i++) {
-    //     for(int j = 0; j <8; j++){
-    //         std::cout<<tmp[(i)*8+(j)]<<" ";
-    //     }
-    //     std::cout<<"\n";
-    // }
+    u_curr_tensor.print();
 
 
     
     // 输出最终结果的某些值作为示例
     //cout << "Final wave state at center: " << u_curr[(NX/2)*NY + (NY/2)] << "\n";
-    auto end_time = std::chrono::high_resolution_clock::now(); // 结束时间测量
-    std::chrono::duration<double> duration = end_time - start_time; // 计算持续时间
-    std::cout << "总执行时间: " << duration.count() << " 秒" << std::endl; // 输出执行时间
+    
     return 0;
 }
