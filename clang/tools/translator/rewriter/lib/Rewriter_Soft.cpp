@@ -78,7 +78,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
             }else if(shell->search_symbol(info[i].v)->type.compare("RegularSplit") == 0) {
                 dacppTranslator::RegularSplit* r = static_cast<dacppTranslator::RegularSplit*>(shell->search_symbol(info[i].v));
                 RegularSlice tmp = RegularSlice(r->getId(), r->getSplitSize(), r->getSplitStride());
-                std::cout << r->getId() << " " << r->getSplitSize() << " " << r->getSplitStride() << std::endl;
+                //std::cout << r->getId() << " " << r->getSplitSize() << " " << r->getSplitStride() << std::endl;
                 tmp.SetSplitSize(r->getSplitNumber());
                 tmp.setDimId(r->getDimIdx());
                 ops.push_back(tmp);
@@ -202,7 +202,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
                     add2Op_inops += CodeGen_AddOp2Ops(split->getId(),std::to_string(inflag),"In_Ops");//将算子添加到输入算子组中去
                     Dac_Op op = Dac_Op(split->getId(),0,inflag);
                     inflag++;
-                    std::cout<<inflag<<std::endl;
+                    //std::cout<<inflag<<std::endl;
                     Inops.push_back(op);
                     setIn.insert(set);
                 }

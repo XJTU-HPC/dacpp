@@ -4785,6 +4785,7 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
     // 获取 DAC 数据关联表达式右值
     Expr* dacExprRHS = dacExpr->getRHS();
     FunctionDecl* calcFunc = dyn_cast<FunctionDecl>(dyn_cast<DeclRefExpr>(dacExprRHS)->getDecl());
+    calcFunc->dump();
     
     // 设置 AST 中 Calc 节点的位置
     setCalcLoc(calcFunc);
