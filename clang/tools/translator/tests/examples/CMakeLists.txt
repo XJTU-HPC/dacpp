@@ -29,7 +29,8 @@ add_executable(jacobi_dac jacobi.dac_sycl.cpp)
 add_executable(jacobi_StandardSycl jacobiStandardSycl.cpp)
 add_executable(liuliang_dac liuliangdac_sycl.cpp)
 add_executable(liuliang_StandardSycl liuliangStandardSycl.cpp)
-
+add_executable(decay_chain_dac_sycl liuliangStandardSycl.cpp)
+add_executable(decay_chain_StandardSycl liuliangStandardSycl.cpp)
 
 
 set_target_properties(FOuLa_sycl PROPERTIES
@@ -65,6 +66,12 @@ set_target_properties(liuliang_dac PROPERTIES
 set_target_properties(liuliang_StandardSycl PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
 )
+set_target_properties(decay_chain_dac_sycl PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
+)
+set_target_properties(decay_chain_StandardSycl PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
+)
 
 # # 链接库到可执行文件
 target_link_libraries(FOuLa_sycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
@@ -79,3 +86,5 @@ target_link_libraries(jacobi_dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib Rewrite
 target_link_libraries(jacobi_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(liuliang_dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(liuliang_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(decay_chain_dac_sycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(decay_chain_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
