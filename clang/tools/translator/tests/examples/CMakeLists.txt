@@ -19,51 +19,63 @@ include_directories(${SYCL_PATH})
 
 # 添加源文件
 # add_executable(matMul_dac matMul.dac_sycl.cpp)
-# add_executable(FOuLa_sycl FOuLa_sycl.cpp)
+add_executable(FOuLa_sycl FOuLa_sycl.cpp)
 # add_executable(matMul_StandardSycl matMulStandardSycl.cpp)
-# add_executable(waveEquation_dac waveEquation.dac_sycl.cpp)
-# add_executable(waveEquation_StandardSycl waveEquationStandardSycl.cpp)
-# add_executable(stencil_dac stencil.dac_sycl.cpp)
-# add_executable(stencil_StandardSycl stencilStandardSycl.cpp)
-# add_executable(jacobi_dac jacobi.dac_sycl.cpp)
-# add_executable(jacobi_StandardSycl jacobiStandardSycl.cpp)
+add_executable(waveEquation_dac waveEquation.dac_sycl.cpp)
+add_executable(waveEquation_StandardSycl waveEquationStandardSycl.cpp)
+add_executable(stencil_dac stencil.dac_sycl.cpp)
+add_executable(stencil_StandardSycl stencilStandardSycl.cpp)
+add_executable(jacobi_dac jacobi.dac_sycl.cpp)
+add_executable(jacobi_StandardSycl jacobiStandardSycl.cpp)
+add_executable(liuliang_dac liuliangdac_sycl.cpp)
+add_executable(liuliang_StandardSycl liuliangStandardSycl.cpp)
 
-# set_target_properties(FOuLa_sycl PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
-# )
+
+
+set_target_properties(FOuLa_sycl PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
+)
 # set_target_properties(matMul_dac PROPERTIES
 #     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
 # )
 # set_target_properties(matMul_StandardSycl PROPERTIES
 #     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
 # )
-# set_target_properties(waveEquation_dac PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
-# )
-# set_target_properties(waveEquation_StandardSycl PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
-# )
-# set_target_properties(stencil_dac PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
-# )
-# set_target_properties(stencil_StandardSycl PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
-# )
-# set_target_properties(jacobi_dac PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
-# )
-# set_target_properties(jacobi_StandardSycl PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
-# )
+set_target_properties(waveEquation_dac PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
+)
+set_target_properties(waveEquation_StandardSycl PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
+)
+set_target_properties(stencil_dac PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
+)
+set_target_properties(stencil_StandardSycl PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
+)
+set_target_properties(jacobi_dac PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
+)
+set_target_properties(jacobi_StandardSycl PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
+)
+set_target_properties(liuliang_dac PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
+)
+set_target_properties(liuliang_StandardSycl PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
+)
 
 # # 链接库到可执行文件
-# target_link_libraries(FOuLa_sycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(FOuLa_sycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 # target_link_libraries(matMul_dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 
 # target_link_libraries(matMul_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
-# target_link_libraries(waveEquation_dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
-# target_link_libraries(waveEquation_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
-# target_link_libraries(stencil_dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
-# target_link_libraries(stencil_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
-# target_link_libraries(jacobi_dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
-# target_link_libraries(jacobi_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(waveEquation_dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(waveEquation_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(stencil_dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(stencil_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(jacobi_dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(jacobi_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(liuliang_dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(liuliang_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)

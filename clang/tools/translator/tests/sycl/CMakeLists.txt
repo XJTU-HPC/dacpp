@@ -26,6 +26,9 @@ add_executable(waveEquation.dac waveEquation.dac_sycl.cpp)
 add_executable(waveEquationStandardSycl waveEquationStandardSycl.cpp)
 add_executable(jacobi.dac jacobi.dac_sycl.cpp)
 add_executable(jacobiStandardSycl jacobiStanardSycl.cpp)
+add_executable(liuliangdac liuliangdac_sycl.cpp)
+add_executable(liuliangStandardSycl liuliangStandardSycl.cpp)
+
 
 add_executable(syclBlockMatMul0 blockMatMul0.sycl.cpp)
 add_executable(syclBlockMatMul1 blockMatMul1.sycl.cpp)
@@ -56,6 +59,15 @@ set_target_properties(jacobi.dac PROPERTIES
 set_target_properties(jacobiStandardSycl PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
+set_target_properties(liuliangdac PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+set_target_properties(liuliangStandardSycl PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+
+
+
 set_target_properties(syclBlockMatMul0 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
@@ -82,6 +94,9 @@ target_link_libraries(waveEquation.dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib R
 target_link_libraries(waveEquationStandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(jacobi.dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(jacobiStandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(liuliangdac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(liuliangStandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+
 
 target_link_libraries(syclBlockMatMul1 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(syclBlockMatMul0 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
