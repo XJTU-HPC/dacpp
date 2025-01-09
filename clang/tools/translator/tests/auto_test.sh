@@ -26,14 +26,9 @@ INCLUDE_DIRS=(
     "$WORK_DIR/std_lib/include/"
 )
 
-SRC_DIRS=(
-    "$WORK_DIR/rewriter/lib/"
+SRC_FILES=(
+    "$WORK_DIR/rewriter/lib/dacInfo.cpp"
 )
-
-SRC_FILES=()
-for dir in ${SRC_DIRS[@]}; do
-    SRC_FILES+=($(find "$dir" -type f -name "*.cpp" ! -name "Rewriter.cpp"))
-done
 
 echo "------------------------------------------------------------------------------------------"
 echo "DACPP to SYCL transpilation test"
@@ -93,7 +88,7 @@ for dir in ${examples[@]}; do
     if [ -z "$exe_file" ]; then
         continue
     fi
-    exe_file="${exe_file#./tmp/$dir/$dir}"
+    exe_file="${exe_file#./tmp/$dir}"
     "./tmp/$dir/$exe_file" > "./tmp/$dir/$exe_file.out" 
     std_res=$(find "./$dir/" -type f -name "*.out" | head -n 1)
     if diff -y --suppress-common-lines "./tmp/$dir/$exe_file.out" "$std_res"; then
