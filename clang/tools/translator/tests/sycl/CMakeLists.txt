@@ -32,8 +32,9 @@ add_executable(decay_chain_dac decay_chain_dac_sycl.cpp)
 add_executable(decay_chain_StandardSycl decay_chain_StandardSycl.cpp)
 add_executable(matMuldac matMuldac_sycl.cpp)
 add_executable(matMulStandardSycl matMulStandardSycl.cpp)
-
-
+add_executable(imageAdjustment imageAdjustment_dac_sycl.cpp)
+add_executable(mdp mdp_dac_sycl.cpp)
+# add_executable(mdp_StandardSycl mdp_StandardSycl.cpp)
 
 
 add_executable(syclBlockMatMul0 blockMatMul0.sycl.cpp)
@@ -83,6 +84,18 @@ set_target_properties(matMuldac PROPERTIES
 set_target_properties(matMulStandardSycl PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
+set_target_properties(imageAdjustment PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+set_target_properties(mdp PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+# set_target_properties(mdp_StandardSycl PROPERTIES
+#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+# )
+
+
+
 
 
 set_target_properties(syclBlockMatMul0 PROPERTIES
@@ -117,6 +130,11 @@ target_link_libraries(decay_chain_dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib Re
 target_link_libraries(decay_chain_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(matMuldac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(matMulStandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(imageAdjustment PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(mdp PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+# target_link_libraries(mdp_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+
+
 
 
 target_link_libraries(syclBlockMatMul1 PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)

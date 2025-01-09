@@ -31,7 +31,7 @@ add_executable(decay_chain_dac_sycl liuliangStandardSycl.cpp)
 add_executable(decay_chain_StandardSycl liuliangStandardSycl.cpp)
 add_executable(matMuldac matMuldac_sycl.cpp)
 add_executable(matMulStandardSycl matMulStandardSycl.cpp)
-
+add_executable(mdp mdp_dac_sycl.cpp)
 
 set_target_properties(FOuLa_sycl PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
@@ -72,6 +72,12 @@ set_target_properties(matMuldac PROPERTIES
 set_target_properties(matMulStandardSycl PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests/examples
 )
+set_target_properties(mdp PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
+
+
+
 
 # # 链接库到可执行文件
 target_link_libraries(FOuLa_sycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
@@ -90,4 +96,5 @@ target_link_libraries(decay_chain_dac_sycl PRIVATE ${OpenCL_LIBRARY} sycl DacppL
 target_link_libraries(decay_chain_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(matMuldac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(matMulStandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(mdp PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 
