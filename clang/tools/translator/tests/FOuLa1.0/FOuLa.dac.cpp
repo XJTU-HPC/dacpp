@@ -8,53 +8,43 @@
 #include <algorithm>
 #include <fstream>
 #include <queue>
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
-
-using dacpp::Tensor;
+#include "ReconTensor.h"
 
 namespace dacpp {
     typedef std::vector<std::any> list;
 }
 
-double phi(double x) {
-    return x*x*x+x;
-}
+double phi(double x) { return x*x*x+x; }
 
-double alpha(double t) {
-    return 0.0;
-}
+double alpha(double t) { return 0.0; }
 
-double beta(double t) {
-    return 1.0+exp(t);
-}
+double beta(double t) { return 1.0+exp(t); }
 
-double f(double x, double t) {
-    return x*exp(t)-6*x;
-}
+double f(double x, double t) { return x*exp(t)-6*x; }
 
-double exact(double x, double t) {
-    return x*(x*x+exp(t));
-}
+double exact(double x, double t) { return x*(x*x+exp(t)); }
 
 //同样的问题，划分时，一个待计算数据和三个计算数据，一共四个数据要划分到一起
-
-shell dacpp::list PDE(const dacpp::Tensor<int> & u_kin, dacpp::Tensor<int> & u_kout,const dacpp::Tensor<int> & r) {
-    dacpp::Index idx1("idx1");
-    dacpp::RegularSplit S1("S1",3,1);
-    binding(idx1,S1);
-    dacpp::list dataList{u_kin[{S1}][{}], u_kout[{idx1}],r[{}]};
+shell dacpp::list PDE(const dacpp::Tensor<int, 1>& u_kin,
+                        dacpp::Tensor<int, 1>& u_kout,
+                        const dacpp::Tensor<int, 1>& r) {
+    dacpp::index i;
+    dacpp::split s(3,1);
+    binding(i, s);
+    dacpp::list dataList{u_kin[s][{}], u_kout[i], r[{}]};
     return dataList;
 }
 
-calc void pde(int u_kin[], int  u_kout[],int r[]) {
+calc void pde(dacpp::Tensor<int, 1>& u_kin,
+                dacpp::Tensor<int, 1>& u_kout,
+                dacpp::Tensor<int, 1>& r) {
     u_kout[0] = r[0] * u_kin[0] + (1 - 2 * r[0]) * u_kin[1] + r[0] * u_kin[2];
 }
 
 int main() {
     int n = 100; //时间域n等分
     int m = 5; //空间域m等分
-    int r = 1;
+    double r = 0.25;
     double a = 1.0;
     double h = 1.0 / m; //空间步长
     double tau = 1.0 / n; //时间步长
@@ -63,7 +53,6 @@ int main() {
     //r=a*tau/(h*h);  //网比
     //printf("r=%.4f.\n",r);
     
-
     x = (double*)malloc(sizeof(double)*(m+1));
     for (int i=0;i<=m;i++) {
         x[i]=i*h;
@@ -92,8 +81,8 @@ int main() {
     }
 
     // Define the shape of the tensor (rows, columns) and create the Tensor
-    std::vector<int> shape = {6, 101};
-    Tensor<int> u_tensor(u_flat, shape);
+    // std::vector<int> shape = {6, 101};
+    dacpp::Tensor<int, 2> u_tensor({6, 101}, u_flat);
     
     for (int k = 0; k < n-1; k++) {
         //输入数据是6个点，3个一组分为四组，输出数据四个点，降维
@@ -102,19 +91,20 @@ int main() {
         for (int i = 1; i <= 4; i++) {
           middle_points.push_back(static_cast<int>(u[i][k+1]));
         }
-        std::vector<int> shape2 = {4, 1};
-        Tensor<int> middle_tensor(middle_points, shape2);
-         std::vector<int> shape3 = {1, 1};
-         std::vector<int> r_data;
-         r_data.push_back(r);
-         Tensor<int> R(r_data, shape3);
+        //std::vector<int> shape2 = {4, 1};
+        dacpp::Tensor<int, 1> middle_tensor(middle_points);
+        //std::vector<int> shape3 = {1, 1};
+        std::vector<int> r_data;
+        r_data.push_back(r);
+        dacpp::Tensor<int, 1> R(r_data);
 
-        //  Tensor<int> u_test1 = u_tensor.slice(1,k);
-         PDE(u_tensor[{}][{k}], middle_tensor,R) <-> pde;
+        dacpp::Tensor<int,1> u_test1 = u_tensor.slice(1,k);
+        // std::cout << typeid(u_tensor[{}][k]) << std::endl;
+        PDE(u_test1, middle_tensor, R) <-> pde;
         
         //计算完毕后，替换第1到4个点
         for (int i = 1; i <= 4; i++) {
-            u_tensor[{i}][k+1] = middle_tensor[i];
+            u_tensor[i][k+1] = middle_tensor[i-1];
         }
 
     }

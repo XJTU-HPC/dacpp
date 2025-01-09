@@ -1,22 +1,22 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
-
+#include "ReconTensor.h"
 // 定义矩阵大小
 const int N = 100; // 可以修改 N 的值来改变矩阵大小
 const int max_iter = 10000;
 const float tolerance = 1e-6;
-using dacpp::Tensor;
-
 namespace dacpp {
     typedef std::vector<std::any> list;
 }
 
 
-shell dacpp::list jacobiShell(const Tensor<float>& A, const Tensor<float>& b, const Tensor<float>& x, Tensor<float>& x_new,const Tensor<int>& nums) {
-    dacpp::Index idx1("idx1");
+shell dacpp::list jacobiShell(const dacpp::Tensor<float, 2>& A, 
+                                const dacpp::Tensor<float, 1>& b, 
+                                const dacpp::Tensor<float, 1>& x, 
+                                dacpp::Tensor<float, 1>& x_new,
+                                const dacpp::Tensor<int, 1>& nums) {
+    dacpp::index idx1;
 //     dacpp::Index idx2("idx1");
 //     dacpp::Index idx3("idx1");
 //     dacpp::Index idx4("idx1");
@@ -30,7 +30,11 @@ shell dacpp::list jacobiShell(const Tensor<float>& A, const Tensor<float>& b, co
     return dataList;
 }
 
-calc void jacobi(float a[], float b[], float x[], float x_new[], int num[]) {
+calc void jacobi(dacpp::Tensor<float, 1>& a, 
+                dacpp::Tensor<float, 1>& b, 
+                dacpp::Tensor<float, 1>& x, 
+                dacpp::Tensor<float, 1>& x_new, 
+                dacpp::Tensor<int, 1>& num) {
     float sigma = 0;
     for(int i = 0;i < N;++i) {
         if(i != num[0]) {
@@ -38,6 +42,7 @@ calc void jacobi(float a[], float b[], float x[], float x_new[], int num[]) {
         }
     }
     x_new[0] = (b[0] - sigma) / a[num[0]];
+    
 }
 
 int main() {
@@ -60,17 +65,17 @@ int main() {
             mat_A[i * N + i + 1] = -1.0f; // 上三角元素
         }
 
-        vec_b[i] = i; // 初始化向量 b，可根据需要修改
+        vec_b[i] = 1.0f; // 初始化向量 b，可根据需要修改
     }
 
-    std::vector<int> A_shape = {100, 100};
-    std::vector<int> b_shape = {100};
-    std::vector<int> x_shape = {100};
-    std::vector<int> x_new_shape = {100};
-    Tensor<float> A(mat_A, A_shape);
-    Tensor<float> b(vec_b, b_shape);
-    Tensor<float> x(vec_x, x_shape);
-    Tensor<float> x_new(vec_x_new, x_new_shape);
+    // std::vector<int> A_shape = {100, 100};
+    // std::vector<int> b_shape = {100};
+    // std::vector<int> x_shape = {100};
+    // std::vector<int> x_new_shape = {100};
+    dacpp::Tensor<float, 2> A({100, 100}, mat_A);
+    dacpp::Tensor<float, 1> b(vec_b);
+    dacpp::Tensor<float, 1> x(vec_x);
+    dacpp::Tensor<float, 1> x_new(vec_x_new);
     
     bool converged = false;
     int iter = 0;
@@ -79,8 +84,8 @@ int main() {
     for(int i = 0;i < N;  i++){
         nums[i] = i;
     }
-    std::vector<int> nums_shape = {100};
-    Tensor<int> tensor_nums(nums, nums_shape);
+    //std::vector<int> nums_shape = {100};
+    dacpp::Tensor<int, 1> tensor_nums(nums);
     float* data = new float[1 * 100];
     float* data2 = new float[1 * 100];
 

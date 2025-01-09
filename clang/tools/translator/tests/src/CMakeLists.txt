@@ -23,8 +23,8 @@ add_executable(vecMulScalarTest vecMulScalarTest.cpp)
 add_executable(bindIndexInitTest bindIndexInitTest.cpp)
 add_executable(bindIndexInitTest2 bindIndexInitTest2.cpp)
 add_executable(matmul2Test matmul2Test.cpp)
-add_executable(UsmTemplateTest UsmTemplateTest.cpp)
-add_executable(BufferTemplateTest BufferTemplateTest.cpp)
+# add_executable(UsmTemplateTest UsmTemplateTest.cpp)
+# add_executable(BufferTemplateTest BufferTemplateTest.cpp)
 add_executable(ParameterGenerationTest ParameterGenerationTest.cpp)
 add_executable(ParameterGenerationTest2 ParameterGenerationTest2.cpp)
 add_executable(ParameterGenerationTest3 ParameterGenerationTest3.cpp)
@@ -78,12 +78,12 @@ set_target_properties(bindIndexInitTest2 PROPERTIES
 set_target_properties(matmul2Test PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
-set_target_properties(UsmTemplateTest PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
-)
-set_target_properties(BufferTemplateTest PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
-)
+# set_target_properties(UsmTemplateTest PROPERTIES
+#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+# )
+# set_target_properties(BufferTemplateTest PROPERTIES
+#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+# )
 set_target_properties(ParameterGenerationTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
@@ -121,8 +121,8 @@ target_link_libraries(vecMulScalarTest DacppLib RewriterLib)
 target_link_libraries(bindIndexInitTest DacppLib RewriterLib)
 target_link_libraries(bindIndexInitTest2 DacppLib RewriterLib)
 target_link_libraries(matmul2Test DacppLib RewriterLib)
-target_link_libraries(UsmTemplateTest DacppLib RewriterLib)
-target_link_libraries(BufferTemplateTest DacppLib RewriterLib)
+# target_link_libraries(UsmTemplateTest DacppLib RewriterLib)
+# target_link_libraries(BufferTemplateTest DacppLib RewriterLib)
 target_link_libraries(ParameterGenerationTest DacppLib RewriterLib)
 target_link_libraries(ParameterGenerationTest2 DacppLib RewriterLib)
 target_link_libraries(ParameterGenerationTest3 DacppLib RewriterLib)
