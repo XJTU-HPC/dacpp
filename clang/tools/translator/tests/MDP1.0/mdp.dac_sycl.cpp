@@ -49,43 +49,22 @@ void normalize(dacpp::Tensor<double, 1>& p) {
 
 
 // 数值求解Fokker-Planck方程
-void solveFokkerPlanck(std::vector<double>& p) {
-    std::vector<double> new_p(N-2, 0.0); // 存储下一时间步的分布
-    dacpp::Tensor<double, 1> p_tensor(p);
-    dacpp::Tensor<double, 1> new_p_tensor(new_p);
-        
-
-    for (int t = 0; t < T; ++t) {
-        // 对内部点进行更新，边界条件暂不考虑
-
-
-        mdp_shell(p_tensor, new_p_tensor); 
-        
-        // 更新分布
-        for(int i = 0; i < N-2; i++){
-            p_tensor[i+1] = new_p_tensor[i];
-        }
-        normalize(p_tensor); // 归一化分布
-    }
-
-}
-
 #include <sycl/sycl.hpp>
 #include "DataReconstructor.h"
 #include "ParameterGeneration.h"
 
 using namespace sycl;
 
-void mdp(double* p, double* new_p) 
+void mdp(double* p,double* new_p,sycl::accessor<int, 1, sycl::access::mode::read_write> info_p_acc, sycl::accessor<int, 1, sycl::access::mode::read_write> info_new_p_acc) 
 {
     new_p[0] = p[1] + dt * (D * (p[2] - 2 * p[1] + p[0]) / (dx * dx) + (-A) * (p[2] - p[0]) / (2 * dx));
 }
 
 
 // 生成函数调用
-void mdp_shell(const dacpp::Tensor<double, 1> & p, dacpp::Tensor<double, 1> & new_p) { 
+void mdp_shell_mdp(const dacpp::Tensor<double, 1> & p, dacpp::Tensor<double, 1> & new_p) { 
     // 设备选择
-    auto selector = gpu_selector_v;
+    auto selector = default_selector_v;
     queue q(selector);
     //声明参数生成工具
     ParameterGeneration<int,2> para_gene_tool;
@@ -214,6 +193,8 @@ void mdp_shell(const dacpp::Tensor<double, 1> & p, dacpp::Tensor<double, 1> & ne
     p_ops.push_back(sp);
     p_tool.init(info_p,p_ops);
     p_tool.Reconstruct(r_p,p);
+	std::vector<int> info_partition_p=para_gene_tool.init_partition_data_shape(info_p,p_ops);
+    sycl::buffer<int> info_partition_p_buffer(info_partition_p.data(), sycl::range<1>(info_partition_p.size()));
     // 数据重组
     DataReconstructor<double> new_p_tool;
     double* r_new_p=(double*)malloc(sizeof(double)*new_p_Size);
@@ -226,6 +207,8 @@ void mdp_shell(const dacpp::Tensor<double, 1> & p, dacpp::Tensor<double, 1> & ne
     new_p_ops.push_back(idx);
     new_p_tool.init(info_new_p,new_p_ops);
     new_p_tool.Reconstruct(r_new_p,new_p);
+	std::vector<int> info_partition_new_p=para_gene_tool.init_partition_data_shape(info_new_p,new_p_ops);
+    sycl::buffer<int> info_partition_new_p_buffer(info_partition_new_p.data(), sycl::range<1>(info_partition_new_p.size()));
     
     // 数据移动
     q.memcpy(d_p,r_p,p_Size*sizeof(double)).wait();
@@ -235,6 +218,10 @@ void mdp_shell(const dacpp::Tensor<double, 1> & p, dacpp::Tensor<double, 1> & ne
     sycl::range<3> global(1, 1, 1);
     //队列提交命令组
     q.submit([&](handler &h) {
+        // 访问器初始化
+        
+        auto info_partition_p_accessor = info_partition_p_buffer.get_access<sycl::access::mode::read_write>(h);
+        auto info_partition_new_p_accessor = info_partition_new_p_buffer.get_access<sycl::access::mode::read_write>(h);
         h.parallel_for(sycl::nd_range<3>(global * local, local),[=](sycl::nd_item<3> item) {
             const auto item_id = item.get_local_id(2);
             // 索引初始化
@@ -243,7 +230,7 @@ void mdp_shell(const dacpp::Tensor<double, 1> & p, dacpp::Tensor<double, 1> & ne
             const auto sp_=(item_id+(0))%sp.split_size;
             // 嵌入计算
 			
-            mdp(d_p+(sp_*SplitLength[0][0]),d_new_p+(sp_*SplitLength[1][0]));
+            mdp(d_p+(sp_*SplitLength[0][0]),d_new_p+(sp_*SplitLength[1][0]),info_partition_p_accessor,info_partition_new_p_accessor);
         });
     }).wait();
     
@@ -277,6 +264,28 @@ void mdp_shell(const dacpp::Tensor<double, 1> & p, dacpp::Tensor<double, 1> & ne
     
     sycl::free(d_p, q);
     sycl::free(d_new_p, q);
+}
+
+void solveFokkerPlanck(std::vector<double>& p) {
+    std::vector<double> new_p(N-2, 0.0); // 存储下一时间步的分布
+    dacpp::Tensor<double, 1> p_tensor(p);
+    dacpp::Tensor<double, 1> new_p_tensor(new_p);
+        
+
+    for (int t = 0; t < T; ++t) {
+        // 对内部点进行更新，边界条件暂不考虑
+
+
+        mdp_shell_mdp(p_tensor, new_p_tensor); 
+        
+        // 更新分布
+        for(int i = 0; i < N-2; i++){
+            p_tensor[i+1] = new_p_tensor[i];
+        }
+        normalize(p_tensor); // 归一化分布
+    }
+    p_tensor.print();
+
 }
 
 int main() {

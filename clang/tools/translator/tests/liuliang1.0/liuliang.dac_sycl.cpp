@@ -47,17 +47,17 @@ void initializeDensity(std::vector<double>& rho) {
 
 using namespace sycl;
 
-void lwr(double* rho, double* new_rho) 
+void lwr(double* rho,double* new_rho,sycl::accessor<int, 1, sycl::access::mode::read_write> info_rho_acc, sycl::accessor<int, 1, sycl::access::mode::read_write> info_new_rho_acc) 
 {
-    new_rho[0] = rho[0] - (DELTA_T / DELTA_X) * (q(rho[1]) - q(rho[0]));
+    new_rho[0] = rho[1] - (DELTA_T / DELTA_X) * (q(rho[1]) - q(rho[0]));
     new_rho[0] = std::max(0., new_rho[0]);
 }
 
 
 // 生成函数调用
-void LWR_shell(const dacpp::Tensor<double, 1> & rho, dacpp::Tensor<double, 1> & new_rho) { 
+void LWR_shell_lwr(const dacpp::Tensor<double, 1> & rho, dacpp::Tensor<double, 1> & new_rho) { 
     // 设备选择
-    auto selector = gpu_selector_v;
+    auto selector = default_selector_v;
     queue q(selector);
     //声明参数生成工具
     ParameterGeneration<int,2> para_gene_tool;
@@ -186,6 +186,8 @@ void LWR_shell(const dacpp::Tensor<double, 1> & rho, dacpp::Tensor<double, 1> & 
     rho_ops.push_back(S1);
     rho_tool.init(info_rho,rho_ops);
     rho_tool.Reconstruct(r_rho,rho);
+	std::vector<int> info_partition_rho=para_gene_tool.init_partition_data_shape(info_rho,rho_ops);
+    sycl::buffer<int> info_partition_rho_buffer(info_partition_rho.data(), sycl::range<1>(info_partition_rho.size()));
     // 数据重组
     DataReconstructor<double> new_rho_tool;
     double* r_new_rho=(double*)malloc(sizeof(double)*new_rho_Size);
@@ -198,6 +200,8 @@ void LWR_shell(const dacpp::Tensor<double, 1> & rho, dacpp::Tensor<double, 1> & 
     new_rho_ops.push_back(idx1);
     new_rho_tool.init(info_new_rho,new_rho_ops);
     new_rho_tool.Reconstruct(r_new_rho,new_rho);
+	std::vector<int> info_partition_new_rho=para_gene_tool.init_partition_data_shape(info_new_rho,new_rho_ops);
+    sycl::buffer<int> info_partition_new_rho_buffer(info_partition_new_rho.data(), sycl::range<1>(info_partition_new_rho.size()));
     
     // 数据移动
     q.memcpy(d_rho,r_rho,rho_Size*sizeof(double)).wait();
@@ -207,6 +211,10 @@ void LWR_shell(const dacpp::Tensor<double, 1> & rho, dacpp::Tensor<double, 1> & 
     sycl::range<3> global(1, 1, 1);
     //队列提交命令组
     q.submit([&](handler &h) {
+        // 访问器初始化
+        
+        auto info_partition_rho_accessor = info_partition_rho_buffer.get_access<sycl::access::mode::read_write>(h);
+        auto info_partition_new_rho_accessor = info_partition_new_rho_buffer.get_access<sycl::access::mode::read_write>(h);
         h.parallel_for(sycl::nd_range<3>(global * local, local),[=](sycl::nd_item<3> item) {
             const auto item_id = item.get_local_id(2);
             // 索引初始化
@@ -215,7 +223,7 @@ void LWR_shell(const dacpp::Tensor<double, 1> & rho, dacpp::Tensor<double, 1> & 
             const auto S1_=(item_id+(0))%S1.split_size;
             // 嵌入计算
 			
-            lwr(d_rho+(S1_*SplitLength[0][0]),d_new_rho+(S1_*SplitLength[1][0]));
+            lwr(d_rho+(S1_*SplitLength[0][0]),d_new_rho+(S1_*SplitLength[1][0]),info_partition_rho_accessor,info_partition_new_rho_accessor);
         });
     }).wait();
     
@@ -275,10 +283,7 @@ int main() {
     dacpp::Tensor<double, 1> middle_in_tensor(middle_points_in);
 
     for (int t = 0; t < TIME_STEPS; ++t) {
-
-        std::cout << "1111"  << std::endl;
-        LWR_shell(middle_in_tensor, middle_out_tensor);
-        std::cout << "2222"  << std::endl;
+        LWR_shell_lwr(middle_in_tensor, middle_out_tensor);
 
         // double* r_1 = new double[98];
         // middle_out_tensor.tensor2Array(r_1);
