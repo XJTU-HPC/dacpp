@@ -4736,6 +4736,11 @@ void dacppTranslator::Calc::setBody(Stmt* body) {
 
 std::string dacppTranslator::Calc::getBody(int idx) {
     std::string code = body[idx];
+    for (int i = 0; i < getNumParams(); i++) {
+      std::string name = getParam(i)->getName();
+      std::regex pattern(name + R"((?!\[))");  
+      code = std::regex_replace(code, pattern, name + "[0]");
+    }
     std::string res = "";
     size_t last_pos = 0;
     for (int i = 0; i < getNumParams(); i++) {
@@ -4755,11 +4760,13 @@ std::string dacppTranslator::Calc::getBody(int idx) {
           std::string r_str = "";
           while (pos != -1) {
             for (int k = count; k < b_count; k++) {
-              r_str += "*info_" + name + "_acc[" + std::to_string(k) + "]+";
+              r_str += "*info_" + name + "_acc[" + std::to_string(k) + "]";
             }
+            r_str += "+";
             str.replace(pos, 2, r_str);
             pos = str.find("][");
             count++;
+            r_str = "";
           }
           res += str;
           last_pos = match.position() + match.length();
