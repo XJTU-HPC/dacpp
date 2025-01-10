@@ -66,7 +66,7 @@ int main() {
     dacpp::Tensor<float, 2> u_curr_tensor({32, 32}, u_curr);
 
     for(int i=0;i<TIME_STEPS;i++) {
-        std::vector<float> middle_points(NX * NY, 0.0f);
+        std::vector<float> middle_points;
         for (int i = 1; i <= 30; i++) {
             std::vector<float> row;
             for (int j = 1; j <= 30; j++) {  
@@ -100,7 +100,8 @@ int main() {
         }
         
     }
-    
+    u_curr_tensor[2].print();
+
 
     // 输出最终结果的某些值作为示例
     //cout << "Final temperature at center: " << vec2D[(NX/2)*NY + (NY/2)] << "\n";
