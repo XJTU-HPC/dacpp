@@ -4738,7 +4738,7 @@ std::string dacppTranslator::Calc::getBody(int idx) {
     std::string code = body[idx];
     for (int i = 0; i < getNumParams(); i++) {
       std::string name = getParam(i)->getName();
-      std::regex pattern(name + R"((?!\[))");  
+      std::regex pattern(R"((?![\[a-zA-z0-9_]))" + name + R"((?![\[a-zA-z0-9_]))");  
       code = std::regex_replace(code, pattern, name + "[0]");
     }
     std::string res = "";
@@ -4746,7 +4746,7 @@ std::string dacppTranslator::Calc::getBody(int idx) {
     for (int i = 0; i < getNumParams(); i++) {
       std::string name = getParam(i)->getName();
       
-      std::regex pattern(name + R"((\[[^\[\]]\]){2,})");
+      std::regex pattern(R"((?![\[a-zA-z0-9_]))" + name + R"((\[[^\[\]]\]){2,})");
       std::sregex_iterator it(code.begin(), code.end(), pattern);
       std::sregex_iterator end;
 
