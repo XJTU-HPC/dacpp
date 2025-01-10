@@ -76,10 +76,7 @@ int main() {
     dacpp::Tensor<double, 1> middle_in_tensor(middle_points_in);
 
     for (int t = 0; t < TIME_STEPS; ++t) {
-
-        std::cout << "1111"  << std::endl;
         LWR_shell(middle_in_tensor, middle_out_tensor) <-> lwr;
-        std::cout << "2222"  << std::endl;
 
         // double* r_1 = new double[98];
         // middle_out_tensor.tensor2Array(r_1);
