@@ -1,6 +1,5 @@
 # !/usr/bin/env bash
-
-# exec 2>/dev/null
+exec 2>/dev/null
 
 # Delete all temporary files
 rm -rf ./tmp
@@ -19,6 +18,7 @@ examples=(
     "imageAdjustment1.0"
     "liuliang1.0"
     "MDP1.0"
+    "mandel1.0"
 )
 
 
@@ -72,7 +72,6 @@ for dir in ${examples[@]}; do
     fi
     icpx -fsycl -fsycl-targets=nvptx64-nvidia-cuda \
     "$sycl_file" \
-    "${SRC_FILES[@]}" \
     "${INCLUDE_DIRS[@]/#/-I}" \
     -o "./tmp/$dir/$dir" 
     exe_file=$(find "./tmp/$dir/" -type f -name "$dir")

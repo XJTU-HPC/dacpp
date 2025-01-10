@@ -43,14 +43,14 @@ void print_image(const std::vector<std::vector<Pixel>>& image, int num_rows = 5,
 
 using namespace sycl;
 
-void image_1(Pixel* image_tensor, Pixel* image_tensor2) 
+void image_1(Pixel* image_tensor,Pixel* image_tensor2,sycl::accessor<int, 1, sycl::access::mode::read_write> info_image_tensor_acc, sycl::accessor<int, 1, sycl::access::mode::read_write> info_image_tensor2_acc) 
 {
-    image_tensor2[0].r = std::min(255, image_tensor[0].r + 50);
+    image_tensor[0]2[0].r = std::min(255, image_tensor[0].r + 50);
 }
 
 
 // 生成函数调用
-void imageAdjustment(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor<Pixel, 2> & image_tensor2) { 
+void imageAdjustment_image_1(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor<Pixel, 2> & image_tensor2) { 
     // 设备选择
     auto selector = gpu_selector_v;
     queue q(selector);
@@ -199,6 +199,8 @@ void imageAdjustment(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor
     image_tensor_ops.push_back(idx2);
     image_tensor_tool.init(info_image_tensor,image_tensor_ops);
     image_tensor_tool.Reconstruct(r_image_tensor,image_tensor);
+	std::vector<int> info_partition_image_tensor=para_gene_tool.init_partition_data_shape(info_image_tensor,image_tensor_ops);
+    sycl::buffer<int> info_partition_image_tensor_buffer(info_partition_image_tensor.data(), sycl::range<1>(info_partition_image_tensor.size()));
     // 数据重组
     DataReconstructor<Pixel> image_tensor2_tool;
     Pixel* r_image_tensor2=(Pixel*)malloc(sizeof(Pixel)*image_tensor2_Size);
@@ -214,6 +216,8 @@ void imageAdjustment(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor
     image_tensor2_ops.push_back(idx2);
     image_tensor2_tool.init(info_image_tensor2,image_tensor2_ops);
     image_tensor2_tool.Reconstruct(r_image_tensor2,image_tensor2);
+	std::vector<int> info_partition_image_tensor2=para_gene_tool.init_partition_data_shape(info_image_tensor2,image_tensor2_ops);
+    sycl::buffer<int> info_partition_image_tensor2_buffer(info_partition_image_tensor2.data(), sycl::range<1>(info_partition_image_tensor2.size()));
     
     // 数据移动
     q.memcpy(d_image_tensor,r_image_tensor,image_tensor_Size*sizeof(Pixel)).wait();
@@ -223,6 +227,10 @@ void imageAdjustment(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor
     sycl::range<3> global(1, 1, 1);
     //队列提交命令组
     q.submit([&](handler &h) {
+        // 访问器初始化
+        
+        auto info_partition_image_tensor_accessor = info_partition_image_tensor_buffer.get_access<sycl::access::mode::read_write>(h);
+        auto info_partition_image_tensor2_accessor = info_partition_image_tensor2_buffer.get_access<sycl::access::mode::read_write>(h);
         h.parallel_for(sycl::nd_range<3>(global * local, local),[=](sycl::nd_item<3> item) {
             const auto item_id = item.get_local_id(2);
             // 索引初始化
@@ -231,7 +239,7 @@ void imageAdjustment(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor
             const auto idx2_=(item_id+(0))%idx2.split_size;
             // 嵌入计算
 			
-            image_1(d_image_tensor+(idx1_*SplitLength[0][0]+idx2_*SplitLength[0][1]),d_image_tensor2+(idx1_*SplitLength[1][0]+idx2_*SplitLength[1][1]));
+            image_1(d_image_tensor+(idx1_*SplitLength[0][0]+idx2_*SplitLength[0][1]),d_image_tensor2+(idx1_*SplitLength[1][0]+idx2_*SplitLength[1][1]),info_partition_image_tensor_accessor,info_partition_image_tensor2_accessor);
         });
     }).wait();
     
@@ -267,7 +275,7 @@ void imageAdjustment(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor
     sycl::free(d_image_tensor2, q);
 }
 
-void image_2(Pixel* image_tensor2, Pixel* image_tensor3) 
+void image_2(Pixel* image_tensor2,Pixel* image_tensor3,sycl::accessor<int, 1, sycl::access::mode::read_write> info_image_tensor2_acc, sycl::accessor<int, 1, sycl::access::mode::read_write> info_image_tensor3_acc) 
 {
     int value = 30;
     image_tensor3[0].r = std::min(255, image_tensor2[0].r + value);
@@ -277,7 +285,7 @@ void image_2(Pixel* image_tensor2, Pixel* image_tensor3)
 
 
 // 生成函数调用
-void imageAdjustment(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor<Pixel, 2> & image_tensor2) { 
+void imageAdjustment_image_2(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor<Pixel, 2> & image_tensor2) { 
     // 设备选择
     auto selector = gpu_selector_v;
     queue q(selector);
@@ -426,6 +434,8 @@ void imageAdjustment(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor
     image_tensor_ops.push_back(idx2);
     image_tensor_tool.init(info_image_tensor,image_tensor_ops);
     image_tensor_tool.Reconstruct(r_image_tensor,image_tensor);
+	std::vector<int> info_partition_image_tensor=para_gene_tool.init_partition_data_shape(info_image_tensor,image_tensor_ops);
+    sycl::buffer<int> info_partition_image_tensor_buffer(info_partition_image_tensor.data(), sycl::range<1>(info_partition_image_tensor.size()));
     // 数据重组
     DataReconstructor<Pixel> image_tensor2_tool;
     Pixel* r_image_tensor2=(Pixel*)malloc(sizeof(Pixel)*image_tensor2_Size);
@@ -441,6 +451,8 @@ void imageAdjustment(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor
     image_tensor2_ops.push_back(idx2);
     image_tensor2_tool.init(info_image_tensor2,image_tensor2_ops);
     image_tensor2_tool.Reconstruct(r_image_tensor2,image_tensor2);
+	std::vector<int> info_partition_image_tensor2=para_gene_tool.init_partition_data_shape(info_image_tensor2,image_tensor2_ops);
+    sycl::buffer<int> info_partition_image_tensor2_buffer(info_partition_image_tensor2.data(), sycl::range<1>(info_partition_image_tensor2.size()));
     
     // 数据移动
     q.memcpy(d_image_tensor,r_image_tensor,image_tensor_Size*sizeof(Pixel)).wait();
@@ -450,6 +462,10 @@ void imageAdjustment(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor
     sycl::range<3> global(1, 1, 1);
     //队列提交命令组
     q.submit([&](handler &h) {
+        // 访问器初始化
+        
+        auto info_partition_image_tensor_accessor = info_partition_image_tensor_buffer.get_access<sycl::access::mode::read_write>(h);
+        auto info_partition_image_tensor2_accessor = info_partition_image_tensor2_buffer.get_access<sycl::access::mode::read_write>(h);
         h.parallel_for(sycl::nd_range<3>(global * local, local),[=](sycl::nd_item<3> item) {
             const auto item_id = item.get_local_id(2);
             // 索引初始化
@@ -458,7 +474,7 @@ void imageAdjustment(const dacpp::Tensor<Pixel, 2> & image_tensor, dacpp::Tensor
             const auto idx2_=(item_id+(0))%idx2.split_size;
             // 嵌入计算
 			
-            image_2(d_image_tensor+(idx1_*SplitLength[0][0]+idx2_*SplitLength[0][1]),d_image_tensor2+(idx1_*SplitLength[1][0]+idx2_*SplitLength[1][1]));
+            image_2(d_image_tensor+(idx1_*SplitLength[0][0]+idx2_*SplitLength[0][1]),d_image_tensor2+(idx1_*SplitLength[1][0]+idx2_*SplitLength[1][1]),info_partition_image_tensor_accessor,info_partition_image_tensor2_accessor);
         });
     }).wait();
     
@@ -509,7 +525,7 @@ int main() {
     dacpp::Tensor<Pixel, 2> image_tensor2({height, width}, image2);
 
     // 执行色彩调整操作
-    imageAdjustment(image_tensor, image_tensor2);
+    imageAdjustment_image_1(image_tensor, image_tensor2);
     std::cout << "\nImage After Color Adjustment:" << std::endl;
 
     std::vector<Pixel> image3 = image2;
@@ -517,7 +533,7 @@ int main() {
 
 
     // 执行亮度增强操作
-    imageAdjustment(image_tensor2, image_tensor3);
+    imageAdjustment_image_2(image_tensor2, image_tensor3);
     std::cout << "\nImage After Brightness Enhancement:" << std::endl;
     image_tensor3.print();
 
