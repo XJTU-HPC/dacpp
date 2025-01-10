@@ -36,6 +36,7 @@ add_executable(imageAdjustmentdac imageAdjustment.dac_sycl.cpp)
 add_executable(mdpdac mdp.dac_sycl.cpp)
 # add_executable(mdpStandardSycl mdp.StandardSycl.cpp)
 add_executable(DFTdac DFT.dac_sycl.cpp)
+add_executable(mandeldac mandel.dac_sycl.cpp)
 
 
 add_executable(syclBlockMatMul0 blockMatMul0.sycl.cpp)
@@ -97,6 +98,9 @@ set_target_properties(mdpdac PROPERTIES
 set_target_properties(DFTdac PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
+set_target_properties(mandeldac PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
 
 
 
@@ -137,6 +141,7 @@ target_link_libraries(imageAdjustmentdac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib
 target_link_libraries(mdpdac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 # target_link_libraries(mdp_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(DFTdac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+target_link_libraries(mandeldac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 
 
 
