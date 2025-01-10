@@ -82,14 +82,12 @@ void dacppTranslator::Param::setType(clang::QualType newType) {
           llvm::raw_string_ostream BSStream(BSBuf);
           SpecTy->getTemplateName().print(BSStream, clang::LangOptions(),
                                           clang::TemplateName::Qualified::None);
-          if (!strcmp("Tensor", BSBuf.c_str())) {
+          if (!strcmp("Tensor", BSBuf.c_str()) ||
+              !strcmp("Vector", BSBuf.c_str()) ||
+              !strcmp("Matrix", BSBuf.c_str())) {
             found_p = true;
-            clang::TemplateDecl *TD =
-                SpecTy->getTemplateName().getAsTemplateDecl();
             llvm::ArrayRef<clang::TemplateArgument> Args =
                 SpecTy->template_arguments();
-            const clang::TemplateParameterList *TPL =
-                TD ? TD->getTemplateParameters() : nullptr;
             bool __attribute__((unused)) FirstArg = true;
             for (const auto &Arg : Args) {
               // Print the argument into a string.
