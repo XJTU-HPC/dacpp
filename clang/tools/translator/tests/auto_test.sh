@@ -1,6 +1,6 @@
 # !/usr/bin/env bash
 
-exec 2>/dev/null
+# exec 2>/dev/null
 
 # Delete all temporary files
 rm -rf ./tmp
@@ -8,12 +8,17 @@ mkdir ./tmp
 
 # Edit examples here
 examples=(
-    # "matMul"
+    "matMul1.0"
     # "block_mat_mul"
     "waveEquation1.0"
     "stencil1.0"
     "jacobi1.0"
     "FOuLa1.0"
+    "decay1.0"
+    "DFT1.0"
+    "imageAdjustment1.0"
+    "liuliang1.0"
+    "MDP1.0"
 )
 
 
@@ -90,6 +95,7 @@ for dir in ${examples[@]}; do
     fi
     exe_file="${exe_file#./tmp/$dir}"
     "./tmp/$dir/$exe_file" > "./tmp/$dir/$exe_file.out" 
+    perl -pi -e 'chomp if eof' "./tmp/$dir/$exe_file.out"
     std_res=$(find "./$dir/" -type f -name "*.out" | head -n 1)
     if diff -y --suppress-common-lines "./tmp/$dir/$exe_file.out" "$std_res"; then
         echo "Example $dir: execution test succeeded"

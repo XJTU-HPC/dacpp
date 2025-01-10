@@ -83,7 +83,7 @@ int main() {
     // Define the shape of the tensor (rows, columns) and create the Tensor
     // std::vector<int> shape = {6, 101};
     dacpp::Tensor<int, 2> u_tensor({6, 101}, u_flat);
-    
+
     for (int k = 0; k < n-1; k++) {
         //输入数据是6个点，3个一组分为四组，输出数据四个点，降维
         //这里再输入之前要把输出那一行初始化为各长度为4的Tensor
