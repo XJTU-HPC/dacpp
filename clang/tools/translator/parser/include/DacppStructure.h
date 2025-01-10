@@ -87,9 +87,20 @@ private:
     std::vector<NameSpace*> nameSpaces; // 命名空间
     std::vector<Expression*> exprs; // 数据关联计算表达式
     const FunctionDecl* mainFuncLoc; // AST中主函数节点位置
+    clang::TranslationUnitDecl* decl;
+
 
 public:
+    const FunctionDecl* node;
     DacppFile();
+
+    void setTranslationUnitDecl(clang::TranslationUnitDecl* decl) {
+        this->decl = decl;
+    }
+
+    clang::TranslationUnitDecl* getTranslationUnitDecl() {
+        return decl;
+    }
     
     void setHeaderFile(std::string headerfile);
     HeaderFile* getHeaderFile(int idx);

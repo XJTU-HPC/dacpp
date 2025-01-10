@@ -18,7 +18,7 @@ set(PARSER_SOURCES
   parser/lib/Split.cpp
 )
 set(REWRITER_SOURCES
-  rewriter/lib/dacInfo.cpp
+  # rewriter/lib/dacInfo.cpp
   rewriter/lib/sub_template.cpp
   rewriter/lib/usm_template.cpp
   rewriter/lib/Rewriter.cpp

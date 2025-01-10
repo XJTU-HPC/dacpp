@@ -55,6 +55,8 @@ std::string CodeGen_DeviceMemAllocReduction(std::string  type,std::string name,s
 
 std::string CodeGen_H2DMemMov(std::string type,std::string name,std::string size);
 
+std::string CodeGen_DeviceDataInit(std::string type,std::string name,std::string size);
+
 //aborted
 std::string CodeGen_KernelExecute(std::string SplitSize,std::string IndexInit,std::string CalcEmbed);
 
