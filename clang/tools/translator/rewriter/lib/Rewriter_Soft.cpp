@@ -93,7 +93,10 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
         // 计算结构
         code += "void " + calc->getName() + "(";
         for(int count = 0; count < calc->getNumParams(); count++) {
-            code += calc->getParam(count)->getBasicType() + "* " + calc->getParam(count)->getName();
+            code += calc->getParam(count)->getBasicType() + "* " + calc->getParam(count)->getName() + ",";
+        }
+        for(int count = 0; count < calc->getNumParams(); count++) {
+            code += "sycl::accessor<int, 1, sycl::access::mode::read_write> info_" + calc->getParam(count)->getName() + "_acc";
             if(count != calc->getNumParams() - 1) {
                 code += ", ";
             }
@@ -106,7 +109,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
 
         // std::cout << code;
 
-        std::string dacShellName = shell->getName();
+        std::string dacShellName = shell->getName() + "_" + calc->getName();
         std::string dacShellParams = "";
         for (int count = 0; count < shell->getNumParams(); count++) {
             Param* param = shell->getParam(count);
@@ -319,8 +322,17 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
             DacData data = DacData("d_"+shellParam->getName(), 0, ops);
             args.push_back(data);
         }
-        std::string CalcEmbed = CodeGen_CalcEmbed2(calc->getName(),args);//注意调用了新的嵌入计算模板
-	    std::string KernelExecute = CodeGen_KernelExecute("Item_Size",BindingInit,CalcEmbed);//注意这里面填的size的大小需要是前面算出来的大小
+        // std::string CalcEmbed = CodeGen_CalcEmbed2(calc->getName(),args);//注意调用了新的嵌入计算模板
+        std::vector<std::string> accessor_names;
+        for (int z = 0; z < shell->getNumParams(); z++) {
+            accessor_names.push_back(shell->getParam(z)->getName());
+        }
+        std::string CalcEmbed = CodeGen_CalcEmbed2(calc->getName(),args, accessor_names);
+        std::string AccessorInit = "";
+        for (int argCount = 0; argCount < shell->getNumShellParams(); argCount++) {
+            AccessorInit += CodeGen_AccessorInit(shell->getShellParam(argCount)->getName());
+        }
+	    std::string KernelExecute = CodeGen_KernelExecute("Item_Size",AccessorInit,BindingInit,CalcEmbed);//注意这里面填的size的大小需要是前面算出来的大小
         // std::cout << KernelExecute;
 
         std::string Reduction;
