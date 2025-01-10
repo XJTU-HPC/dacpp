@@ -1105,6 +1105,11 @@ std::string CodeGen_CalcEmbed2(std::string Name,Args args){
 			DacCalcArgs+=args[i].name + "+" + IndexComb;
 		}		
 		if(i==len-1){
+			DacCalcArgs+=",";
+			for(int j=0;j<len;j++) {
+				DacCalcArgs+="info_partition_"+args[j].name.substr(2)+"_accessor";
+				if(j!=len-1) DacCalcArgs+=",";
+			}
 			DacCalcArgs+=");";
 		}
 		else{
