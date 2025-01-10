@@ -8,9 +8,15 @@ int main(){
     int* res=(int*)malloc(sizeof(int)*16);
     
     std::vector<int> data{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-    std::vector<int> shape{4,4};
-    dacpp::Tensor<int> myTensor(data,shape);
+    // std::vector<int> shape{4,4};
+    dacpp::Tensor<int,2> myTensor({4,4},data);
     myTensor.print();
+
+    DataInfo info_myTensor;
+    info_myTensor.dim = myTensor.getDim();
+    for(int i = 0; i < info_myTensor.dim; i++) info_myTensor.dimLength.push_back(myTensor.getShape(i));
+
+
     RegularSlice si = RegularSlice("si", 2, 2);
 	si.SetSplitSize(2);
 	RegularSlice sj = RegularSlice("sj", 2, 2);
@@ -23,8 +29,8 @@ int main(){
     sj.setSplitLength(4);
     data_ops.push_back(sj);
     DataReconstructor<int> tool;
-    tool.init(myTensor,data_ops);
-    tool.Reconstruct(res);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+    tool.init(info_myTensor,data_ops);
+    tool.Reconstruct(res,myTensor);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
   
     for(int i=0;i<4;i++){
         for(int j=0;j<4;j++){

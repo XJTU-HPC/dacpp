@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <fstream>
 #include <queue>
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
+#include "Slice.h"
+#include "ReconTensor.h"
 
 using dacpp::Tensor;
 
@@ -44,7 +44,7 @@ double exact(double x, double t) {
 
 
 #include <sycl/sycl.hpp>
-#include "DataReconstructor.h"
+#include "/data/qinian/ice/dacpp/clang/tools/translator/dpcppLib/include/DataReconstructor.old.h"
 
 using namespace sycl;
 

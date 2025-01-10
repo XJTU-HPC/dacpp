@@ -3,6 +3,10 @@
 #include <fstream>
 #include <vector>
 #include "usm_template.h"
+#include <string>
+#include <vector>
+#include <set>
+#include <unordered_map>
 
 namespace USM_TEMPLATE {
 
@@ -199,5 +203,6 @@ std::string CodeGen_MemFree(std::string Name){
 		{"{{NAME}}",            Name}
 	});
 }
+
 
 }

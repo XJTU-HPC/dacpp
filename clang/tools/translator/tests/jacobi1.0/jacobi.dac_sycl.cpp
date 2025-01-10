@@ -1,15 +1,11 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
-
+#include "ReconTensor.h"
 // 定义矩阵大小
 const int N = 100; // 可以修改 N 的值来改变矩阵大小
-const int max_iter = 100;
+const int max_iter = 10000;
 const float tolerance = 1e-6;
-using dacpp::Tensor;
-
 namespace dacpp {
     typedef std::vector<std::any> list;
 }
@@ -21,10 +17,11 @@ namespace dacpp {
 
 #include <sycl/sycl.hpp>
 #include "DataReconstructor.h"
+#include "ParameterGeneration.h"
 
 using namespace sycl;
 
-void jacobi(float* a, float* b, float* x, float* x_new, int* num) 
+void jacobi(float* a, float* b, float* x, float* x_new, float* num) 
 {
     float sigma = 0;
     for (int i = 0; i < N; ++i) {
@@ -37,100 +34,249 @@ void jacobi(float* a, float* b, float* x, float* x_new, int* num)
 
 
 // 生成函数调用
-void jacobiShell(const Tensor<float> & A, const Tensor<float> & b, const Tensor<float> & x, Tensor<float> & x_new, const Tensor<int> & nums) { 
+void jacobiShell(const dacpp::Tensor<float, 2> & A, const dacpp::Tensor<float, 1> & b, const dacpp::Tensor<float, 1> & x, dacpp::Tensor<float, 1> & x_new, const dacpp::Tensor<int, 1> & nums) { 
     // 设备选择
     auto selector = gpu_selector_v;
     queue q(selector);
+    //声明参数生成工具
+    ParameterGeneration<int,2> para_gene_tool;
     // 算子初始化
     
+    // 数据信息初始化
+    DataInfo info_A;
+    info_A.dim = A.getDim();
+    for(int i = 0; i < info_A.dim; i++) info_A.dimLength.push_back(A.getShape(i));
+    // 数据信息初始化
+    DataInfo info_b;
+    info_b.dim = b.getDim();
+    for(int i = 0; i < info_b.dim; i++) info_b.dimLength.push_back(b.getShape(i));
+    // 数据信息初始化
+    DataInfo info_x;
+    info_x.dim = x.getDim();
+    for(int i = 0; i < info_x.dim; i++) info_x.dimLength.push_back(x.getShape(i));
+    // 数据信息初始化
+    DataInfo info_x_new;
+    info_x_new.dim = x_new.getDim();
+    for(int i = 0; i < info_x_new.dim; i++) info_x_new.dimLength.push_back(x_new.getShape(i));
+    // 数据信息初始化
+    DataInfo info_nums;
+    info_nums.dim = nums.getDim();
+    for(int i = 0; i < info_nums.dim; i++) info_nums.dimLength.push_back(nums.getShape(i));
     // 降维算子初始化
     Index idx1 = Index("idx1");
-    idx1.SetSplitSize(100);
-    // 数据重组
+    idx1.setDimId(0);
+    idx1.SetSplitSize(para_gene_tool.init_operetor_splitnumber(idx1,info_A));
+
+    //参数生成
+	
+    // 参数生成 提前计算后面需要用到的参数	
+	
+    // 算子组初始化
+    Dac_Ops A_Ops;
+    
+    idx1.setDimId(0);
+    A_Ops.push_back(idx1);
+
+
+    // 算子组初始化
+    Dac_Ops b_Ops;
+    
+    idx1.setDimId(0);
+    b_Ops.push_back(idx1);
+
+
+    // 算子组初始化
+    Dac_Ops x_Ops;
+    
+
+    // 算子组初始化
+    Dac_Ops x_new_Ops;
+    
+    idx1.setDimId(0);
+    x_new_Ops.push_back(idx1);
+
+
+    // 算子组初始化
+    Dac_Ops nums_Ops;
+    
+    idx1.setDimId(0);
+    nums_Ops.push_back(idx1);
+
+
+    // 算子组初始化
+    Dac_Ops In_Ops;
+    
+    idx1.setDimId(0);
+    In_Ops.push_back(idx1);
+
+
+    // 算子组初始化
+    Dac_Ops Out_Ops;
+    
+    idx1.setDimId(0);
+    Out_Ops.push_back(idx1);
+
+
+    // 算子组初始化
+    Dac_Ops Reduction_Ops;
+    
+    idx1.setDimId(0);
+    Reduction_Ops.push_back(idx1);
+
+
+	
+    //生成设备内存分配大小
+    int A_Size = para_gene_tool.init_device_memory_size(info_A,A_Ops);
+
+    //生成设备内存分配大小
+    int b_Size = para_gene_tool.init_device_memory_size(info_b,b_Ops);
+
+    //生成设备内存分配大小
+    int x_Size = para_gene_tool.init_device_memory_size(info_x,x_Ops);
+
+    //生成设备内存分配大小
+    int x_new_Size = para_gene_tool.init_device_memory_size(In_Ops,Out_Ops,info_x_new);
+
+    //生成设备内存分配大小
+    int Reduction_Size = para_gene_tool.init_device_memory_size(info_x_new,Reduction_Ops);
+
+    //生成设备内存分配大小
+    int nums_Size = para_gene_tool.init_device_memory_size(info_nums,nums_Ops);
+
+	
+    // 计算算子组里面的算子的划分长度
+    para_gene_tool.init_op_split_length(A_Ops,A_Size);
+
+    // 计算算子组里面的算子的划分长度
+    para_gene_tool.init_op_split_length(b_Ops,b_Size);
+
+    // 计算算子组里面的算子的划分长度
+    para_gene_tool.init_op_split_length(x_Ops,x_Size);
+
+    // 计算算子组里面的算子的划分长度
+    para_gene_tool.init_op_split_length(In_Ops,x_new_Size);
+
+    // 计算算子组里面的算子的划分长度
+    para_gene_tool.init_op_split_length(nums_Ops,nums_Size);
+
+	
+	
+    std::vector<Dac_Ops> ops_s;
+	
+    ops_s.push_back(A_Ops);
+
+    ops_s.push_back(b_Ops);
+
+    ops_s.push_back(x_Ops);
+
+    ops_s.push_back(In_Ops);
+
+    ops_s.push_back(nums_Ops);
+
+
+	// 生成划分长度的二维矩阵
+    int SplitLength[5][1] = {0};
+    para_gene_tool.init_split_length_martix(5,1,&SplitLength[0][0],ops_s);
+
+	
+    // 计算工作项的大小
+    int Item_Size = para_gene_tool.init_work_item_size(In_Ops);
+
+	
+    // 计算归约中split_size的大小
+    int Reduction_Split_Size = para_gene_tool.init_reduction_split_size(In_Ops,Out_Ops);
+
+	
+    // 计算归约中split_length的大小
+    int Reduction_Split_Length = para_gene_tool.init_reduction_split_length(Out_Ops);
+
+
+    // 设备内存分配
+    
+    // 设备内存分配
+    float *d_A=malloc_device<float>(A_Size,q);
+    // 设备内存分配
+    float *d_b=malloc_device<float>(b_Size,q);
+    // 设备内存分配
+    float *d_x=malloc_device<float>(x_Size,q);
+    // 设备内存分配
+    float *d_x_new=malloc_device<float>(x_new_Size,q);
+    // 归约设备内存分配
+    float *reduction_x_new = malloc_device<float>(Reduction_Size,q);
+    // 设备内存分配
+    int *d_nums=malloc_device<int>(nums_Size,q);
+    // 数据关联计算
+    
     
     // 数据重组
     DataReconstructor<float> A_tool;
-    float* r_A=(float*)malloc(sizeof(float)*10000);
+    float* r_A=(float*)malloc(sizeof(float)*A_Size);
     
     // 数据算子组初始化
     Dac_Ops A_ops;
     
     idx1.setDimId(0);
-    idx1.setSplitLength(100);
+    idx1.setSplitLength(8);
     A_ops.push_back(idx1);
-    A_tool.init(A,A_ops);
-    A_tool.Reconstruct(r_A);
+    A_tool.init(info_A,A_ops);
+    A_tool.Reconstruct(r_A,A);
     // 数据重组
     DataReconstructor<float> b_tool;
-    float* r_b=(float*)malloc(sizeof(float)*100);
+    float* r_b=(float*)malloc(sizeof(float)*b_Size);
     
     // 数据算子组初始化
     Dac_Ops b_ops;
     
     idx1.setDimId(0);
-    idx1.setSplitLength(1);
+    idx1.setSplitLength(8);
     b_ops.push_back(idx1);
-    b_tool.init(b,b_ops);
-    b_tool.Reconstruct(r_b);
+    b_tool.init(info_b,b_ops);
+    b_tool.Reconstruct(r_b,b);
     // 数据重组
     DataReconstructor<float> x_tool;
-    float* r_x=(float*)malloc(sizeof(float)*100);
+    float* r_x=(float*)malloc(sizeof(float)*x_Size);
     
     // 数据算子组初始化
     Dac_Ops x_ops;
     
-    x_tool.init(x,x_ops);
-    x_tool.Reconstruct(r_x);
+    x_tool.init(info_x,x_ops);
+    x_tool.Reconstruct(r_x,x);
     // 数据重组
     DataReconstructor<float> x_new_tool;
-    float* r_x_new=(float*)malloc(sizeof(float)*100);
+    float* r_x_new=(float*)malloc(sizeof(float)*x_new_Size);
     
     // 数据算子组初始化
     Dac_Ops x_new_ops;
     
     idx1.setDimId(0);
-    idx1.setSplitLength(1);
+    idx1.setSplitLength(8);
     x_new_ops.push_back(idx1);
-    x_new_tool.init(x_new,x_new_ops);
-    x_new_tool.Reconstruct(r_x_new);
+    x_new_tool.init(info_x_new,x_new_ops);
+    x_new_tool.Reconstruct(r_x_new,x_new);
     // 数据重组
     DataReconstructor<int> nums_tool;
-    int* r_nums=(int*)malloc(sizeof(int)*100);
+    int* r_nums=(int*)malloc(sizeof(int)*nums_Size);
     
     // 数据算子组初始化
     Dac_Ops nums_ops;
     
     idx1.setDimId(0);
-    idx1.setSplitLength(1);
+    idx1.setSplitLength(8);
     nums_ops.push_back(idx1);
-    nums_tool.init(nums,nums_ops);
-    nums_tool.Reconstruct(r_nums);
-    // 设备内存分配
-    
-    // 设备内存分配
-    float *d_A=malloc_device<float>(10000,q);
-    // 设备内存分配
-    float *d_b=malloc_device<float>(100,q);
-    // 设备内存分配
-    float *d_x=malloc_device<float>(100,q);
-    // 设备内存分配
-    float *d_x_new=malloc_device<float>(100,q);
-    // 设备内存分配
-    int *d_nums=malloc_device<int>(100,q);
-    // 数据移动
+    nums_tool.init(info_nums,nums_ops);
+    nums_tool.Reconstruct(r_nums,nums);
     
     // 数据移动
-    q.memcpy(d_A,r_A,10000*sizeof(float)).wait();
+    q.memcpy(d_A,r_A,A_Size*sizeof(float)).wait();
     // 数据移动
-    q.memcpy(d_b,r_b,100*sizeof(float)).wait();
+    q.memcpy(d_b,r_b,b_Size*sizeof(float)).wait();
     // 数据移动
-    q.memcpy(d_x,r_x,100*sizeof(float)).wait();
+    q.memcpy(d_x,r_x,x_Size*sizeof(float)).wait();
     // 数据移动
-    q.memcpy(d_nums,r_nums,100*sizeof(int)).wait();   
-    // 内核执行
-    
+    q.memcpy(d_nums,r_nums,nums_Size*sizeof(int)).wait();
+	
     //工作项划分
-    sycl::range<3> local(1, 1, 100);
+    sycl::range<3> local(1, 1, Item_Size);
     sycl::range<3> global(1, 1, 1);
     //队列提交命令组
     q.submit([&](handler &h) {
@@ -138,21 +284,39 @@ void jacobiShell(const Tensor<float> & A, const Tensor<float> & b, const Tensor<
             const auto item_id = item.get_local_id(2);
             // 索引初始化
 			
-            const auto idx1=(item_id+(0)+100)%100;
+            const auto idx1_=(item_id+(0))%idx1.split_size;
             // 嵌入计算
 			
-            jacobi(d_A+(idx1*100),d_b+(idx1*1),d_x,d_x_new+(idx1*1),d_nums+(idx1*1));
+            jacobi(d_A+(idx1_*SplitLength[0][0]),d_b+(idx1_*SplitLength[1][0]),d_x,d_x_new+(idx1_*SplitLength[3][0]),d_nums+(idx1_*SplitLength[4][0]));
         });
     }).wait();
     
-    
+
+	
     // 归约
-    
-    // 返回计算结果
-    
+    if(Reduction_Split_Size > 1)
+    {
+        for(int i=0;i<Reduction_Size;i++) {
+            q.submit([&](handler &h) {
+    	        h.parallel_for(
+                range<1>(Reduction_Split_Size),
+                reduction(reduction_x_new+i, 
+                sycl::plus<>(),
+                property::reduction::initialize_to_identity()),
+                [=](id<1> idx,auto &reducer) {
+                    reducer.combine(d_x_new[(i/Reduction_Split_Length)*Reduction_Split_Length*Reduction_Split_Size+i%Reduction_Split_Length+idx*Reduction_Split_Length]);
+     	        });
+         }).wait();
+        }
+        q.memcpy(d_x_new,reduction_x_new, Reduction_Size*sizeof(float)).wait();
+    }
+
+
+	
     // 归并结果返回
-    q.memcpy(r_x_new, d_x_new, 100*sizeof(float)).wait();
-    x_new = x_new_tool.UpdateData(r_x_new);
+    q.memcpy(r_x_new, d_x_new, x_new_Size*sizeof(float)).wait();
+    x_new_tool.UpdateData(r_x_new,x_new);
+
     // 内存释放
     
     sycl::free(d_A, q);
@@ -163,7 +327,7 @@ void jacobiShell(const Tensor<float> & A, const Tensor<float> & b, const Tensor<
 }
 
 int main() {
-    auto start_time = std::chrono::high_resolution_clock::now(); // 开始时间测量
+
 
     // 初始化系数矩阵 A 和向量 b
     std::vector<float> mat_A(N * N, 0.0f);
@@ -182,17 +346,17 @@ int main() {
             mat_A[i * N + i + 1] = -1.0f; // 上三角元素
         }
 
-        vec_b[i] = 1.0f; // 初始化向量 b，可根据需要修改
+        vec_b[i] = i; // 初始化向量 b，可根据需要修改
     }
 
-    std::vector<int> A_shape = {100, 100};
-    std::vector<int> b_shape = {100};
-    std::vector<int> x_shape = {100};
-    std::vector<int> x_new_shape = {100};
-    Tensor<float> A(mat_A, A_shape);
-    Tensor<float> b(vec_b, b_shape);
-    Tensor<float> x(vec_x, x_shape);
-    Tensor<float> x_new(vec_x_new, x_new_shape);
+    // std::vector<int> A_shape = {100, 100};
+    // std::vector<int> b_shape = {100};
+    // std::vector<int> x_shape = {100};
+    // std::vector<int> x_new_shape = {100};
+    dacpp::Tensor<float, 2> A({100, 100}, mat_A);
+    dacpp::Tensor<float, 1> b(vec_b);
+    dacpp::Tensor<float, 1> x(vec_x);
+    dacpp::Tensor<float, 1> x_new(vec_x_new);
     
     bool converged = false;
     int iter = 0;
@@ -201,8 +365,8 @@ int main() {
     for(int i = 0;i < N;  i++){
         nums[i] = i;
     }
-    std::vector<int> nums_shape = {100};
-    Tensor<int> tensor_nums(nums, nums_shape);
+    //std::vector<int> nums_shape = {100};
+    dacpp::Tensor<int, 1> tensor_nums(nums);
     float* data = new float[1 * 100];
     float* data2 = new float[1 * 100];
 
@@ -222,12 +386,7 @@ int main() {
         }
 
         // 更新 x
-        for(int i = 0;i<N;i++){
-            float* data = new float[1];
-            x_new[i].tensor2Array(data);
-            x[i].array2Tensor(data);    
-        }
-        //x=x_new;
+        x=x_new;
 
         ++iter;
     }
@@ -240,8 +399,6 @@ int main() {
         std::cout << data2[i] << " ";
     }
     std::cout << std::endl;
-    auto end_time = std::chrono::high_resolution_clock::now(); // 结束时间测量
-    std::chrono::duration<double> duration = end_time - start_time; // 计算持续时间
-    std::cout << "总执行时间: " << duration.count() << " 秒" << std::endl; // 输出执行时间
+
     return 0;
 }

@@ -16,10 +16,22 @@ void block_mat_mul(int *matA, int *matB, int *matC) {
         }
     } 
 }
-void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp::Tensor<int> &matC)
+void blockMatMulSplit(dacpp::Tensor<int,2> &matA, dacpp::Tensor<int,2> &matB, dacpp::Tensor<int,2> &matC)
 {
     auto selector = gpu_selector_v;
     queue q(selector);
+
+    DataInfo info_matA;
+    info_matA.dim = matA.getDim();
+    for(int i = 0; i < info_matA.dim; i++) info_matA.dimLength.push_back(matA.getShape(i));
+
+    DataInfo info_matB;
+    info_matB.dim = matB.getDim();
+    for(int i = 0; i < info_matB.dim; i++) info_matB.dimLength.push_back(matB.getShape(i));
+
+    DataInfo info_matC;
+    info_matC.dim = matC.getDim();
+    for(int i = 0; i < info_matC.dim; i++) info_matC.dimLength.push_back(matC.getShape(i));
 
     RegularSlice si = RegularSlice("si", 2, 2);
 	si.SetSplitSize(2);
@@ -37,8 +49,8 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     sk.setDimId(1);
     sk.setSplitLength(4);
     matA_ops.push_back(sk);
-    matA_tool.init(matA,matA_ops);
-    matA_tool.Reconstruct(r_matA);
+    matA_tool.init(info_matA,matA_ops);
+    matA_tool.Reconstruct(r_matA,matA);
 
     std::cout <<  "matA重组结果:\n";
     for(int i=0;i<4;i++){
@@ -57,8 +69,8 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     sj.setDimId(1);
     sj.setSplitLength(4);
     matB_ops.push_back(sj);
-    matB_tool.init(matB,matB_ops);
-    matB_tool.Reconstruct(r_matB);
+    matB_tool.init(info_matB,matB_ops);
+    matB_tool.Reconstruct(r_matB,matB);
 
     std::cout <<  "matB重组结果:\n";
     for(int i=0;i<4;i++){
@@ -82,8 +94,8 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
     // sk.setDimId(2);
     // sk.setSplitLength(4);
     // matC_ops.push_back(sk);
-    matC_tool.init(matC,matC_ops);
-    matC_tool.Reconstruct(r_matC);
+    matC_tool.init(info_matC,matC_ops);
+    matC_tool.Reconstruct(r_matC,matC);
 
     std::cout <<  "matC重组结果:\n";
     for(int i=0;i<4;i++){
@@ -152,20 +164,17 @@ void blockMatMulSplit(dacpp::Tensor<int> &matA, dacpp::Tensor<int> &matB, dacpp:
         if(i%4==3) std::cout<<"\n";
     }
     // debug(5);
-    matC = matC_tool.UpdateData(r_matC);
+    matC_tool.UpdateData(r_matC,matC);
     std::cout <<  "归约后计算结果(归并):\n";
     matC.print();
 }
 int main() {
     std::vector<int> dataA{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-    std::vector<int> shapeA{4,4};
-    dacpp::Tensor<int> matA(dataA,shapeA);
+    dacpp::Tensor<int,2> matA({4,4},dataA);
     std::vector<int> dataB{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-    std::vector<int> shapeB{4,4};
-    dacpp::Tensor<int> matB(dataB,shapeB);
+    dacpp::Tensor<int,2> matB({4,4},dataB);
     std::vector<int> dataC{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    std::vector<int> shapeC{4,4};
-    dacpp::Tensor<int> matC(dataC,shapeC);
+    dacpp::Tensor<int,2> matC({4,4},dataC);
 
     blockMatMulSplit(matA,matB,matC);
     

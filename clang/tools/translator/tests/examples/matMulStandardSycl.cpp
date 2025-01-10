@@ -1,8 +1,9 @@
 #include <vector>
 
-#include "/data/zjx/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
+//#include "/data/zjx/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
+#include <any> 
 
-using dacpp::Tensor;
+
 
 namespace dacpp {
 typedef std::vector<std::any> list;
@@ -13,14 +14,15 @@ typedef std::vector<std::any> list;
 
 
 #include <sycl/sycl.hpp>
-#include "DataReconstructor.h"
+#include "/data/qinian/ice/dacpp/clang/tools/translator/dpcppLib/include/DataReconstructor.old.h"
+using dacpp::Tensor;
 
 using namespace sycl;
 
 void matMul(int* vecA, int* vecB, int* dotProduct) 
 {
     for (int i = 0; i < 5; i++) {
-        dotProduct += vecA[i] * vecB[i];
+        dotProduct[0] += vecA[i] * vecB[i];
     }
 }
 
@@ -77,6 +79,8 @@ void matMulSplit(const std::vector<int> & matA, const std::vector<int> & matB, s
 }
 
 int main() {
+    auto start_time = std::chrono::high_resolution_clock::now(); // 开始时间测量
+
     std::vector<int> dataA{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
 
     std::vector<int> dataB{1, 5, 9, 13, 17, 2, 6, 10, 14, 18, 3, 7, 11, 15, 19, 4, 8, 12, 16, 20};
@@ -91,5 +95,8 @@ int main() {
         }
         std::cout << std::endl;
     }
+    auto end_time = std::chrono::high_resolution_clock::now(); // 结束时间测量
+    std::chrono::duration<double> duration = end_time - start_time; // 计算持续时间
+    std::cout << "总执行时间: " << duration.count() << " 秒" << std::endl; // 输出执行时间
     return 0;
 }

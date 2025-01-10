@@ -20,7 +20,7 @@ int main() {
     float dy = Ly / (NY - 1);
     
     // CFL条件
-    float dt = 0.5f * fmin(dx, dy) / c; // 满足稳定性条件
+    float dt = 0.5f * std::fmin(dx, dy) / c; // 满足稳定性条件
     
     // 初始化波场
     vector<float> u_prev(NX * NY, 0.0f); // 前一步
@@ -35,7 +35,7 @@ int main() {
         for(int j = 0; j < NY; ++j) {
             float x = i * dx;
             float y = j * dy;
-            u_prev[i * NY + j] = exp(-((x - Lx/2)*(x - Lx/2) + (y - Ly/2)*(y - Ly/2)) / (2 * sigma * sigma));
+            u_prev[i * NY + j] = std::exp(-((x - Lx/2)*(x - Lx/2) + (y - Ly/2)*(y - Ly/2)) / (2 * sigma * sigma));
         }
     }
     

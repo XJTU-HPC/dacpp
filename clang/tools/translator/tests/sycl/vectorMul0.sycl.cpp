@@ -10,10 +10,26 @@ void debug(int x) {
 void vector_mul(int *vecA, int *vecB, int *vecC, int *vecD) {
     vecD[0] = vecA[0] * vecB[0] * vecC[0];
 }
-void vectorMulSplit(dacpp::Tensor<int> &vecA, dacpp::Tensor<int> &vecB, dacpp::Tensor<int> &vecC, dacpp::Tensor<int> &vecD)
+void vectorMulSplit(dacpp::Tensor<int,1> &vecA, dacpp::Tensor<int,1> &vecB, dacpp::Tensor<int,1> &vecC, dacpp::Tensor<int,1> &vecD)
 {
     auto selector = gpu_selector_v;
     queue q(selector);
+
+    DataInfo info_vecA;
+    info_vecA.dim = vecA.getDim();
+    for(int i = 0; i < info_vecA.dim; i++) info_vecA.dimLength.push_back(vecA.getShape(i));
+
+    DataInfo info_vecB;
+    info_vecB.dim = vecB.getDim();
+    for(int i = 0; i < info_vecB.dim; i++) info_vecB.dimLength.push_back(vecB.getShape(i));
+
+    DataInfo info_vecC;
+    info_vecC.dim = vecC.getDim();
+    for(int i = 0; i < info_vecC.dim; i++) info_vecC.dimLength.push_back(vecC.getShape(i));
+
+    DataInfo info_vecD;
+    info_vecD.dim = vecD.getDim();
+    for(int i = 0; i < info_vecD.dim; i++) info_vecD.dimLength.push_back(vecD.getShape(i));
 
     Index i = Index("i");
     i.SetSplitSize(3);
@@ -26,8 +42,8 @@ void vectorMulSplit(dacpp::Tensor<int> &vecA, dacpp::Tensor<int> &vecB, dacpp::T
     i.setDimId(0);
     i.setSplitLength(1);
     vecA_ops.push_back(i);
-    vecA_tool.init(vecA,vecA_ops);
-    vecA_tool.Reconstruct(r_vecA);
+    vecA_tool.init(info_vecA,vecA_ops);
+    vecA_tool.Reconstruct(r_vecA,vecA);
 
     std::cout <<  "vecA重组结果:\n";
     for(int i=0;i<3;i++){
@@ -38,11 +54,11 @@ void vectorMulSplit(dacpp::Tensor<int> &vecA, dacpp::Tensor<int> &vecB, dacpp::T
     DataReconstructor<int> vecB_tool;
     int* r_vecB=(int*)malloc(sizeof(int)*3);
     Dac_Ops vecB_ops;
-    i.setDimId(1);
+    i.setDimId(0);
     i.setSplitLength(1);
     vecB_ops.push_back(i);
-    vecB_tool.init(vecB,vecB_ops);
-    vecB_tool.Reconstruct(r_vecB);
+    vecB_tool.init(info_vecB,vecB_ops);
+    vecB_tool.Reconstruct(r_vecB,vecB);
 
     std::cout <<  "vecB重组结果:\n";
     for(int i=0;i<3;i++){
@@ -53,11 +69,11 @@ void vectorMulSplit(dacpp::Tensor<int> &vecA, dacpp::Tensor<int> &vecB, dacpp::T
     DataReconstructor<int> vecC_tool;
     int* r_vecC=(int*)malloc(sizeof(int)*3);
     Dac_Ops vecC_ops;
-    j.setDimId(1);
+    j.setDimId(0);
     j.setSplitLength(1);
     vecC_ops.push_back(j);
-    vecC_tool.init(vecC,vecC_ops);
-    vecC_tool.Reconstruct(r_vecC);
+    vecC_tool.init(info_vecC,vecC_ops);
+    vecC_tool.Reconstruct(r_vecC,vecC);
 
     std::cout <<  "vecC重组结果:\n";
     for(int i=0;i<3;i++){
@@ -68,11 +84,11 @@ void vectorMulSplit(dacpp::Tensor<int> &vecA, dacpp::Tensor<int> &vecB, dacpp::T
     DataReconstructor<int> vecD_tool;
     int* r_vecD=(int*)malloc(sizeof(int)*3*3);
     Dac_Ops vecD_ops;
-    j.setDimId(1);
+    j.setDimId(0);
     j.setSplitLength(1);
     vecD_ops.push_back(j);
-    vecD_tool.init(vecD,vecD_ops);
-    vecD_tool.Reconstruct(r_vecD);
+    vecD_tool.init(info_vecD,vecD_ops);
+    vecD_tool.Reconstruct(r_vecD,vecD);
 
     std::cout <<  "vecD重组结果:\n";
     for(int i=0;i<3;i++){
@@ -133,23 +149,19 @@ void vectorMulSplit(dacpp::Tensor<int> &vecA, dacpp::Tensor<int> &vecB, dacpp::T
     }
     std::cout<<"\n";
 
-    vecD = vecD_tool.UpdateData(res);
+    vecD_tool.UpdateData(res,vecD);
     std::cout <<  "归约后计算结果(归并):\n";
     vecD.print();
 }
 int main() {
     std::vector<int> dataA{1,2,3};
-    std::vector<int> shapeA{1,3};
-    dacpp::Tensor<int> vecA(dataA,shapeA);
+    dacpp::Tensor<int,1> vecA(dataA);
     std::vector<int> dataB{1,2,3};
-    std::vector<int> shapeB{3,1};
-    dacpp::Tensor<int> vecB(dataB,shapeB);
+    dacpp::Tensor<int,1> vecB(dataB);
     std::vector<int> dataC{1,2,3};
-    std::vector<int> shapeC{1,3};
-    dacpp::Tensor<int> vecC(dataC,shapeC);
+    dacpp::Tensor<int,1> vecC(dataC);
     std::vector<int> dataD{0,0,0};
-    std::vector<int> shapeD{1,3};
-    dacpp::Tensor<int> vecD(dataD,shapeD);
+    dacpp::Tensor<int,1> vecD(dataD);
 
     vectorMulSplit(vecA,vecB,vecC,vecD);
     // std::cout <<  "归约后计算结果(归并):\n";

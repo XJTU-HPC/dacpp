@@ -15,7 +15,6 @@
 #include "Param.h"
 #include "DacppStructure.h"
 #include "Rewriter.h"
-#include "test.h"
 #include "ASTParse.h"
 
 using namespace clang;
@@ -118,14 +117,14 @@ public:
         dacppTranslator::Rewriter* rewriter = new dacppTranslator::Rewriter();
         rewriter->setRewriter(clangRewriter);
         rewriter->setDacppFile(dacppFile);
-        //dacppTranslator::printDacppFileInfo(dacppFile);
-        rewriter->rewriteDac();
+        // dacppTranslator::printDacppFileInfo(dacppFile);
+        // rewriter->rewriteDac();
+        rewriter->rewriteDac_Soft();
+        rewriter->rewriteMain();
 
-        /*
-        this will output to screen as what you got.
-        clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID())
-            .write(llvm::outs());
-        */
+        // // this will output to screen as what you got.
+        // clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID())
+        //     .write(llvm::outs());
         
         // 生成 SYCL 文件
         std::error_code error_code;

@@ -454,7 +454,7 @@ public:
         }
     }
 
-    Tensor<ImplType> operator[](RegularSplit sp) const {
+    Tensor<ImplType> operator[](split sp) const {
         return *this;
     }
 
@@ -510,6 +510,11 @@ public:
             temp = temp.slice(0, indices[i]);
         }
         return temp.getDataPtr().get()[temp.getOffset()];
+    }
+
+    ImplType getValue() {
+        ImplType a;
+        return a;
     }
 
     // 获取 Tensor 中的数据，用基本类型数组保存

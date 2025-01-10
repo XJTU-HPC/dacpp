@@ -24,7 +24,7 @@ const int TIME_STEPS = 1000;  // 时间步数
 
 
 #include <sycl/sycl.hpp>
-#include "DataReconstructor.h"
+#include "/data/qinian/ice/dacpp/clang/tools/translator/dpcppLib/include/DataReconstructor.old.h"
 
 using namespace sycl;
 
@@ -61,6 +61,13 @@ void stencilShell(const dacpp::Tensor<float> & matIn, Tensor<float> & matOut) {
     
     // 数据算子组初始化
     Dac_Ops matIn_ops;
+
+    sp1.setDimId(0);
+    sp1.setSplitLength(270);
+    matIn_ops.push_back(sp1);
+    sp2.setDimId(1);
+    sp2.setSplitLength(9);
+    matIn_ops.push_back(sp2);
     
     matIn_tool.init(matIn,matIn_ops);
     matIn_tool.Reconstruct(r_matIn);
@@ -106,7 +113,7 @@ void stencilShell(const dacpp::Tensor<float> & matIn, Tensor<float> & matOut) {
             const auto idx2=(item_id+( + 1)+30)%30;
             // 嵌入计算
 			
-            stencil(d_matIn+(sp1*96+sp2*9),d_matOut+(idx1*30+idx2*1));
+            stencil(d_matIn+(sp1*270+sp2*9),d_matOut+(idx1*30+idx2*1));
         });
     }).wait();
     
@@ -195,7 +202,16 @@ int main() {
         }
         //u_curr_tensor.print();
     }
-    u_curr_tensor.print();
+    //u_curr_tensor.print();
+
+    float* tmp1 = new float[1024];
+    u_curr_tensor.tensor2Array(tmp1);
+    for (int i = 0; i < 1; i++) {
+        for(int j = 0; j <NY; j++){
+            std::cout<<tmp1[(i)*NX+(j)]<<" ";
+        }
+        std::cout<<"\n";
+    }
     // float* data = new float[32 * 32];
     // u_curr_tensor.tensor2Array(data);
 
@@ -223,3 +239,5 @@ int main() {
 
     return 0;
 }
+
+

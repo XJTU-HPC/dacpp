@@ -8,9 +8,13 @@ int main(){
     int* res=(int*)malloc(sizeof(int)*16);
     
     std::vector<int> data{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-    std::vector<int> shape{4,4};
-    dacpp::Tensor<int> myTensor(data,shape);
+    // std::vector<int> shape{4,4};
+    dacpp::Tensor<int,2> myTensor({4,4},data);
     myTensor.print();
+
+    DataInfo info_myTensor;
+    info_myTensor.dim = myTensor.getDim();
+    for(int i = 0; i < info_myTensor.dim; i++) info_myTensor.dimLength.push_back(myTensor.getShape(i));
 
     RegularSlice si = RegularSlice("si", 2, 2);
 	si.SetSplitSize(2);
@@ -31,8 +35,8 @@ int main(){
     i.setSplitLength(4);
     matA_ops.push_back(i);
     DataReconstructor<int> tool;
-    tool.init(myTensor,matA_ops);
-    tool.Reconstruct(res);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+    tool.init(info_myTensor,matA_ops);
+    tool.Reconstruct(res,myTensor);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
   
     for(int i=0;i<4;i++){
         for(int j=0;j<4;j++){
@@ -51,9 +55,9 @@ int main(){
     matB_ops.push_back(j);
 
     DataReconstructor<int> tool2;
-    tool2.init(myTensor,matB_ops);
+    tool2.init(info_myTensor,matB_ops);
     int* res2=(int*)malloc(sizeof(int)*16);
-    tool2.Reconstruct(res2);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+    tool2.Reconstruct(res2,myTensor);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
   
     for(int i=0;i<4;i++){
         for(int j=0;j<4;j++){

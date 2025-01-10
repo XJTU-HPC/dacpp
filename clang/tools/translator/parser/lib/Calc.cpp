@@ -1,4 +1,5 @@
-﻿#include <string>
+#include <string>
+#include <regex>
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclFriend.h"
@@ -14,6 +15,8 @@
 #include "Param.h"
 #include "Shell.h"
 
+#include <string>
+#include <iostream>
 
 namespace {
 
@@ -3544,7 +3547,7 @@ void DeclPrinter::VisitBinaryOperator(BinaryOperator *Node) {
     for (int paramCount = 0; paramCount < calc->getNumParams(); paramCount++) {
       dacppTranslator::Param *param = calc->getParam(paramCount);
       for (int dimCount = 0; dimCount < param->getDim(); dimCount++) {
-        shapes[paramCount].push_back(param->getShape(dimCount));
+        // shapes[paramCount].push_back(param->getShape(dimCount));
       }
     }
     calc->setExpr(Node, shapes);
@@ -4732,7 +4735,46 @@ void dacppTranslator::Calc::setBody(Stmt* body) {
 }
 
 std::string dacppTranslator::Calc::getBody(int idx) {
-    return body[idx];
+    std::string code = body[idx];
+    for (int i = 0; i < getNumParams(); i++) {
+      std::string name = getParam(i)->getName();
+      std::regex pattern(name + R"((?!\[))");  
+      code = std::regex_replace(code, pattern, name + "[0]");
+    }
+    std::string res = "";
+    size_t last_pos = 0;
+    for (int i = 0; i < getNumParams(); i++) {
+      std::string name = getParam(i)->getName();
+      
+      std::regex pattern(name + R"((\[[^\[\]]\]){2,})");
+      std::sregex_iterator it(code.begin(), code.end(), pattern);
+      std::sregex_iterator end;
+
+      while (it != end) {
+          std::smatch match = *it; // 获取当前匹配结果
+          std::string str = match.str();
+          res += code.substr(last_pos, match.position() - last_pos);
+          int b_count = std::count(str.begin(), str.end(), '[');
+          int pos = str.find("][");
+          int count = 1;
+          std::string r_str = "";
+          while (pos != -1) {
+            for (int k = count; k < b_count; k++) {
+              r_str += "*info_" + name + "_acc[" + std::to_string(k) + "]";
+            }
+            r_str += "+";
+            str.replace(pos, 2, r_str);
+            pos = str.find("][");
+            count++;
+            r_str = "";
+          }
+          res += str;
+          last_pos = match.position() + match.length();
+          ++it; // 移动到下一个匹配结果
+      }
+    }
+    res += code.substr(last_pos);
+    return res;
 }
 
 int dacppTranslator::Calc::getNumBody() {
@@ -4814,7 +4856,7 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
             } else if(sp->type.compare("IndexSplit") == 0) {
                 IndexSplit* isp = static_cast<IndexSplit*>(sp);
             } else {
-                param->setShape(shellParam->getShape(i));
+                // param->setShape(shellParam->getShape(i));
             }
         }
         if (param->getDim() == 0) {
@@ -4823,4 +4865,15 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
         setParam(param);
     }
     setBody(calcFunc->getBody());
+
+    std::string functionBody = this->body[0];
+    functionBody = functionBody.substr(functionBody.find("{") + 1, functionBody.find("}") - 1);
+    int end = functionBody.find("@Expression;");
+    while (end != -1) {
+      this->blocks.push_back(functionBody.substr(0, end));
+      this->blocks.push_back("@Expression;");
+      functionBody.erase(functionBody.begin(), functionBody.begin() + end + 12);
+      end = functionBody.find("@Expression");
+    }
+    this->blocks.push_back(functionBody);
 }

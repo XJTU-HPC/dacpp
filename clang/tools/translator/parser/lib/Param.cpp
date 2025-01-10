@@ -8,6 +8,8 @@
 #include "clang/Basic/LLVM.h"
 #include "Param.h"
 
+using namespace llvm;
+
 /*
     参数
 */
@@ -98,6 +100,7 @@ void dacppTranslator::Param::setType(clang::QualType newType) {
               } else {
                 if (clang::TemplateArgument::Type == Argument.getKind()) {
                   newType = Argument.getAsType();
+                  break;
                 }
               }
               if (!FirstArg)

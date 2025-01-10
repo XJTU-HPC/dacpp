@@ -1,12 +1,9 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
-
+#include "ReconTensor.h"
 
 using namespace std;
-using dacpp::Tensor;
 namespace dacpp {
     typedef std::vector<std::any> list;
 }
@@ -26,17 +23,19 @@ const float dy = Ly / (NY - 1);
 const float dt_stability = (dx * dx * dy * dy) / (2.0f * alpha * (dx * dx + dy * dy));
 const float delta_t = 0.4f * dt_stability; // 选择一个更严格的时间步长以确保稳定性
 
-shell dacpp::list stencilShell(const dacpp::Tensor<float>& matIn, Tensor<float>& matOut) {
-    dacpp::RegularSplit sp1("S1",3, 1), sp2("S2",3, 1);
-    dacpp::Index idx1("idx1"), idx2("idx2");
+shell dacpp::list stencilShell(const dacpp::Tensor<float, 2>& matIn, 
+                                dacpp::Tensor<float, 2>& matOut) {
+    dacpp::split sp1(3, 1), sp2(3, 1);
+    dacpp::index idx1, idx2;
     binding(sp1, idx1);
     binding(sp2, idx2);
-    dacpp::list dataList{matIn[{sp1}][{sp2}], matOut[{idx1}][{idx2}]};
+    dacpp::list dataList{matIn[sp1][sp2], matOut[idx1][idx2]};
     return dataList;
 }
 
-calc void stencil(float* mat, float* out) {
-    out[0] = mat[1 * 3 + 1] + alpha *delta_t * (((mat[2 * 3 + 1] - 2.0f * mat[1 * 3 + 1] + mat[0 * 3 + 1]) / (dx * dx))+ ((mat[1 * 3 + 2] - 2.0f * mat[1 * 3 + 1] + mat[1 * 3 + 0]) / (dy * dy)));                
+calc void stencil(dacpp::Tensor<float, 2>& mat, 
+                    dacpp::Tensor<float, 1>& out) {
+    out[0] = mat[1][1] + alpha *delta_t * (((mat[2][1] - 2.0f * mat[1][1] + mat[0][1]) / (dx * dx))+ ((mat[1][2] - 2.0f * mat[1][1] + mat[1][0]) / (dy * dy)));                
 }
 
 int main() {
@@ -63,8 +62,8 @@ int main() {
         }
     }
 
-    std::vector<int> shape = {32, 32};
-    Tensor<float> u_curr_tensor(u_curr, shape);
+    //std::vector<int> shape = {32, 32};
+    dacpp::Tensor<float, 2> u_curr_tensor({32, 32}, u_curr);
 
     for(int i=0;i<TIME_STEPS;i++) {
         std::vector<float> middle_points(NX * NY, 0.0f);
@@ -75,34 +74,29 @@ int main() {
             }
             
         }
-        std::vector<int> shape2 = {30, 30};
-        Tensor<float> middle_tensor(middle_points, shape2);
+        //std::vector<int> shape2 = {30, 30};
+        dacpp::Tensor<float, 2> middle_tensor({30, 30}, middle_points);
 
         stencilShell(u_curr_tensor, middle_tensor) <-> stencil;
 
         for (int i = 1; i <= 30; i++) {
             for(int j = 1; j <=30; j++){
                 float* data = new float[1];
-                middle_tensor[i-1][j-1].tensor2Array(data);
-                u_curr_tensor[i][j].array2Tensor(data);
+                u_curr_tensor[i][j]=middle_tensor[i-1][j-1];
             }
         }
 
         // 处理边界条件（绝热边界：导数为零）
         for (int j = 0; j < NY; ++j) {
-            float* data = new float[1];
-            u_curr_tensor[1][j].tensor2Array(data);
-            u_curr_tensor[0][j].array2Tensor(data);              // 顶部边界
-            u_curr_tensor[NX-2][j].tensor2Array(data);
-            u_curr_tensor[NX - 1][j].array2Tensor(data);
+            //float* data = new float[1];
+            u_curr_tensor[0][j]=u_curr_tensor[1][j];              // 顶部边界
+            u_curr_tensor[NX - 1][j]=u_curr_tensor[NX-2][j];
              // 底部边界
         }
         for (int i = 0; i < NX; ++i) {
-            float* data = new float[1];
-            u_curr_tensor[i][1].tensor2Array(data);
-            u_curr_tensor[i][0].array2Tensor(data);              // 顶部边界
-            u_curr_tensor[i][NY-2].tensor2Array(data);
-            u_curr_tensor[i][NY-1].array2Tensor(data);
+            //float* data = new float[1];
+            u_curr_tensor[i][0]=u_curr_tensor[i][1];              // 顶部边界
+            u_curr_tensor[i][NY-1]=u_curr_tensor[i][NY-2];
         }
         
     }

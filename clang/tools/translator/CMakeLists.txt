@@ -1,10 +1,9 @@
 ﻿set(LLVM_LINK_COMPONENTS support)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dacppLib/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dpcppLib/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/parser/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/rewriter/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/test)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dpcppLib/include)
 include_directories(/usr/include)
 
 set(DACPPLIB_SOURCES
@@ -12,10 +11,10 @@ set(DACPPLIB_SOURCES
 )
 set(PARSER_SOURCES
   parser/lib/ASTParse.cpp
-  parser/lib/Shell.cpp
   parser/lib/Calc.cpp
   parser/lib/DacppStructure.cpp
   parser/lib/Param.cpp
+  parser/lib/Shell.cpp
   parser/lib/Split.cpp
 )
 set(REWRITER_SOURCES
@@ -23,6 +22,9 @@ set(REWRITER_SOURCES
   rewriter/lib/sub_template.cpp
   rewriter/lib/usm_template.cpp
   rewriter/lib/Rewriter.cpp
+  rewriter/lib/Rewriter_Usm.cpp
+  rewriter/lib/Rewriter_Buffer.cpp
+  rewriter/lib/Rewriter_Soft.cpp
   rewriter/lib/buffer_template.cpp
   rewriter/lib/universal_template.cpp
 )
@@ -30,7 +32,6 @@ set(REWRITER_SOURCES
 add_library(DacppLib ${DACPPLIB_SOURCES})
 add_library(ParserLib ${PARSER_SOURCES})
 add_library(RewriterLib ${REWRITER_SOURCES})
-add_library(TestLib test/test.cpp)
 
 add_clang_executable(translator
   translator.cpp
@@ -51,7 +52,6 @@ clang_target_link_libraries(translator
   DacppLib
   ParserLib
   RewriterLib
-  TestLib
 )
 
 add_subdirectory(tests)
