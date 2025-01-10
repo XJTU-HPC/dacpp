@@ -51,7 +51,7 @@ const char *DAC2SYCL_Template_1 = R"~~~(
 // 生成函数调用
 void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) { 
     // 设备选择
-    auto selector = default_selector();
+    auto selector = default_selector_v;
     queue q(selector);
     // 设备内存分配
     {{DEVICE_MEM_ALLOC}}
@@ -80,7 +80,7 @@ const char *DAC2SYCL_Template = R"~~~(
 // 生成函数调用
 void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) { 
     // 设备选择
-    auto selector = default_selector();
+    auto selector = default_selector_v;
     queue q(selector);
     // 算子初始化
     {{OP_INIT}}
@@ -640,7 +640,7 @@ const char *DAC2SYCL_Template_2 = R"~~~(
 // 生成函数调用
 void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) { 
     // 设备选择
-    auto selector = default_selector();
+    auto selector = default_selector_v;
     queue q(selector);
     //声明参数生成工具
     ParameterGeneration<int,2> para_gene_tool;
