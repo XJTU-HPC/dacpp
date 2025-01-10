@@ -67,6 +67,8 @@ std::string CodeGen_IndexInit(Dac_Ops ops,std::vector<std::string> sets,std::vec
 
 std::string CodeGen_CalcEmbed(std::string Name,Args args);
 
+std::string CodeGen_CalcEmbed2(std::string Name,Args args, std::vector<std::string> accessor_names);
+
 std::string CodeGen_Reduction(std::string SplitSize,std::string Name,std::string Type,std::string ReductionRule);
 
 std::string CodeGen_Reduction_Span(std::string SPAN_SIZE,std::string SplitSize,std::string SplitLength,std::string Name,std::string Type,std::string ReductionRule);
@@ -124,4 +126,6 @@ std::string CodeGen_ParameterGenerate(std::string InitOPS,std::string InitDevice
 //std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string TENSOR_NAME);
 
 std::string CodeGen_InitParameterTool(std::string DIM_NUM);
+
+std::string CodeGen_AccessorInit(std::string name);
 #endif

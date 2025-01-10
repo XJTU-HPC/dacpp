@@ -488,6 +488,42 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 	});
 }
 
+std::string CodeGen_CalcEmbed2(std::string Name,Args args, std::vector<std::string> accessor_names){
+		std::string DacCalcArgs = "(";
+	int len = args.size;
+	for(int i=0;i<len;i++){
+		std::string IndexComb="(";
+		for(int j=0;j<args[i].ops.size;j++){
+			std::string opsname = args[i].ops[j].name;
+			//IndexComb+= args[i].ops[j].name + "_" + "*" + "SplitLength[" + std::to_string(i) + "][" + std::to_string(j) + "]";
+			IndexComb+= opsname + "_" + "*" + "SplitLength[" + std::to_string(i) + "][" + std::to_string(j) + "]";
+			if(j!=args[i].ops.size-1) IndexComb+="+";
+		}
+		IndexComb+=")";
+		if(IndexComb == "()")
+		{
+			DacCalcArgs+=args[i].name;
+		}
+		else{
+			DacCalcArgs+=args[i].name + "+" + IndexComb;
+		}		
+		DacCalcArgs+=",";
+	}
+	for (int z = 0; z < accessor_names.size(); z++) {
+		DacCalcArgs+="info_partition_"+accessor_names[z]+"_accessor";
+		if (z == accessor_names.size() - 1) {
+			DacCalcArgs+=");";
+		} else {
+			DacCalcArgs+=",";
+		}
+	}
+	return templateString(CALC_EMBED_Template,
+	{
+		{"{{DAC_CALC_NAME}}",    Name},
+		{"{{DAC_CALC_ARGS}}",    DacCalcArgs}
+	});
+}
+
 // aborted
 const char *REDUCTION_Template = R"~~~(
     // 归约
