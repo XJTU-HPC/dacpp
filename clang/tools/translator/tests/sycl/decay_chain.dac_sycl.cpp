@@ -7,7 +7,7 @@
 namespace dacpp {
     typedef std::vector<std::any> list;
 }
-
+void DECAY(const dacpp::Tensor<double, 1> & N0s, const dacpp::Tensor<double, 1> & lambdas, dacpp::Tensor<double, 1> & local_A, const dacpp::Tensor<double, 1> & t);
 
 
 
