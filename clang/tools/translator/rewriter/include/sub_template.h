@@ -91,7 +91,7 @@ std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string DATA_INF
 
 //std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_NAME);
 
-std::string CodeGen_DeviceMemSizeGenerate(std::string NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME,std::string DATA_INFO_NAME)
+std::string CodeGen_DeviceMemSizeGenerate(std::string NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME,std::string DATA_INFO_NAME);
 
 //std::string CodeGen_DeviceMemSizeGenerate(std::string NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME,std::string TENSOR_OUT);
 
@@ -122,4 +122,5 @@ std::string CodeGen_ParameterGenerate(std::string InitOPS,std::string InitDevice
 //std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string TENSOR_NAME);
 
 std::string CodeGen_InitParameterTool(std::string DIM_NUM);
+
 #endif
