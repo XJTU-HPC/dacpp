@@ -168,6 +168,11 @@ class DataReconstructor{
             GetPos(pos, this->ops, 0);
             std::sort(this->posNumberList.begin(),this->posNumberList.end(),[](PosNumber a,PosNumber b){return (a.number==b.number)?a.pos<b.pos:a.number<b.number;});
         }
+        void push_back(Dac_Ops ops) {
+            for(int i = 0; i < ops.size; i++) {
+                this->ops.push_back(ops[i]);
+            }
+        }
         /*
             减少一个算子
         */

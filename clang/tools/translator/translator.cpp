@@ -15,7 +15,6 @@
 #include "Param.h"
 #include "DacppStructure.h"
 #include "Rewriter.h"
-#include "test.h"
 #include "ASTParse.h"
 
 using namespace clang;
@@ -63,6 +62,8 @@ public:
         // 匹配主函数
         else if (const FunctionDecl* mainFunc = Result.Nodes.getNodeAs<clang::FunctionDecl>("main")) {
             dacppFile->setMainFuncLoc(mainFunc);
+        } else if (const FunctionDecl* mainFunc = Result.Nodes.getNodeAs<clang::FunctionDecl>("dac_expr_father")) {
+            dacppFile->node = mainFunc;
         }
   
     }
@@ -85,6 +86,7 @@ public:
     MyASTConsumer() {
         // 可以通过 addMatcher 添加用户构造的匹配器到 MatchFinder中
         // Matcher.addMatcher(binaryOperator(hasOperatorName("<->")).bind("dac_expr"), &HandleForDac);
+        Matcher.addMatcher(functionDecl(hasDescendant(binaryOperator(hasOperatorName("<->")))).bind("dac_expr_father"), &HandleForDac);
         Matcher.addMatcher(binaryOperator(hasOperatorName("<->")).bind("dac_expr"), &HandleForDac);
         Matcher.addMatcher(functionDecl(hasName("main")).bind("main"), &HandleForDac);
     }
@@ -92,6 +94,7 @@ public:
     void HandleTranslationUnit(ASTContext &Context) override {
         // Run the matchers when we have the whole TU parsed.
         Matcher.matchAST(Context);
+        dacppFile->setTranslationUnitDecl(Context.getTranslationUnitDecl());
     }
 
 };
@@ -118,14 +121,14 @@ public:
         dacppTranslator::Rewriter* rewriter = new dacppTranslator::Rewriter();
         rewriter->setRewriter(clangRewriter);
         rewriter->setDacppFile(dacppFile);
-        //dacppTranslator::printDacppFileInfo(dacppFile);
-        rewriter->rewriteDac();
+        // dacppTranslator::printDacppFileInfo(dacppFile);
+        // rewriter->rewriteDac();
+        rewriter->rewriteDac_Soft();
+        rewriter->rewriteMain();
 
-        /*
-        this will output to screen as what you got.
-        clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID())
-            .write(llvm::outs());
-        */
+        // // this will output to screen as what you got.
+        // clangRewriter->getEditBuffer(clangRewriter->getSourceMgr().getMainFileID())
+        //     .write(llvm::outs());
         
         // 生成 SYCL 文件
         std::error_code error_code;

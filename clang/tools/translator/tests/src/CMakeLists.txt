@@ -18,18 +18,18 @@ add_executable(packingTest3 DataReconstructorTest3.cpp)
 add_executable(packingTest4 DataReconstructorTest4.cpp)
 add_executable(packingTest5 DataReconstructorTest5.cpp)
 add_executable(packingTest6 DataReconstructorTest6.cpp)
-#add_executable(packingTest7 DataReconstructorTest7.cpp)
+add_executable(packingTest7 DataReconstructorTest7.cpp)
 add_executable(vecMulScalarTest vecMulScalarTest.cpp)
 add_executable(bindIndexInitTest bindIndexInitTest.cpp)
 add_executable(bindIndexInitTest2 bindIndexInitTest2.cpp)
 add_executable(matmul2Test matmul2Test.cpp)
-add_executable(UsmTemplateTest UsmTemplateTest.cpp)
-add_executable(BufferTemplateTest BufferTemplateTest.cpp)
+# add_executable(UsmTemplateTest UsmTemplateTest.cpp)
+# add_executable(BufferTemplateTest BufferTemplateTest.cpp)
 add_executable(ParameterGenerationTest ParameterGenerationTest.cpp)
 add_executable(ParameterGenerationTest2 ParameterGenerationTest2.cpp)
 add_executable(ParameterGenerationTest3 ParameterGenerationTest3.cpp)
 add_executable(ParameterGenerationTest4 ParameterGenerationTest4.cpp)
-#add_executable(ParameterGenerationTest5 ParameterGenerationTest5.cpp)
+add_executable(ParameterGenerationTest5 ParameterGenerationTest5.cpp)
 add_executable(ParameterGenerationTest6 ParameterGenerationTest6.cpp)
 add_executable(ParameterGenerationTest7 ParameterGenerationTest7.cpp)
 
@@ -63,9 +63,9 @@ set_target_properties(packingTest5 PROPERTIES
 set_target_properties(packingTest6 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
-# set_target_properties(packingTest7 PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
-# )
+set_target_properties(packingTest7 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
 set_target_properties(vecMulScalarTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
@@ -78,12 +78,12 @@ set_target_properties(bindIndexInitTest2 PROPERTIES
 set_target_properties(matmul2Test PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
-set_target_properties(UsmTemplateTest PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
-)
-set_target_properties(BufferTemplateTest PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
-)
+# set_target_properties(UsmTemplateTest PROPERTIES
+#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+# )
+# set_target_properties(BufferTemplateTest PROPERTIES
+#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+# )
 set_target_properties(ParameterGenerationTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
@@ -96,9 +96,9 @@ set_target_properties(ParameterGenerationTest3 PROPERTIES
 set_target_properties(ParameterGenerationTest4 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
-# set_target_properties(ParameterGenerationTest5 PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
-# )
+set_target_properties(ParameterGenerationTest5 PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
 set_target_properties(ParameterGenerationTest6 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
@@ -116,17 +116,17 @@ target_link_libraries(packingTest3 DacppLib RewriterLib)
 target_link_libraries(packingTest4 DacppLib RewriterLib)
 target_link_libraries(packingTest5 DacppLib RewriterLib)
 target_link_libraries(packingTest6 DacppLib RewriterLib)
-#target_link_libraries(packingTest7 DacppLib RewriterLib)
+target_link_libraries(packingTest7 DacppLib RewriterLib)
 target_link_libraries(vecMulScalarTest DacppLib RewriterLib)
 target_link_libraries(bindIndexInitTest DacppLib RewriterLib)
 target_link_libraries(bindIndexInitTest2 DacppLib RewriterLib)
 target_link_libraries(matmul2Test DacppLib RewriterLib)
-target_link_libraries(UsmTemplateTest DacppLib RewriterLib)
-target_link_libraries(BufferTemplateTest DacppLib RewriterLib)
+# target_link_libraries(UsmTemplateTest DacppLib RewriterLib)
+# target_link_libraries(BufferTemplateTest DacppLib RewriterLib)
 target_link_libraries(ParameterGenerationTest DacppLib RewriterLib)
 target_link_libraries(ParameterGenerationTest2 DacppLib RewriterLib)
 target_link_libraries(ParameterGenerationTest3 DacppLib RewriterLib)
 target_link_libraries(ParameterGenerationTest4 DacppLib RewriterLib)
-# target_link_libraries(ParameterGenerationTest5 DacppLib RewriterLib)
+target_link_libraries(ParameterGenerationTest5 DacppLib RewriterLib)
 target_link_libraries(ParameterGenerationTest6 DacppLib RewriterLib)
 target_link_libraries(ParameterGenerationTest7 DacppLib RewriterLib)

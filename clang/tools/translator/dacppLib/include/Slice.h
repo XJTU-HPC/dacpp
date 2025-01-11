@@ -10,80 +10,49 @@ namespace dacpp {
 
 
 // 降维算子
-class Index {
-private:
-    std::string variable_;
+class index {
 public:
-    Index(std::string variable) : variable_(variable) {}
-    const Index operator+(const int &R)const;
-    const Index operator-(const int &R)const;
+    const index operator+(const int &R)const;
+    const index operator-(const int &R)const;
 };
 
 
-// 规则分区算子
-class RegularSplit {
+// 分区算子
+class split {
 private:
-    std::string variable_;
     int size_;
     int stride_;
 
 public:
-    RegularSplit(std::string variable, int size, int stride) : variable_(variable), size_(size), stride_(stride) {}
-    const RegularSplit operator+(const int &R)const;
-    const RegularSplit operator-(const int &R)const;
+    split(int size, int stride) : size_(size), stride_(stride) {}
+    const split operator+(const int &R)const;
+    const split operator-(const int &R)const;
 }; 
 
 
-// 不规则分区算子
-class IrregularSlice {
-private:
-    std::string pattern_;
-    std::set<std::string> variables_;
-    std::vector<std::vector<std::string>> indices_;
-
-public:
-    IrregularSlice(std::string pattern) : pattern_(pattern) {
-        int left = pattern_.find("("), right = pattern_.find(")");
-        while(left != std::string::npos && right != std::string::npos) {
-            std::vector<std::string> index;
-            int cur = left + 1;
-            while(1) {
-                if(pattern_.find(",", cur) != std::string::npos && pattern_.find(",", cur) < right) {
-                    index.push_back(pattern_.substr(cur, pattern_.find(",", cur) - cur));
-                    cur = pattern_.find(",", cur) + 1;
-                }
-                else {
-                    index.push_back(pattern_.substr(cur, right - cur));
-                    break;
-                }
-            }
-            indices_.push_back(index);
-            left = pattern_.find("(", left + 1), right = pattern_.find(")", right + 1);
-        }
-    }
-};
-
-
-class ConformalSlice {};
+// 保形算子
+class conformal {};
 
 
 struct Slice {
-    bool isIndex_;
+    bool isindex_;
     bool isAll_;
     int start_;
     int end_;
     int stride_;
 
-    Slice() : isIndex_(false), isAll_(true) {}
-    Slice(int idx) : isIndex_(false), isAll_(false), start_(idx), end_(idx + 1), stride_(1) {}
-    Slice(int start, int end, int stride = 1) : isIndex_(false), isAll_(false), start_(start), end_(end), stride_(stride) {}
-    Slice(Index i) : isIndex_(true) {}
+    Slice() : isindex_(false), isAll_(true) {}
+    Slice(int idx) : isindex_(false), isAll_(false), start_(idx), end_(idx + 1), stride_(1) {}
+    Slice(int start, int end, int stride = 1) : isindex_(false), isAll_(false), start_(start), end_(end), stride_(stride) {}
+    Slice(index i) : isindex_(true) {}
 };
 
-void binding (Index, Index);
-void binding (Index, RegularSplit);
-void binding (RegularSplit, Index);
-void binding (RegularSplit, RegularSplit);
+
+void binding (index, index);
+void binding (index, split);
+void binding (split, index);
+void binding (split, split);
+
 
 } // namespace dacpp
 

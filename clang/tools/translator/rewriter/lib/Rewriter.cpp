@@ -8,7 +8,7 @@
 #include "Param.h"
 #include "dacInfo.h"
 #include "sub_template.h"
-#include "test.h"
+#include "ASTParse.h"
 
 // void DFS(int node, std::vector<bool>& visited, Dac_Ops ops, Dac_Ops component, int componentID, std::vector<std::string>& sets) {
 //             visited[node] = true;
@@ -194,12 +194,14 @@ void dacppTranslator::Rewriter::rewriteDac() {
                 else if(split->type.compare("RegularSplit") == 0) {
                     dacppTranslator::RegularSplit* regulerSplit = static_cast<dacppTranslator::RegularSplit*>(split);
                     mem[j] *= (shellParam->getShape(k) - regulerSplit->getSplitSize() + regulerSplit->getSplitStride()) / regulerSplit->getSplitStride() * regulerSplit->getSplitSize();
+                    
                 }
                 // 保形划分
                 else {
                     mem[j] *= shellParam->getShape(k);
                 }
             }
+            std::cout << mem[j] << std::endl;
         }
 
         // 计算结构
@@ -242,6 +244,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
             }
         }
 
+        // 数据重组
         std::string dataRecon = "";
         for(int count = 0; count < shell->getNumShellParams(); count++) {
             ShellParam* shellParam = shell->getShellParam(count);
@@ -410,6 +413,7 @@ void dacppTranslator::Rewriter::rewriteDac() {
         for(int j = 0; j < shell->getNumShellParams(); j++) {
             ShellParam* shellParam = shell->getShellParam(j);
             if(shellParam->getRw() == 1 && countIn != countOut) {
+                reduction += CodeGen_DeviceMemAllocReduction(shellParam->getBasicType(), shellParam->getName(), std::to_string(mem[j]));
                 std::string ReductionRule = "sycl::plus<>()";
                 reduction += CodeGen_Reduction_Span(std::to_string(mem[j]), std::to_string(countIn / countOut),
                                                     std::to_string(countIn), shellParam->getName(), 
@@ -466,17 +470,17 @@ void dacppTranslator::Rewriter::rewriteMain() {
     for (int exprCount = 0; exprCount < dacppFile->getNumExpression(); exprCount++) {
         Expression* expr = dacppFile->getExpression(exprCount);
         Shell* shell = expr->getShell();
-        std::string code = "";
-        code += shell->getName() + "(";
-        for(int paramCount = 0; paramCount < shell->getNumParams(); paramCount++) {
-            code += shell->getParam(paramCount)->getName();
-            if(paramCount != shell->getNumParams() - 1) {
-                code += ", ";
-            }
-        }
-        code += ");";
-        expr->getDacExpr()->dump();
-        rewriter->InsertText(expr->getDacExpr()->getBeginLoc(), code);   
+        Calc* calc = expr->getCalc();
+        Expr *dacExprLHS = expr->getDacExpr()->getLHS();
+        CallExpr *shellCall = getNode<CallExpr>(dacExprLHS);
+        std::string str;
+        llvm::raw_string_ostream rso(str);
+        clang::LangOptions langOpts;
+        langOpts.CPlusPlus = true; // 启用C++选项（根据需要配置）
+        clang::PrintingPolicy policy(langOpts);
+        shellCall->printPretty(rso, nullptr, policy);
+        std::string code = rso.str();
+        code.replace(code.find(shell->getName()), shell->getName().size(), shell->getName() + "_" + calc->getName());
+        rewriter->ReplaceText(expr->getDacExpr()->getSourceRange(), code);   
     }
 }
-

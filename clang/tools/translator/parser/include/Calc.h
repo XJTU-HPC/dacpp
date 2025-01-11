@@ -61,6 +61,9 @@ public:
 
     void parseCalc(const BinaryOperator* dacExpr);
     std::vector<std::string> body; // 函数体
+
+    // 存储划分后的函数体
+    std::vector<std::string> blocks;
 };
 
 

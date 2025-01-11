@@ -51,7 +51,7 @@ const char *DAC2SYCL_Template_1 = R"~~~(
 // 生成函数调用
 void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) { 
     // 设备选择
-    auto selector = gpu_selector_v;
+    auto selector = default_selector_v;
     queue q(selector);
     // 设备内存分配
     {{DEVICE_MEM_ALLOC}}
@@ -80,7 +80,7 @@ const char *DAC2SYCL_Template = R"~~~(
 // 生成函数调用
 void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) { 
     // 设备选择
-    auto selector = gpu_selector_v;
+    auto selector = default_selector_v;
     queue q(selector);
     // 算子初始化
     {{OP_INIT}}
@@ -206,7 +206,9 @@ const char *DATA_RECON_Template = R"~~~(
     {{TYPE}}* r_{{NAME}}=({{TYPE}}*)malloc(sizeof({{TYPE}})*{{SIZE}});
     {{DATA_OPS_INIT}}
     {{NAME}}_tool.init(info_{{NAME}},{{NAME}}_ops);
-    {{NAME}}_tool.Reconstruct(r_{{NAME}},{{NAME}});)~~~";
+    {{NAME}}_tool.Reconstruct(r_{{NAME}},{{NAME}});
+	std::vector<int> info_partition_{{NAME}}=para_gene_tool.init_partition_data_shape(info_{{NAME}},{{NAME}}_ops);
+    sycl::buffer<int> info_partition_{{NAME}}_buffer(info_partition_{{NAME}}.data(), sycl::range<1>(info_partition_{{NAME}}.size()));)~~~";
 
 std::string CodeGen_DataReconstruct(std::string type,std::string name,std::string size,std::string dataOpsInit){
     return templateString(DATA_RECON_Template,
@@ -291,8 +293,20 @@ std::string CodeGen_H2DMemMov(std::string type,std::string name,std::string size
 		{"{{SIZE}}", size}
 	});
 }
+const char *DEVICE_DATA_INIT_Template = R"~~~(
+    // 设备数据初始化
+    q.memset(d_{{NAME}},0,{{SIZE}}*sizeof({{TYPE}})).wait();)~~~";
 
-const char *KERNEL_EXECUTE_Template = R"~~~(
+std::string CodeGen_DeviceDataInit(std::string type,std::string name,std::string size){
+    return templateString(DEVICE_DATA_INIT_Template,
+	{
+		{"{{TYPE}}", type},
+		{"{{NAME}}", name},
+		{"{{SIZE}}", size}
+	});
+}
+
+const char *KERNEL_EXECUTE_OLD_Template = R"~~~(
     //工作项划分
     sycl::range<3> local(1, 1, {{SPLIT_SIZE}});
     sycl::range<3> global(1, 1, 1);
@@ -310,7 +324,7 @@ const char *KERNEL_EXECUTE_Template = R"~~~(
 )~~~";
 
 std::string CodeGen_KernelExecute(std::string SplitSize,std::string IndexInit,std::string CalcEmbed){
-    return templateString(KERNEL_EXECUTE_Template,
+    return templateString(KERNEL_EXECUTE_OLD_Template,
 	{
 		{"{{SPLIT_SIZE}}",    SplitSize},
 		{"{{INDEX_INIT}}",    IndexInit},
@@ -318,6 +332,43 @@ std::string CodeGen_KernelExecute(std::string SplitSize,std::string IndexInit,st
 	});
 }
 
+const char *KERNEL_EXECUTE_Template = R"~~~(
+    //工作项划分
+    sycl::range<3> local(1, 1, {{SPLIT_SIZE}});
+    sycl::range<3> global(1, 1, 1);
+    //队列提交命令组
+    q.submit([&](handler &h) {
+        // 访问器初始化
+        {{ACCESSOR_INIT}}
+        h.parallel_for(sycl::nd_range<3>(global * local, local),[=](sycl::nd_item<3> item) {
+            const auto item_id = item.get_local_id(2);
+            // 索引初始化
+			{{INDEX_INIT}}
+            // 嵌入计算
+			{{CALC_EMBED}}
+        });
+    }).wait();
+    
+)~~~";
+
+std::string CodeGen_KernelExecute(std::string SplitSize,std::string AccessorInit,std::string IndexInit,std::string CalcEmbed){
+    return templateString(KERNEL_EXECUTE_Template,
+	{
+		{"{{SPLIT_SIZE}}",    SplitSize},
+		{"{{ACCESSOR_INIT}}", AccessorInit},
+		{"{{INDEX_INIT}}",    IndexInit},
+		{"{{CALC_EMBED}}",    CalcEmbed}
+	});
+}
+
+const char *ACCESSOR_INIT_Template = R"~~~(
+        auto info_partition_{{NAME}}_accessor = info_partition_{{NAME}}_buffer.get_access<sycl::access::mode::read_write>(h);)~~~";
+std::string CodeGen_AccessorInit(std::string name) {
+	return templateString(ACCESSOR_INIT_Template,
+	{
+		{"{{NAME}}",    name}
+	});
+}
 const char *INDEX_INIT_Template = R"~~~(
             const auto {{NAME}}={{EXPRESSION}};)~~~";
 
@@ -431,9 +482,50 @@ std::string CodeGen_CalcEmbed(std::string Name,Args args){
 			DacCalcArgs+=args[i].name + "+" + IndexComb;
 		}		
 		if(i==len-1){
+			DacCalcArgs+=",";
+			for(int j=0;j<len;j++) {
+				DacCalcArgs+="info_partition_"+args[j].name.substr(2)+"_accessor";
+				if(j!=len-1) DacCalcArgs+=",";
+			}
 			DacCalcArgs+=");";
 		}
 		else{
+			DacCalcArgs+=",";
+		}
+	}
+	return templateString(CALC_EMBED_Template,
+	{
+		{"{{DAC_CALC_NAME}}",    Name},
+		{"{{DAC_CALC_ARGS}}",    DacCalcArgs}
+	});
+}
+
+std::string CodeGen_CalcEmbed2(std::string Name,Args args, std::vector<std::string> accessor_names){
+		std::string DacCalcArgs = "(";
+	int len = args.size;
+	for(int i=0;i<len;i++){
+		std::string IndexComb="(";
+		for(int j=0;j<args[i].ops.size;j++){
+			std::string opsname = args[i].ops[j].name;
+			//IndexComb+= args[i].ops[j].name + "_" + "*" + "SplitLength[" + std::to_string(i) + "][" + std::to_string(j) + "]";
+			IndexComb+= opsname + "_" + "*" + "SplitLength[" + std::to_string(i) + "][" + std::to_string(j) + "]";
+			if(j!=args[i].ops.size-1) IndexComb+="+";
+		}
+		IndexComb+=")";
+		if(IndexComb == "()")
+		{
+			DacCalcArgs+=args[i].name;
+		}
+		else{
+			DacCalcArgs+=args[i].name + "+" + IndexComb;
+		}		
+		DacCalcArgs+=",";
+	}
+	for (int z = 0; z < accessor_names.size(); z++) {
+		DacCalcArgs+="info_partition_"+accessor_names[z]+"_accessor";
+		if (z == accessor_names.size() - 1) {
+			DacCalcArgs+=");";
+		} else {
 			DacCalcArgs+=",";
 		}
 	}
@@ -548,7 +640,7 @@ const char *DAC2SYCL_Template_2 = R"~~~(
 // 生成函数调用
 void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) { 
     // 设备选择
-    auto selector = gpu_selector_v;
+    auto selector = default_selector_v;
     queue q(selector);
     //声明参数生成工具
     ParameterGeneration<int,2> para_gene_tool;
@@ -576,72 +668,6 @@ std::string CodeGen_DAC2SYCL2(std::string dacShellName, std::string dacShellPara
         {"{{MEM_FREE}}",          memFree}
 	});
 }
-
-// const char *DAC2SYCL_Template_2 = R"~~~(
-// // 生成函数调用
-// void {{DAC_SHELL_NAME}}({{DAC_SHELL_PARAMS}}) { 
-//     // 设备选择
-//     auto selector = gpu_selector_v;
-//     queue q(selector);
-//     //声明参数生成工具
-//     {{ParameterTool}}
-//     // 算子初始化
-//     {{OP_INIT}}
-//     //参数生成
-// 	{{ParameterGenerate}}
-//     // 设备内存分配
-//     {{DEVICE_MEM_ALLOC}}
-//     // 数据关联计算
-//     {{DATA_ASSOC_COMP}}
-//     // 内存释放
-//     {{MEM_FREE}}
-// })~~~";
-
-// std::string CodeGen_DAC2SYCL2(std::string dacShellName, std::string dacShellParams,std::string parameter_tool, std::string opInit, std::string parameter_generate, std::string deviceMemAlloc, std::string dataAssocComp, std::string memFree){
-//     return templateString(DAC2SYCL_Template_2,
-// 	{	
-// 		{"{{DAC_SHELL_NAME}}",    dacShellName},
-// 		{"{{DAC_SHELL_PARAMS}}",  dacShellParams},
-// 		{"{{ParameterTool}}",     parameter_tool},
-// 		{"{{OP_INIT}}",           opInit},
-// 		{"{{ParameterGenerate}}", parameter_generate},
-// 		{"{{DEVICE_MEM_ALLOC}}",  deviceMemAlloc},
-// 		{"{{DATA_ASSOC_COMP}}",   dataAssocComp},
-//         {"{{MEM_FREE}}",          memFree}
-// 	});
-// }
-
-// 下面已经不需要了
-// //参数生成工具的声明 Tensor是几维的这个就应该是几维的
-// const char *INIT_PARAMETER_TOOL_Template = R"~~~(
-//     ParameterGeneration<int,{{DIM_NUM}}> para_gene_tool{{NUM}};
-// )~~~";
-
-// std::string CodeGen_InitParameterTool(std::string DIM_NUM){
-//     return templateString(INIT_PARAMETER_TOOL_Template,
-// 	{
-// 		{"{{DIM_NUM}}",    DIM_NUM}
-// 	});
-// }
-
-//新的 规则分区算子初始化
-// const char *OP_REGULAR_SLICE_INIT_Template2 = R"~~~(
-//     // 规则分区算子初始化
-//     RegularSlice {{OP_NAME}} = RegularSlice("{{OP_NAME}}", {{SIZE}}, {{STRIDE}});
-//     {{OP_NAME}}.setDimId({{DIM_ID}});
-//     {{OP_NAME}}.SetSplitSize(para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}}));
-// )~~~";
-
-// std::string CodeGen_RegularSliceInit2(std::string opName,std::string size,std::string stride,std::string dim_id,std::string tensor_name){
-//     return templateString(OP_REGULAR_SLICE_INIT_Template2,
-// 	{
-// 		{"{{OP_NAME}}",    opName},
-// 		{"{{SIZE}}",       size},
-// 		{"{{STRIDE}}",     stride},
-// 		{"{{DIM_ID}}",     dim_id}, //需要通过dimId来计算算子的划分数了
-// 		{"{{TENSOR_NAME}}",     tensor_name}
-// 	});
-// }
 
 const char *OP_REGULAR_SLICE_INIT_Template2 = R"~~~(
     // 规则分区算子初始化
@@ -678,21 +704,6 @@ std::string CodeGen_IndexInit2(std::string opName,std::string dim_id,std::string
 	});
 }
 
-//生成算子划分数的模板 在初始化算子时直接进行划分数的赋值了
-// const char *OP_SPILIT_NUMBER_Generate_Template = R"~~~(
-// 	//生成算子的划分数
-//     int {{OP_NAME}}_spilit_number = para_gene_tool.init_operetor_splitnumber({{OP_NAME}},{{TENSOR_NAME}});
-// 	{{OP_NAME}}.SetSplitSize({{OP_NAME}}_spilit_number);
-// )~~~";
-
-// std::string CodeGen_OpSpilitNumberGenerate(std::string op_name, std::string tensor_name){
-//     return templateString(OP_SPILIT_NUMBER_Generate_Template,
-// 	{
-//         {"{{OP_NAME}}",        op_name}, //算子的名字 注意这里有一个逗号
-// 		{"{{TENSOR_NAME}}",    tensor_name} //存数据的tensor的名字 
-// 	});
-// }
-
 //参数生成的总模板
 const char *PARA_GENE_Template = R"~~~(
     // 参数生成 提前计算后面需要用到的参数	
@@ -717,34 +728,6 @@ std::string CodeGen_ParameterGenerate(std::string InitOPS,std::string InitDevice
 		{"{{InitReductionSplitLength}}",InitReductionSplitLength}
 	});
 }
-
-/*下面函数已废弃*/
-//构造tensor_in std::vector<dacpp::Tensor<ImplType>> tensor_in
-// const char *Tensor_Vector_Declaration_Template = R"~~~(
-// 	std::vector<dacpp::Tensor<{{TYPE}}>> {{NAME}};
-// )~~~";
-
-// std::string CodeGen_TensorVectorDeclarationGenerate(std::string TYPE, std::string tensor_name){
-//     return templateString(Tensor_Vector_Declaration_Template,
-// 	{
-//         {"{{TYPE}}",        TYPE}, //Tensor里面的数据类型
-// 		{"{{NAME}}",    tensor_name} //Tensor vector组的名字 注意前后命名一致性 
-// 	});
-// }
-
-// //tensor_in.pushback();往vector组里面添加数据
-// const char *Tensor_Vector_Add_Template = R"~~~(
-// 	{{NAME}}.push_back({{NAME2}});
-// )~~~";
-
-// std::string CodeGen_TensorVectorAddGenerate(std::string NAME, std::string NAME2){
-//     return templateString(Tensor_Vector_Add_Template,
-// 	{
-//         {"{{NAME}}",        NAME}, //Tensor vector组的名字
-// 		{"{{NAME2}}",       NAME2} //加到里面的Tensor的名字 
-// 	});
-// }
-/*上面函数已废弃*/
 
 //生成设备内存分配大小的模板 对应mat[分区][分区] mat[分区][降维] mat[分区][] mat[降维][]
 const char *DEVICE_MEM_SIZE_Generate_Template1 = R"~~~(
@@ -774,25 +757,6 @@ std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string DATA_INF
 		{"{{DATA_INFO_NAME}}",     DATA_INFO_NAME} //tensor的名字
 	});
 }
-
-/*下面函数已废弃*/
-//生成设备内存分配的大小 对应数据重组需要分配的大小
-// const char *DEVICE_MEM_SIZE_Generate_Template3 = R"~~~(
-// 	//生成设备内存分配大小
-//     int {{NAME}}_size = para_gene_tool.init_device_memory_size({{TENSOR_IN_NAME}},{{TENSOR_OUT_NAME}},{{IN_DAC_OPS_NAME}},{{OUT_DAC_OPS_NAME}});
-// )~~~";
-
-// std::string CodeGen_DeviceMemSizeGenerate(std::string NAME, std::string TENSOR_IN_NAME,std::string TENSOR_OUT_NAME,std::string IN_DAC_OPS_NAME,std::string OUT_DAC_OPS_NAME){
-//     return templateString(DEVICE_MEM_SIZE_Generate_Template3,
-// 	{
-//         {"{{NAME}}",        NAME}, //设备内存的名字
-// 		{"{{TENSOR_IN_NAME}}",     TENSOR_IN_NAME}, //输入tensor组的名字
-// 		{"{{TENSOR_OUT_NAME}}", TENSOR_OUT_NAME},//输出Tensor的名字 这个就一个Tensor
-// 		{"{{IN_DAC_OPS_NAME}}", IN_DAC_OPS_NAME},//输入算子组的组的名字
-// 		{"{{OUT_DAC_OPS_NAME}}",OUT_DAC_OPS_NAME}//输出算子组的名字
-// 	});
-// }
-/*上面函数已废弃*/
 
 //生成设备内存分配的大小 对应数据重组需要分配的大小 
 const char *DEVICE_MEM_SIZE_Generate_Template3 = R"~~~(
@@ -1061,6 +1025,11 @@ std::string CodeGen_CalcEmbed2(std::string Name,Args args){
 			DacCalcArgs+=args[i].name + "+" + IndexComb;
 		}		
 		if(i==len-1){
+			DacCalcArgs+=",";
+			for(int j=0;j<len;j++) {
+				DacCalcArgs+="info_partition_"+args[j].name.substr(2)+"_accessor";
+				if(j!=len-1) DacCalcArgs+=",";
+			}
 			DacCalcArgs+=");";
 		}
 		else{
