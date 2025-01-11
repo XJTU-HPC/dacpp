@@ -29,7 +29,7 @@ add_executable(FOuLadac FOuLa_sycl.cpp)
 # add_executable(liuliangdac liuliangdac_sycl.cpp)
 # add_executable(stencil.dac stencil.dac_sycl.cpp)
 # add_executable(stencilStandardSycl stencilStandardSycl.cpp)
-add_executable(waveEquation.dac waveEquation.dac_sycl.cpp)
+# add_executable(waveEquation.dac waveEquation.dac_sycl.cpp)
 # add_executable(waveEquationStandardSycl waveEquationStandardSycl.cpp)
 
 set_target_properties(FOuLadac PROPERTIES
@@ -63,9 +63,9 @@ set_target_properties(FOuLadac PROPERTIES
 # set_target_properties(stencilStandardSycl PROPERTIES
 #     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 # )
-set_target_properties(waveEquation.dac PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
-)
+# set_target_properties(waveEquation.dac PROPERTIES
+#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+# )
 # set_target_properties(waveEquationStandardSycl PROPERTIES
 #     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 # )
@@ -86,5 +86,5 @@ target_link_libraries(FOuLadac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterL
 # # target_link_libraries(liuliangdac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 # target_link_libraries(stencil.dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 # target_link_libraries(stencilStandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
-target_link_libraries(waveEquation.dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
+# target_link_libraries(waveEquation.dac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 # target_link_libraries(waveEquationStandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
