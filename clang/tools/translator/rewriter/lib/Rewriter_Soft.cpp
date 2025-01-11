@@ -385,6 +385,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
         rewriter->RemoveText(calc->getCalcLoc()->getSourceRange());
         // std::cout << code;  
     }
-    rewriter->InsertText(dacppFile->getMainFuncLoc()->getBeginLoc(), code);
-    
+
+    rewriter->InsertText(dacppFile->node->getBeginLoc(),code);
+    //rewriter->InsertText(dacppFile->getMainFuncLoc()->getBeginLoc(), code);
 }

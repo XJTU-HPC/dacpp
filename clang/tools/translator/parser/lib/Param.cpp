@@ -10,6 +10,8 @@
 
 using namespace llvm;
 
+using namespace llvm;
+
 /*
     参数
 */

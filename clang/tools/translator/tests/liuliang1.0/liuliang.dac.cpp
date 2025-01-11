@@ -5,10 +5,8 @@
 #include <fstream>
 #include <any>
 #include <queue>
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Slice.h"
-#include "/data/powerzhang/dacpp/clang/tools/translator/dacppLib/include/Tensor.hpp"
+#include "ReconTensor.h"
 
-using dacpp::Tensor;
 namespace dacpp {
     typedef std::vector<std::any> list;
 }
@@ -39,17 +37,18 @@ void initializeDensity(std::vector<double>& rho) {
 }
 
 // 计算交通流量
-calc void lwr(double rho[], double new_rho[]) {
-    new_rho[0] = rho[0] - (DELTA_T / DELTA_X) * (q(rho[1]) - q(rho[0]));
+calc void lwr(dacpp::Tensor<double, 1>& rho, dacpp::Tensor<double, 1>& new_rho) {
+    new_rho[0] = rho[1] - (DELTA_T / DELTA_X) * (q(rho[1]) - q(rho[0]));
     new_rho[0] = std::max(0.0, new_rho[0]);
     //new_rho += 0.1 * (rho[0] + new_rho - 2 * rho[1]);
 }
 
-shell dacpp::list LWR_shell(const dacpp::Tensor<double> & rho, dacpp::Tensor<double> & new_rho) {
-    dacpp::Index idx1("idx1");
-    dacpp::RegularSplit S1("S1",2, 1);
+shell dacpp::list LWR_shell(const dacpp::Tensor<double, 1> & rho, 
+                            dacpp::Tensor<double, 1> & new_rho) {
+    dacpp::index idx1;
+    dacpp::split S1(2, 1);
     binding(idx1, S1);
-    dacpp::list dataList{rho[{S1}], new_rho[{idx1}]};
+    dacpp::list dataList{rho[S1], new_rho[idx1]};
     return dataList;
 }
 
@@ -61,42 +60,41 @@ int main() {
     //Tensor<int> new_rho(middle_points, shape3);
 
     initializeDensity(rho);
+    // 使用 LWR 算法
+    std::vector<double> middle_points_out;
+    for (int i = 1; i <= 98; i++) {
+        middle_points_out.push_back(static_cast<double>(new_rho[i]));
+    }
+    //std::vector<int> shape = {98,1};
+    dacpp::Tensor<double, 1> middle_out_tensor(middle_points_out);
+
+    std::vector<double> middle_points_in;
+    for (int i = 0; i <= 98; i++) {
+        middle_points_in.push_back(static_cast<double>(rho[i]));
+    }
+    //std::vector<int> shape2 = {99,1};
+    dacpp::Tensor<double, 1> middle_in_tensor(middle_points_in);
 
     for (int t = 0; t < TIME_STEPS; ++t) {
-
-        // 使用 LWR 算法
-        std::vector<double> middle_points_out;
-        for (int i = 1; i <= 98; i++) {
-          middle_points_out.push_back(static_cast<double>(new_rho[i]));
-        }
-        std::vector<int> shape = {98,1};
-        Tensor<double> middle_out_tensor(middle_points_out, shape);
-
-        std::vector<double> middle_points_in;
-        for (int i = 1; i <= 99; i++) {
-          middle_points_in.push_back(static_cast<double>(rho[i]));
-        }
-        std::vector<int> shape2 = {99,1};
-        Tensor<double> middle_in_tensor(middle_points_in, shape2);
         LWR_shell(middle_in_tensor, middle_out_tensor) <-> lwr;
 
-        double* r_1 = new double[98];
-        middle_out_tensor.tensor2Array(r_1);
-        std::vector<double> r(r_1, r_1 + 98);
+        // double* r_1 = new double[98];
+        // middle_out_tensor.tensor2Array(r_1);
+        // std::vector<double> r(r_1, r_1 + 98);
 
         for (int i = 1; i <= 98; i++) {
-            rho[i] = r[i-1];
+            middle_in_tensor[i] = middle_out_tensor[i-1];
         }
         
         // 处理边界条件
-        rho[0] = rho[1]; // 左边界无车流
-        rho[WIDTH - 1] = rho[WIDTH - 2]; // 右边界无车流
+        middle_in_tensor[0] = middle_out_tensor[0]; // 左边界无车流
+        //middle_in_tensor[WIDTH - 2] = middle_out_tensor[WIDTH - 3]; // 右边界无车流
 
     }
-    for (int x = 0; x < WIDTH; ++x) {
-        std::cout <<  static_cast<int>(rho[x]) <<",";
-    }
-    //rho_tensor.print();
+    // for (int x = 0; x < WIDTH; ++x) {
+    //     std::cout <<  static_cast<int>(rho[x]) <<",";
+    // }
+    middle_in_tensor.print();
 
     // 释放动态分配的内存
 
