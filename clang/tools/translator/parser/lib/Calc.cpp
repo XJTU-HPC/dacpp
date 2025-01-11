@@ -4734,18 +4734,48 @@ void dacppTranslator::Calc::setBody(Stmt* body) {
   this->body.push_back(Msg);
 }
 
+std::string func(std::string code, std::string name) {
+    std::regex pattern(name + R"((?![\w]|\[))");
+
+    std::string result = "";
+    size_t lastPos = 0;
+
+    // 遍历所有匹配
+    for (std::sregex_iterator it(code.begin(), code.end(), pattern), end; it != end; ++it) {
+        std::smatch match = *it;
+        if (match.position() == 0 || !isalnum(code[match.position() - 1])) {
+          result += code.substr(lastPos, match.position() - lastPos); // 添加非匹配部分
+          result += match.str() + "[0]"; // 添加匹配部分的自定义替换
+          lastPos = match.position() + match.length(); // 更新位置
+        } else {
+          result += code.substr(lastPos, match.position() - lastPos + match.str().size());
+          lastPos = match.position() + match.length();
+        }
+    }
+
+    // 添加最后的非匹配部分
+    result += code.substr(lastPos);
+    return result;
+}
+
 std::string dacppTranslator::Calc::getBody(int idx) {
     std::string code = body[idx];
     for (int i = 0; i < getNumParams(); i++) {
       std::string name = getParam(i)->getName();
-      std::regex pattern(R"((?![a-zA-z0-9_]))" + name + R"((?![a-zA-z0-9_\[]))");
-      code = std::regex_replace(code, pattern, name + "[0]");
+      if (getParam(i)->getType().find("Tensor") != -1) {
+        continue;
+      }
+      //std::regex pattern(name + R"((?![\w]|\[))");
+      //code = std::regex_replace(code, pattern, name + "[0]");
+      code = func(code, name);
     }
     std::string res = "";
     size_t last_pos = 0;
     for (int i = 0; i < getNumParams(); i++) {
       std::string name = getParam(i)->getName();
-      
+      if (getParam(i)->getType().find("Tensor") == -1) {
+        continue;
+      }
       std::regex pattern(name + R"((\[[^\[\]]\]){2,})");
       std::sregex_iterator it(code.begin(), code.end(), pattern);
       std::sregex_iterator end;
@@ -4774,6 +4804,31 @@ std::string dacppTranslator::Calc::getBody(int idx) {
       }
     }
     res += code.substr(last_pos);
+
+    // code = res;
+    
+    // std::string res1 = "";
+    // last_pos = 0;
+    // for (int i = 0; i < getNumParams(); i++) {
+    //   std::string name = getParam(i)->getName();
+    //   if (getParam(i)->getType().find("Tensor") != -1) {
+    //     continue;
+    //   }
+    //   std::regex pattern(name + R"((?![\w]|\[))");
+    //   std::sregex_iterator it(code.begin(), code.end(), pattern);
+    //   std::sregex_iterator end;
+
+    //   while (it != end) {
+    //       std::smatch match = *it; // 获取当前匹配结果
+    //       std::string str = match.str();
+    //       res1 += code.substr(last_pos, match.position() - last_pos);
+    //       res1 += str + "[0]";
+    //       last_pos = match.position() + match.length();
+    //       ++it; // 移动到下一个匹配结果
+    //   }
+    // }
+    // res1 += code.substr(last_pos);
+
     return res;
 }
 
