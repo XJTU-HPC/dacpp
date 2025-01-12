@@ -33,7 +33,7 @@ class DacHandler : public MatchFinder::MatchCallback {
 public:
     DacHandler() {}
 
-    virtual void run(const MatchFinder::MatchResult &Result) {
+    virtual void run(const MatchFinder::MatchResult &Result) override {
         // 匹配数据关联计算表达式
         if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
             /*
@@ -42,6 +42,12 @@ public:
                 而子数据关联计算表达式在编译期无法从得到该信息
                 顶级数据关联计算表达式在编译期可以找到数据的定义位置，从其构造函数中得到数据的维度信息
             */
+            if (dyn_cast<BinaryOperator>(dacExpr->getLHS()) ||
+                dyn_cast<BinaryOperator>(dacExpr->getRHS())) {
+              llvm::errs() << "error: multi binary operator in a dac statement"
+                           << "\n";
+              return;
+            }
            // 获取 DAC 数据关联表达式左值
             Expr* dacExprLHS = dacppTranslator::Expression::shellLHS_p (dacExpr) ? dacExpr->getLHS() : dacExpr->getRHS();
             CallExpr* shellCall = dacppTranslator::getNode<CallExpr>(dacExprLHS);
