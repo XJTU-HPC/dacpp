@@ -43,7 +43,7 @@ public:
                 顶级数据关联计算表达式在编译期可以找到数据的定义位置，从其构造函数中得到数据的维度信息
             */
            // 获取 DAC 数据关联表达式左值
-            Expr* dacExprLHS = dacExpr->getLHS();
+            Expr* dacExprLHS = dacppTranslator::Expression::shellLHS_p (dacExpr) ? dacExpr->getLHS() : dacExpr->getRHS();
             CallExpr* shellCall = dacppTranslator::getNode<CallExpr>(dacExprLHS);
             Expr* curExpr = shellCall->getArg(0);
             DeclRefExpr* declRefExpr;
