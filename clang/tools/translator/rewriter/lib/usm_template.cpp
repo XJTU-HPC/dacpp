@@ -11,7 +11,6 @@
 namespace USM_TEMPLATE {
 
 
-
 void replaceTextInString(std::string& text, 
     const std::string &find, 
     const std::string &replace){
@@ -26,6 +25,25 @@ std::string templateString(std::string templ,
 	for(auto &element : replacements)
 		replaceTextInString(templ, element.first, element.second);
 	return templ;
+}
+
+const char *DATA_ASSOC_COMP_Template = R"~~~(
+    {{DATA_RECON}}
+    {{H2D_MEM_MOV}}
+	{{KERNEL_EXECUTE}}
+	{{REDUCTION}}
+	{{D2H_MEM_MOV}}
+)~~~";
+
+std::string CodeGen_DataAssocComp(std::string dataRecon, std::string H2DMemMove, std::string kernelExecute, std::string reduction, std::string D2HMemMove){
+    return templateString(DATA_ASSOC_COMP_Template,
+	{
+        {"{{DATA_RECON}}",        dataRecon},
+        {"{{H2D_MEM_MOV}}",       H2DMemMove},
+        {"{{KERNEL_EXECUTE}}",    kernelExecute},
+		{"{{REDUCTION}}",         reduction},
+        {"{{D2H_MEM_MOV}}",       D2HMemMove}
+	});
 }
 
 const char *DAC2SYCL_Template = R"~~~(
