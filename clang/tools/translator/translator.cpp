@@ -62,6 +62,8 @@ public:
         // 匹配主函数
         else if (const FunctionDecl* mainFunc = Result.Nodes.getNodeAs<clang::FunctionDecl>("main")) {
             dacppFile->setMainFuncLoc(mainFunc);
+        } else if (const FunctionDecl* mainFunc = Result.Nodes.getNodeAs<clang::FunctionDecl>("dac_expr_father")) {
+            dacppFile->node = mainFunc;
         }
   
     }
@@ -84,6 +86,7 @@ public:
     MyASTConsumer() {
         // 可以通过 addMatcher 添加用户构造的匹配器到 MatchFinder中
         // Matcher.addMatcher(binaryOperator(hasOperatorName("<->")).bind("dac_expr"), &HandleForDac);
+        Matcher.addMatcher(functionDecl(hasDescendant(binaryOperator(hasOperatorName("<->")))).bind("dac_expr_father"), &HandleForDac);
         Matcher.addMatcher(binaryOperator(hasOperatorName("<->")).bind("dac_expr"), &HandleForDac);
         Matcher.addMatcher(functionDecl(hasName("main")).bind("main"), &HandleForDac);
     }
@@ -91,6 +94,7 @@ public:
     void HandleTranslationUnit(ASTContext &Context) override {
         // Run the matchers when we have the whole TU parsed.
         Matcher.matchAST(Context);
+        dacppFile->setTranslationUnitDecl(Context.getTranslationUnitDecl());
     }
 
 };
