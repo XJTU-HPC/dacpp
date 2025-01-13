@@ -35,6 +35,8 @@ std::string CodeGen_RegularSliceInit(std::string opName,std::string size,std::st
 
 std::string CodeGen_IndexInit(std::string opName,std::string splitSize);
 
+std::string CodeGen_OpPushBack2Ops(std::string name, std::string opName, std::string dimId);
+
 std::string CodeGen_OpPushBack2Ops(std::string name, std::string opName, std::string dimId, std::string splitLength);
 
 std::string CodeGen_OpPushBack2Tool(std::string name, std::string opName, std::string dimId, std::string splitLength);

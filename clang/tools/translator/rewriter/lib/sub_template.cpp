@@ -175,18 +175,18 @@ std::string CodeGen_OpPushBack2Ops(std::string name, std::string opName, std::st
 	});
 }
 
-// const char *OP_PUSH_BACK2OPS_Template = R"~~~(
-//     {{OP_NAME}}.setDimId({{DIM_ID}});
-//     {{NAME}}_ops.push_back({{OP_NAME}});)~~~";
+const char *OP_PUSH_BACK2OPS_Template2 = R"~~~(
+    {{OP_NAME}}.setDimId({{DIM_ID}});
+    {{NAME}}_ops.push_back({{OP_NAME}});)~~~";
 
-// std::string CodeGen_OpPushBack2Ops(std::string name, std::string opName, std::string dimId){
-//     return templateString(OP_PUSH_BACK2OPS_Template,
-// 	{
-// 		{"{{OP_NAME}}",    opName},
-// 		{"{{NAME}}",       name},
-// 		{"{{DIM_ID}}",     dimId}
-// 	});
-// }
+std::string CodeGen_OpPushBack2Ops(std::string name, std::string opName, std::string dimId){
+    return templateString(OP_PUSH_BACK2OPS_Template2,
+	{
+		{"{{OP_NAME}}",    opName},
+		{"{{NAME}}",       name},
+		{"{{DIM_ID}}",     dimId}
+	});
+}
 
 const char *OP_PUSH_BACK2TOOL_Template = R"~~~(
     {{OP_NAME}}.setDimId({{DIM_ID}});
