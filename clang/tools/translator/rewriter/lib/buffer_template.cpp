@@ -29,7 +29,7 @@ std::string ACCESSOR_POINTER_LIST = "";
 const char *BUFFER_ACCESSOR_Template = R"~~~(
         accessor acc_{{NAME}}{b_{{NAME}}, h};)~~~";
 const char *ACCESSOR_POINTER_Template = R"~~~(
-            auto* d_{{NAME}} = acc_{{NAME}}.get_multi_ptr<access::decorated::no>().get())~~~";
+            auto* d_{{NAME}} = acc_{{NAME}}.get_multi_ptr<access::decorated::no>().get();)~~~";
 
 const char *DAC2SYCL_Template = R"~~~(
 // 生成函数调用
