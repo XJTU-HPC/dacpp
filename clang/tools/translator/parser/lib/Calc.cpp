@@ -1,5 +1,6 @@
 #include <string>
 #include <regex>
+#include <set>
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclFriend.h"
@@ -4899,6 +4900,23 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
         
         // 设置参数名称
         param->setName(calcFunc->getParamDecl(paramsCount)->getNameAsString());
+
+        std::set<std::string> ruleSet;
+        ruleSet.insert("plus");
+        ruleSet.insert("multiplies");
+        ruleSet.insert("bit_and");
+        ruleSet.insert("bit_or");
+        ruleSet.insert("bit_xor");
+        ruleSet.insert("logical_and");
+        ruleSet.insert("logical_or");
+        ruleSet.insert("minimum");
+        ruleSet.insert("maximum");
+
+        for (auto *attr : calcFunc->getParamDecl(paramsCount)->specific_attrs<clang::AnnotateAttr>()) {
+          if (ruleSet.find(attr->getAnnotation().str()) != ruleSet.end()) {
+            param->rule = "sycl::" + attr->getAnnotation().str() + "<>()";
+          }
+        }
         
         // 设置参数形状
         ShellParam* shellParam = shell->getShellParam(paramsCount);
