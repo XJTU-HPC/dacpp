@@ -471,7 +471,7 @@ void dacppTranslator::Rewriter::rewriteMain() {
         Expression* expr = dacppFile->getExpression(exprCount);
         Shell* shell = expr->getShell();
         Calc* calc = expr->getCalc();
-        Expr *dacExprLHS = expr->getDacExpr()->getLHS();
+        Expr *dacExprLHS = dacppTranslator::Expression::shellLHS_p (expr->getDacExpr()) ? expr->getDacExpr()->getLHS() : expr->getDacExpr()->getRHS();
         CallExpr *shellCall = getNode<CallExpr>(dacExprLHS);
         std::string str;
         llvm::raw_string_ostream rso(str);
