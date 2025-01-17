@@ -55,7 +55,13 @@ void print_image(const std::vector<std::vector<Pixel>>& image, int num_rows = 5,
 
 int main() {
     // 初始化一个简单的图像（10x10），所有像素值初始化为(100, 100, 100)
-    int width = 10, height = 10;
+
+    int width, height;
+    std::cout << "Enter width: ";
+    std::cin >> width;  // 错误：无法修改const变量
+
+    std::cout << "Enter height: ";
+    std::cin >> height;  // 错误：无法修改const变量
     std::vector<Pixel> image(height*width, {100, 100, 100});
     std::vector<Pixel> image2(height*width, {100, 100, 100});
     //std::vector<std::vector<Pixel>> image2(height, std::vector<Pixel>(width, {100, 100, 100}));

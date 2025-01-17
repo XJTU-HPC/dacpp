@@ -43,7 +43,7 @@ void waveEq(double* cur,double* prev,double* next,sycl::accessor<int, 1, sycl::a
 // 生成函数调用
 void waveEqShell_waveEq(const dacpp::Tensor<double, 2> & matCur, const dacpp::Tensor<double, 2> & matPrev, dacpp::Tensor<double, 2> & matNext) { 
     // 设备选择
-    auto selector = gpu_selector_v;
+    auto selector = default_selector_v;
     queue q(selector);
     //声明参数生成工具
     ParameterGeneration<int,2> para_gene_tool;
@@ -353,32 +353,37 @@ int main() {
   
 
     //std::vector<int> shape_u_curr = {8, 8};
-    dacpp::Tensor<double, 2> u_curr_tensor({8, 8}, u_curr);
+    dacpp::Tensor<double, 2> u_curr_tensor({NX, NY}, u_curr);
+    dacpp::Tensor<double, 2> u_prev_tensor({NX, NY}, u_prev);
+    dacpp::Tensor<double, 2> u_next_tensor({NX, NY}, u_next);
+    // std::vector<double> u_prev_middle_points;
+    // for (int i = 1; i <= 6; i++) {
+    //     std::vector<double> row;
+    //     for (int j = 1; j <= 6; j++) {  
+    //         u_prev_middle_points.push_back(static_cast<double>(u_prev[i*NY+j]));  
+    //     }
+        
+    // }
+    // //std::vector<int> shape2= {6, 6};
+    // dacpp::Tensor<double, 2> u_prev_middle_tensor({6, 6}, u_prev_middle_points);
+    dacpp::Tensor<double, 2> u_prev_middle_tensor = u_prev_tensor[{1,7}][{1,7}];
 
-    std::vector<double> u_prev_middle_points;
-    for (int i = 1; i <= 6; i++) {
-        std::vector<double> row;
-        for (int j = 1; j <= 6; j++) {  
-            u_prev_middle_points.push_back(static_cast<double>(u_prev[i*NY+j]));  
-        }
-        
-    }
-    //std::vector<int> shape2= {6, 6};
-    dacpp::Tensor<double, 2> u_prev_middle_tensor({6, 6}, u_prev_middle_points);
+
     //u_next取点
-    std::vector<double> u_next_middle_points;
-    for (int i = 1; i <= 6; i++) {
-        std::vector<double> row;
-        for (int j = 1; j <= 6; j++) {  
-            u_next_middle_points.push_back(static_cast<double>(u_next[i*NY+j]));  
-        }
+    // std::vector<double> u_next_middle_points;
+    // for (int i = 1; i <= 6; i++) {
+    //     std::vector<double> row;
+    //     for (int j = 1; j <= 6; j++) {  
+    //         u_next_middle_points.push_back(static_cast<double>(u_next[i*NY+j]));  
+    //     }
         
-    }
+    // }
     
     for(int i = 0;i < TIME_STEPS; i++) {
         
         //std::vector<int> shape1= {6, 6};
-        dacpp::Tensor<double, 2> u_next_middle_tensor({6, 6}, u_next_middle_points);
+        dacpp::Tensor<double, 2> u_next_middle_tensor = u_next_tensor[{1,7}][{1,7}];
+
 
 
         

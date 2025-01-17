@@ -263,24 +263,31 @@ int main() {
     // 创建 Tensor 类型对象
     std::vector<double> rho(WIDTH, 0.0);
     std::vector<double> new_rho(WIDTH, 0.0);
+    
     //std::vector<int> shape3 = {1, 100};
     //Tensor<int> new_rho(middle_points, shape3);
 
     initializeDensity(rho);
-    // 使用 LWR 算法
-    std::vector<double> middle_points_out;
-    for (int i = 1; i <= 98; i++) {
-        middle_points_out.push_back(static_cast<double>(new_rho[i]));
-    }
-    //std::vector<int> shape = {98,1};
-    dacpp::Tensor<double, 1> middle_out_tensor(middle_points_out);
+    dacpp::Tensor<double, 1> rho_tensor(rho);
+    dacpp::Tensor<double, 1> new_rho_tensor(new_rho);
 
-    std::vector<double> middle_points_in;
-    for (int i = 0; i <= 98; i++) {
-        middle_points_in.push_back(static_cast<double>(rho[i]));
-    }
-    //std::vector<int> shape2 = {99,1};
-    dacpp::Tensor<double, 1> middle_in_tensor(middle_points_in);
+
+    // 使用 LWR 算法
+    // std::vector<double> middle_points_out;
+    // for (int i = 1; i <= 98; i++) {
+    //     middle_points_out.push_back(static_cast<double>(new_rho[i]));
+    // }
+    //std::vector<int> shape = {98,1};
+    //dacpp::Tensor<double, 1> middle_out_tensor(middle_points_out);
+    dacpp::Tensor<double, 1> middle_out_tensor = new_rho_tensor[{1,99}];
+    dacpp::Tensor<double, 1> middle_in_tensor = rho_tensor[{0,99}];
+
+    // std::vector<double> middle_points_in;
+    // for (int i = 0; i <= 98; i++) {
+    //     middle_points_in.push_back(static_cast<double>(rho[i]));
+    // }
+    // //std::vector<int> shape2 = {99,1};
+    // dacpp::Tensor<double, 1> middle_in_tensor(middle_points_in);
 
     for (int t = 0; t < TIME_STEPS; ++t) {
         LWR_shell_lwr(middle_in_tensor, middle_out_tensor);
