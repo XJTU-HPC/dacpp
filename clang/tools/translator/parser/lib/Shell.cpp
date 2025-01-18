@@ -519,8 +519,11 @@ void dacppTranslator::Shell::parseShell(const BinaryOperator* dacExpr, std::vect
     Param *param = new Param();
 
     // 获取参数读写属性
-    param->setRw(inputOrOutput(
-        shellFunc->getParamDecl(paramsCount)->getType().getAsString()));
+    param->setRw(false);
+
+    for (auto *attr : shellFunc->getParamDecl(paramsCount)->specific_attrs<clang::AnnotateAttr>()) {
+      param->setRw(attr->getAnnotation().str().compare("out") == 1 ? true : false);
+    }
 
     // 设置参数类型
     param->setType(shellFunc->getParamDecl(paramsCount)->getType());
