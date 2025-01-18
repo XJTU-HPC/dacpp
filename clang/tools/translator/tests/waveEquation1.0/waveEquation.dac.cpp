@@ -32,7 +32,7 @@ shell dacpp::list waveEqShell(const dacpp::Matrix<double>& matCur,
     return dataList;
 }
 
-calc void waveEq(dacpp::Matrix<double>& cur, dacpp::Vector<double>& prev, dacpp::Vector<double>& next) {
+calc void waveEq(dacpp::Matrix<double>& cur, double* prev, double* next) {
     double dt = 0.5f * std::fmin(dx, dy) / c; // 满足稳定性条件
     double u_xx = (cur[2][1] - 2.0f * cur[1][1] + cur[0][1])/ (dx * dx);
     double u_yy = (cur[1][2] - 2.0f * cur[1][1] + cur[1][0])/ (dy * dy);

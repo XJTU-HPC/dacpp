@@ -30,11 +30,11 @@ shell dacpp::list jacobiShell(const dacpp::Matrix<float>& A,
     return dataList;
 }
 
-calc void jacobi(dacpp::Vector<float>& a, 
-                dacpp::Vector<float>& b, 
-                dacpp::Vector<float>& x, 
-                dacpp::Vector<float>& x_new, 
-                dacpp::Vector<int>& num) {
+calc void jacobi(float* a, 
+                float* b, 
+                float* x, 
+                float* x_new, 
+                int* num) {
     float sigma = 0;
     for(int i = 0;i < N;++i) {
         if(i != num[0]) {

@@ -37,7 +37,7 @@ void initializeDensity(std::vector<double>& rho) {
 }
 
 // 计算交通流量
-calc void lwr(dacpp::Vector<double>& rho, dacpp::Vector<double>& new_rho) {
+calc void lwr(dacpp::Vector<double> & rho, double* new_rho) {
     new_rho[0] = rho[1] - (DELTA_T / DELTA_X) * (q(rho[1]) - q(rho[0]));
     new_rho[0] = std::max(0.0, new_rho[0]);
     //new_rho += 0.1 * (rho[0] + new_rho - 2 * rho[1]);

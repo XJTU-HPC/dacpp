@@ -45,7 +45,7 @@ shell dacpp::list mdp_shell(const dacpp::Vector<double>& p, dacpp::Vector<double
     dacpp::list datalist{p[sp],new_p[idx]};
 }
 
-calc void mdp(dacpp::Vector<double>& p, dacpp::Vector<double>& new_p){
+calc void mdp(dacpp::Vector<double>& p, double* new_p){
     new_p[0] = p[1] + dt * (D * (p[2] - 2 * p[1] + p[0]) / (dx * dx) + (-A) * (p[2] - p[0]) / (2 * dx));
 }
 

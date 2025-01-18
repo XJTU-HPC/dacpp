@@ -19,10 +19,10 @@ shell dacpp::list DECAY(const dacpp::Vector<double>& N0s,
     return dataList;
 }
 
-calc void decay(dacpp::Vector<double>& N0s,
-                dacpp::Vector<double>& lambdas,
-                dacpp::Vector<double>& local_A,
-                dacpp::Vector<double>& t) {
+calc void decay(double* N0s,
+                double* lambdas,
+                double* local_A,
+                double* t) {
     local_A[0] = N0s[0] * std::exp(-lambdas[0] * t[0]); 
 }
 

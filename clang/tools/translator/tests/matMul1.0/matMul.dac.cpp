@@ -20,7 +20,7 @@ shell dacpp::list matrixMultiply_shell(const dacpp::Matrix<int>& matA,
 
 calc void matrixMultiply_calc(dacpp::Vector<int>& vecA,
                 dacpp::Vector<int>& vecB,
-                dacpp::Vector<int>& dotProduct) {
+                int* dotProduct) {
     for (int i = 0; i < 5; i++) {
         dotProduct[0] += vecA[i] * vecB[i];
     }

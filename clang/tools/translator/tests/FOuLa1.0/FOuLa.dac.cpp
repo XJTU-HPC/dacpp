@@ -36,8 +36,8 @@ shell dacpp::list PDE(const dacpp::Vector<int>& u_kin,
 }
 
 calc void pde(dacpp::Vector<int>& u_kin,
-                dacpp::Vector<int>& u_kout,
-                dacpp::Vector<int>& r) {
+                int* u_kout,
+                int* r) {
     u_kout[0] = r[0] * u_kin[0] + (1 - 2 * r[0]) * u_kin[1] + r[0] * u_kin[2];
 }
 

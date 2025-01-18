@@ -34,7 +34,7 @@ shell dacpp::list stencilShell(const dacpp::Matrix<float>& matIn,
 }
 
 calc void stencil(dacpp::Matrix<float>& mat, 
-                    dacpp::Vector<float>& out) {
+                    float* out) {
     out[0] = mat[1][1] + alpha *delta_t * (((mat[2][1] - 2.0f * mat[1][1] + mat[0][1]) / (dx * dx))+ ((mat[1][2] - 2.0f * mat[1][1] + mat[1][0]) / (dy * dy)));                
 }
 

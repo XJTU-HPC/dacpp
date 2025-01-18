@@ -26,14 +26,14 @@ shell dacpp::list imageAdjustment(const dacpp::Matrix<Pixel>& image_tensor, dacp
 }
 
 // 色彩调整操作：增加红色分量
-calc void image_1(dacpp::Vector<Pixel>& image_tensor,
-                dacpp::Vector<Pixel>& image_tensor2) {
+calc void image_1(Pixel* image_tensor,
+                Pixel* image_tensor2) {
     image_tensor2[0].r = std::min(255, image_tensor[0].r + 50);  // 增加红色分量，并确保不超过255
 }
 
 // 亮度增强操作：增加每个像素的 RGB 分量
-calc void image_2(dacpp::Vector<Pixel>& image_tensor2,
-                dacpp::Vector<Pixel>& image_tensor3) {
+calc void image_2(Pixel* image_tensor2,
+                Pixel* image_tensor3) {
     int value = 30;
     image_tensor3[0].r = std::min(255, image_tensor2[0].r + value);  // 增加红色分量，限制在255以内
     image_tensor3[0].g = std::min(255, image_tensor2[0].g + value);  // 增加绿色分量

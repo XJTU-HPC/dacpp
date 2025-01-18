@@ -4763,7 +4763,9 @@ std::string dacppTranslator::Calc::getBody(int idx) {
     std::string code = body[idx];
     for (int i = 0; i < getNumParams(); i++) {
       std::string name = getParam(i)->getName();
-      if (getParam(i)->getType().find("Tensor") != -1) {
+      if (getParam(i)->getType().find("Tensor") != -1 ||
+      getParam(i)->getType().find("Vector") != -1 || 
+      getParam(i)->getType().find("Matrix") != -1) {
         continue;
       }
       //std::regex pattern(name + R"((?![\w]|\[))");
@@ -4774,7 +4776,9 @@ std::string dacppTranslator::Calc::getBody(int idx) {
     size_t last_pos = 0;
     for (int i = 0; i < getNumParams(); i++) {
       std::string name = getParam(i)->getName();
-      if (getParam(i)->getType().find("Tensor") == -1) {
+      if (getParam(i)->getType().find("Tensor") == -1 &&
+      getParam(i)->getType().find("Vector") == -1 && 
+      getParam(i)->getType().find("Matrix") == -1) {
         continue;
       }
       std::regex pattern(name + R"((\[[^\[\]]\]){2,})");

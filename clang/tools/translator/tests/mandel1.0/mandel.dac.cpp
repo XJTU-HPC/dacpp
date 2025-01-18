@@ -39,8 +39,8 @@ shell dacpp::list MANDEL(const dacpp::Vector<complex<float>>& complex_points,
     return dataList;
 }
 
-calc void mandel(dacpp::Vector<complex<float>>& complex_points,
-                dacpp::Vector<int>& mandelbrot_flags) {
+calc void mandel(complex<float>* complex_points,
+                int* mandelbrot_flags) {
     const complex<float>& c = complex_points[0];
     complex<float> z = 0;
     int iterations = 0;
