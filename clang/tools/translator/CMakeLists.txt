@@ -23,6 +23,8 @@ set(REWRITER_SOURCES
   rewriter/lib/usm_template.cpp
   rewriter/lib/Rewriter.cpp
   rewriter/lib/Rewriter_Usm.cpp
+  rewriter/lib/Rewriter_Soft_Usm.cpp
+  rewriter/lib/Rewriter_Soft_Buffer.cpp
   rewriter/lib/Rewriter_Buffer.cpp
   rewriter/lib/Rewriter_Soft.cpp
   rewriter/lib/buffer_template.cpp

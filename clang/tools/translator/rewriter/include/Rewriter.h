@@ -5,7 +5,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "DacppStructure.h"
 #include "Param.h"
-#include "sub_template.h"
+#include "dacInfo.h"
 
 #include <string>
 
@@ -75,9 +75,14 @@ public:
 
     void rewriteDac_buffer();
 
+    void rewriteDac_Soft_Usm();
+
+    void rewriteDac_Soft_Buffer();
+
     void rewriteDac_usm();
     
     void rewriteDac_Soft();
+    
 
     void rewriteMain();
 };
