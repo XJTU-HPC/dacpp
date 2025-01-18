@@ -10,6 +10,8 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include <unordered_map>
+#include <set>
 
 #include "Split.h"
 #include "Param.h"
@@ -23,7 +25,9 @@ using namespace clang::driver;
 using namespace clang::tooling;
 
 
- dacppTranslator::DacppFile* dacppFile = new dacppTranslator::DacppFile();
+dacppTranslator::DacppFile* dacppFile = new dacppTranslator::DacppFile();
+
+std::unordered_map<FunctionDecl*, std::set<FunctionDecl*>> dacExprMap;
 
 /*
   ASTMatcher 匹配 DACPP 文件中符合要求的节点
@@ -36,6 +40,7 @@ public:
     virtual void run(const MatchFinder::MatchResult &Result) override {
         // 匹配数据关联计算表达式
         if (const BinaryOperator* dacExpr = Result.Nodes.getNodeAs<clang::BinaryOperator>("dac_expr")) {
+            dacppFile->dacExprs.push_back(dacExpr);
             /*
                 对匹配到的数据关联计算表达式进行过滤，只解析顶级数据关联计算表达式
                 解析数据关联计算表达式时需要知道数据的维度，将其硬编码到生成的SYCL文件中
@@ -48,9 +53,10 @@ public:
                            << "\n";
               return;
             }
-           // 获取 DAC 数据关联表达式左值
+            // 获取 DAC 数据关联表达式左值
             Expr* dacExprLHS = dacppTranslator::Expression::shellLHS_p (dacExpr) ? dacExpr->getLHS() : dacExpr->getRHS();
             CallExpr* shellCall = dacppTranslator::getNode<CallExpr>(dacExprLHS);
+            FunctionDecl* functionDecl = shellCall->getDirectCallee();
             Expr* curExpr = shellCall->getArg(0);
             DeclRefExpr* declRefExpr;
             if(isa<DeclRefExpr>(curExpr)) {
@@ -62,6 +68,22 @@ public:
             if(isa<ParmVarDecl>(declRefExpr->getDecl())) {
                 return;
             }
+
+            if(isa<DeclRefExpr>(dacExpr->getRHS())) {
+                declRefExpr = dyn_cast<DeclRefExpr>(dacExpr->getRHS());
+            }
+            else {
+                declRefExpr = dacppTranslator::getNode<DeclRefExpr>(dacExpr->getRHS());
+            }
+            FunctionDecl* calcFunc = dyn_cast<FunctionDecl>(declRefExpr->getDecl());
+            if (dacExprMap.find(functionDecl) != dacExprMap.end()) {
+                if (dacExprMap[functionDecl].count(calcFunc) == 1) {
+                    return;
+                }
+            } else {
+                dacExprMap.emplace(functionDecl, std::set<FunctionDecl*>());
+            }
+            dacExprMap[functionDecl].emplace(calcFunc);
             // 解析 DACPP 文件中的顶级数据关联计算表达式
             dacppFile->setExpression(dacExpr);
         }
