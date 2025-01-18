@@ -45,7 +45,8 @@ void stencilShell_stencil(const dacpp::Matrix<float> & matIn, dacpp::Matrix<floa
     auto selector = default_selector_v;
     queue q(selector);
     //声明参数生成工具
-    ParameterGeneration<int,2> para_gene_tool;
+    //ParameterGeneration<int,2> para_gene_tool;
+    ParameterGeneration para_gene_tool;
     // 算子初始化
     
     // 数据信息初始化
