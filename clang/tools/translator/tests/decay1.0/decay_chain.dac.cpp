@@ -8,10 +8,10 @@ namespace dacpp {
     typedef std::vector<std::any> list;
 }
 
-shell dacpp::list DECAY(const dacpp::Tensor<double, 1>& N0s,
-                        const dacpp::Tensor<double, 1>& lambdas,
-                        dacpp::Tensor<double, 1>& local_A,
-                        const dacpp::Tensor<double, 1>& t) {
+shell dacpp::list DECAY(const dacpp::Vector<double>& N0s,
+                        const dacpp::Vector<double>& lambdas,
+                        dacpp::Vector<double>& local_A,
+                        const dacpp::Vector<double>& t) {
     dacpp::index i;
     //dacpp::split s(3,1);
     //binding(i, s);
@@ -19,10 +19,10 @@ shell dacpp::list DECAY(const dacpp::Tensor<double, 1>& N0s,
     return dataList;
 }
 
-calc void decay(dacpp::Tensor<double, 1>& N0s,
-                dacpp::Tensor<double, 1>& lambdas,
-                dacpp::Tensor<double, 1>& local_A,
-                dacpp::Tensor<double, 1>& t) {
+calc void decay(double* N0s,
+                double* lambdas,
+                double* local_A,
+                double* t) {
     local_A[0] = N0s[0] * std::exp(-lambdas[0] * t[0]); 
 }
 
@@ -36,11 +36,11 @@ void calculateDecay(const std::vector<double>& lambdas, const std::vector<double
 
     // 串行计算每个同位素的衰变过程
     std::vector<double> local_A(10, 0.0);
-    dacpp::Tensor<double, 1> local_A_tensor(local_A);
-    dacpp::Tensor<double, 1> N0s_tensor(N0s);
-    dacpp::Tensor<double, 1> lambdas_tensor(lambdas);
-    dacpp::Tensor<double, 1> t_tensor(t);
-    dacpp::Tensor<double, 2> A_tensor({50, 10}, A);
+    dacpp::Vector<double> local_A_tensor(local_A);
+    dacpp::Vector<double> N0s_tensor(N0s);
+    dacpp::Vector<double> lambdas_tensor(lambdas);
+    dacpp::Vector<double> t_tensor(t);
+    dacpp::Matrix<double> A_tensor({50, 10}, A);
     
 
     while(t_tensor[0] < T){        

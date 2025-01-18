@@ -37,36 +37,13 @@ void InitializeComplexPoints() {
 
 
 // 计算 Mandelbrot 集
-void ComputeMandelbrot() {
-    mandelbrot_flags.resize(total_points, 0);  // 初始化一维数组为 0
-
-    dacpp::Tensor<complex<float>, 1> complex_points_tensor(complex_points);
-    dacpp::Tensor<int, 1> mandelbrot_flags_tensor(mandelbrot_flags);
-
-
-    MANDEL_mandel(complex_points_tensor, mandelbrot_flags_tensor);
-
-    // 统计数组中 1 的个数
-    mandelbrot_count = 0;
-    for (int i = 0; i < total_points; i++){
-        if (mandelbrot_flags_tensor[i] == 1) mandelbrot_count++;
-    }
-}
-
-// 打印统计信息
-void PrintStats() {
-    cout << "Mandelbrot Set Statistics:\n";
-    cout << "Total points: " << total_points << "\n";
-    cout << "Points in the Mandelbrot set: " << mandelbrot_count << "\n";
-}
-
 #include <sycl/sycl.hpp>
 #include "DataReconstructor.h"
 #include "ParameterGeneration.h"
 
 using namespace sycl;
 
-void mandel(complex<float>* complex_points,int* mandelbrot_flags,sycl::accessor<int, 1, sycl::access::mode::read_write> info_complex_points_acc, sycl::accessor<int, 1, sycl::access::mode::read_write> info_mandelbrot_flags_acc) 
+void mandel(complex<float>* complex_points,complex<float>* mandelbrot_flags,sycl::accessor<int, 1, sycl::access::mode::read_write> info_complex_points_acc, sycl::accessor<int, 1, sycl::access::mode::read_write> info_mandelbrot_flags_acc) 
 {
     const complex<float> &c = complex_points[0];
     complex<float> z = 0;
@@ -86,9 +63,9 @@ void mandel(complex<float>* complex_points,int* mandelbrot_flags,sycl::accessor<
 
 
 // 生成函数调用
-void MANDEL_mandel(const dacpp::Tensor<complex<float>, 1> & complex_points, dacpp::Tensor<int, 1> & mandelbrot_flags) { 
+void MANDEL_mandel(const dacpp::Vector<complex<float> > & complex_points, dacpp::Vector<int> & mandelbrot_flags) { 
     // 设备选择
-    auto selector = gpu_selector_v;
+    auto selector = default_selector_v;
     queue q(selector);
     //声明参数生成工具
     ParameterGeneration<int,2> para_gene_tool;
@@ -282,6 +259,29 @@ void MANDEL_mandel(const dacpp::Tensor<complex<float>, 1> & complex_points, dacp
     
     sycl::free(d_complex_points, q);
     sycl::free(d_mandelbrot_flags, q);
+}
+
+void ComputeMandelbrot() {
+    mandelbrot_flags.resize(total_points, 0);  // 初始化一维数组为 0
+
+    dacpp::Vector<complex<float>> complex_points_tensor(complex_points);
+    dacpp::Vector<int> mandelbrot_flags_tensor(mandelbrot_flags);
+
+
+    MANDEL_mandel(complex_points_tensor, mandelbrot_flags_tensor);
+
+    // 统计数组中 1 的个数
+    mandelbrot_count = 0;
+    for (int i = 0; i < total_points; i++){
+        if (mandelbrot_flags_tensor[i] == 1) mandelbrot_count++;
+    }
+}
+
+// 打印统计信息
+void PrintStats() {
+    cout << "Mandelbrot Set Statistics:\n";
+    cout << "Total points: " << total_points << "\n";
+    cout << "Points in the Mandelbrot set: " << mandelbrot_count << "\n";
 }
 
 int main() {

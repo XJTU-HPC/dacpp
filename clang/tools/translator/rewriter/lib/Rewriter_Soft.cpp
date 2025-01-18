@@ -330,14 +330,15 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
 	    std::string KernelExecute = CodeGen_KernelExecute("Item_Size",AccessorInit,BindingInit,CalcEmbed);//注意这里面填的size的大小需要是前面算出来的大小
         // std::cout << KernelExecute;
 
-        std::string Reduction;
-        std::string D2HMemMove;
-        std::string ReductionRule = "sycl::plus<>()";
+        std::string Reduction = "";
+        std::string D2HMemMove = "";
+        std::string ReductionRule;
         for(int NumShellParam = 0; NumShellParam < shell->getNumShellParams(); NumShellParam++){
+            ReductionRule = calc->getParam(NumShellParam)->rule;
             ShellParam* shellParam = shell->getShellParam(NumShellParam);
             if(shellParam->getRw() == 1){
-                Reduction = CodeGen_Reduction_Span("Reduction_Size","Reduction_Split_Size","Reduction_Split_Length",shellParam->getName(),shellParam->getBasicType(),ReductionRule);
-	            D2HMemMove = CodeGen_D2HMemMov(shellParam->getName(),shellParam->getBasicType(),shellParam->getName()+"_Size",false);
+                Reduction += CodeGen_Reduction_Span("Reduction_Size","Reduction_Split_Size","Reduction_Split_Length",shellParam->getName(),shellParam->getBasicType(),ReductionRule);
+	            D2HMemMove += CodeGen_D2HMemMov(shellParam->getName(),shellParam->getBasicType(),shellParam->getName()+"_Size",false);
             }
         }
         // std::cout << Reduction;
