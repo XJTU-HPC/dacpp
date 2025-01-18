@@ -80,6 +80,8 @@ public:
  * 存储DACPP文件信息
  */
 class DacppFile {
+public:
+    std::vector<const clang::BinaryOperator*> dacExprs;
 private:
     std::vector<HeaderFile*> headerFiles; // 头文件
     std::vector<NameSpace*> nameSpaces; // 命名空间
