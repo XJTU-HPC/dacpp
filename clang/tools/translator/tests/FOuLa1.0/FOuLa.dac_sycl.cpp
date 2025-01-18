@@ -42,7 +42,7 @@ void pde(int* u_kin,int* u_kout,int* r,sycl::accessor<int, 1, sycl::access::mode
 
 
 // 生成函数调用
-void PDE_pde(const dacpp::Tensor<int, 1> & u_kin, dacpp::Tensor<int, 1> & u_kout, const dacpp::Tensor<int, 1> & r) { 
+void PDE_pde(const dacpp::Vector<int> & u_kin, dacpp::Vector<int> & u_kout, const dacpp::Vector<int> & r) { 
     // 设备选择
     auto selector = default_selector_v;
     queue q(selector);
@@ -318,29 +318,14 @@ int main() {
         }
     }
 
-    // Define the shape of the tensor (rows, columns) and create the Tensor
-    // std::vector<int> shape = {6, 101};
-    dacpp::Tensor<int, 2> u_tensor({6, 101}, u_flat);
+    dacpp::Matrix<int> u_tensor({6, 101}, u_flat);
 
     for (int k = 0; k < n-1; k++) {
-        //输入数据是6个点，3个一组分为四组，输出数据四个点，降维
-        //这里再输入之前要把输出那一行初始化为各长度为4的Tensor
-        // std::vector<int> middle_points;
-        // for (int i = 1; i <= 4; i++) {
-        //   middle_points.push_back(static_cast<int>(u[i][k+1]));
-        // }
-        //std::vector<int> shape2 = {4, 1};
-        //dacpp::Tensor<int, 1> middle_tensor(middle_points);
-        dacpp::Tensor<int, 1> middle_tensor = u_tensor[{1,5}][k+1];
-
-        //std::vector<int> shape3 = {1, 1};
+        dacpp::Vector<int> middle_tensor = u_tensor[{1,5}][k+1];
         std::vector<int> r_data;
         r_data.push_back(r);
-        dacpp::Tensor<int, 1> R(r_data);
-
-        dacpp::Tensor<int,1> u_test1 = u_tensor[{}][k];
-
-        // std::cout << typeid(u_tensor[{}][k]) << std::endl;
+        dacpp::Vector<int> R(r_data);
+        dacpp::Vector<int> u_test1 = u_tensor[{}][k];
         PDE_pde(u_test1, middle_tensor, R);
         
         //计算完毕后，替换第1到4个点

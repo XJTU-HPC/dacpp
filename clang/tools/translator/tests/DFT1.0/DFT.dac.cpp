@@ -13,9 +13,9 @@ using Complex = complex<double>;  // 复数类型别名
 const int N = 8;
 
 
-shell dacpp::list DFT(const dacpp::Tensor<Complex, 1>& input,
-                        dacpp::Tensor<Complex, 1>& output, 
-                    const dacpp::Tensor<int, 1>& vec) {
+shell dacpp::list DFT(const dacpp::Vector<complex>& input,
+                        dacpp::Vector<complex>& output, 
+                    const dacpp::Vector<int>& vec) {
     dacpp::index i;
     // dacpp::split s(3,1);
     // binding(i, s);
@@ -23,9 +23,9 @@ shell dacpp::list DFT(const dacpp::Tensor<Complex, 1>& input,
     return dataList;
 }
 
-calc void dft(dacpp::Tensor<Complex, 1>& input,
-                dacpp::Tensor<Complex, 1>& output, 
-                dacpp::Tensor<int, 1>& vec) {
+calc void dft(dacpp::Vector<complex>& input,
+                dacpp::Vector<complex>& output, 
+                dacpp::Vector<int>& vec) {
     Complex sum(0, 0);
     for (int n = 0; n < N; ++n) {
         double angle = -2.0 * M_PI * vec[0] * n / N;
@@ -46,9 +46,9 @@ void dftfunc(const vector<Complex>& input, vector<Complex>& output) {
     for (int i = 0; i < N; ++i) {
         vec[i] = i;  // 赋值为 1 到 N
     }
-    dacpp::Tensor<int, 1> vec_tensor(vec);
-    dacpp::Tensor<Complex, 1> input_tensor(input);
-    dacpp::Tensor<Complex, 1> output_tensor(output);
+    dacpp::Vector<int> vec_tensor(vec);
+    dacpp::Vector<complex> input_tensor(input);
+    dacpp::Vector<complex> output_tensor(output);
 
     // DFT 公式：X[k] = Σ (x[n] * e^(-2πi * k * n / N)), k=0 to N-1
     DFT(input_tensor, output_tensor, vec_tensor) <-> dft;

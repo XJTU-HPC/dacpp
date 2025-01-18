@@ -37,14 +37,14 @@ void initializeDensity(std::vector<double>& rho) {
 }
 
 // 计算交通流量
-calc void lwr(dacpp::Tensor<double, 1>& rho, dacpp::Tensor<double, 1>& new_rho) {
+calc void lwr(dacpp::Vector<double>& rho, dacpp::Vector<double>& new_rho) {
     new_rho[0] = rho[1] - (DELTA_T / DELTA_X) * (q(rho[1]) - q(rho[0]));
     new_rho[0] = std::max(0.0, new_rho[0]);
     //new_rho += 0.1 * (rho[0] + new_rho - 2 * rho[1]);
 }
 
-shell dacpp::list LWR_shell(const dacpp::Tensor<double, 1> & rho, 
-                            dacpp::Tensor<double, 1> & new_rho) {
+shell dacpp::list LWR_shell(const dacpp::Vector<double> & rho, 
+                            dacpp::Vector<double> & new_rho) {
     dacpp::index idx1;
     dacpp::split S1(2, 1);
     binding(idx1, S1);
@@ -57,10 +57,10 @@ int main() {
     std::vector<double> rho(WIDTH, 0.0);
     std::vector<double> new_rho(WIDTH, 0.0);
     initializeDensity(rho);
-    dacpp::Tensor<double, 1> rho_tensor(rho);
-    dacpp::Tensor<double, 1> new_rho_tensor(new_rho);
-    dacpp::Tensor<double, 1> middle_out_tensor = new_rho_tensor[{1,99}];
-    dacpp::Tensor<double, 1> middle_in_tensor = rho_tensor[{0,99}];
+    dacpp::Vector<double> rho_tensor(rho);
+    dacpp::Vector<double> new_rho_tensor(new_rho);
+    dacpp::Vector<double> middle_out_tensor = new_rho_tensor[{1,99}];
+    dacpp::Vector<double> middle_in_tensor = rho_tensor[{0,99}];
     for (int t = 0; t < TIME_STEPS; ++t) {
         LWR_shell(middle_in_tensor, middle_out_tensor) <-> lwr;
         for (int i = 1; i <= 98; i++) {
