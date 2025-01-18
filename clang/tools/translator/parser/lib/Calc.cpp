@@ -4912,6 +4912,7 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
         ruleSet.insert("minimum");
         ruleSet.insert("maximum");
 
+        param->rule = "sycl::plus<>()";
         for (auto *attr : calcFunc->getParamDecl(paramsCount)->specific_attrs<clang::AnnotateAttr>()) {
           if (ruleSet.find(attr->getAnnotation().str()) != ruleSet.end()) {
             param->rule = "sycl::" + attr->getAnnotation().str() + "<>()";
