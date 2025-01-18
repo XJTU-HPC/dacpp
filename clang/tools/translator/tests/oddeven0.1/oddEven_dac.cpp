@@ -7,7 +7,7 @@
 namespace dacpp {
     typedef std::vector<std::any> list;
 }
-const int N = 1024;  // 假设数组的大小为1024
+const int N = 8;  // 假设数组的大小为1024
 
 
 // 交换函数
@@ -43,7 +43,7 @@ void oddEvenMergeSort(vector<int>& array, int n) {
     for (int phase = 0; phase < n; phase++) {
         // 奇数阶段：比较相邻的奇数索引
         ODDEVEN(array_tensor,array_out_tensor) <-> oddeven;
-        dacpp::Tensor<int, 1> array2_tensor = array_out_tensor[{1,1024}];
+        dacpp::Tensor<int, 1> array2_tensor = array_out_tensor[{1,N-1}];
         dacpp::Tensor<int, 1> array_out2_tensor = array2_tensor;
 
         ODDEVEN(array2_tensor,array_out2_tensor) <-> oddeven;
@@ -64,7 +64,7 @@ int main() {
     // 初始化数据
     srand(time(0));
     for (int i = 0; i < N; i++) {
-        array[i] = rand() % 1000;  // 随机生成0到1000之间的整数
+        array[i] = rand() % 10;  // 随机生成0到1000之间的整数
     }
 
     // 打印排序前的数组（前10个）
