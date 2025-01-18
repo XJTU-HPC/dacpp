@@ -59,7 +59,6 @@ private:
     Shell* shell; // 数据关联表达式对应的shell
     Calc* calc; // 数据关联计算表达式对应的calc
     const clang::BinaryOperator* dacExpr; // AST中数据关联计算表达式节点的位置
-    FunctionDecl* fatherFunc; // AST中数据关联计算表达式所属函数节点的位置
 
 public:
     Expression();
@@ -73,8 +72,7 @@ public:
     void setDacExpr(const clang::BinaryOperator* dacExpr);
     const clang::BinaryOperator* getDacExpr();
 
-    void setFatherFunc(FunctionDecl* fatherFunc);
-    FunctionDecl* getFatherFunc();
+    static bool shellLHS_p(const BinaryOperator *dacExpr);
 };
 
 
