@@ -37,7 +37,7 @@ add_executable(mdpdac mdp.dac_sycl.cpp)
 # add_executable(mdpStandardSycl mdp.StandardSycl.cpp)
 add_executable(DFTdac DFT.dac_sycl.cpp)
 add_executable(mandeldac mandel.dac_sycl.cpp)
-
+add_executable(oddEvendac oddEven.dac_sycl.cpp)
 
 add_executable(syclBlockMatMul0 blockMatMul0.sycl.cpp)
 add_executable(syclBlockMatMul1 blockMatMul1.sycl.cpp)
@@ -101,6 +101,9 @@ set_target_properties(DFTdac PROPERTIES
 set_target_properties(mandeldac PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
+set_target_properties(oddEvendac PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+)
 
 
 
@@ -120,9 +123,9 @@ set_target_properties(syclBlockMatMul3 PROPERTIES
 set_target_properties(syclVectorMul0 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
 )
-set_target_properties(outputSyclBlockMatrixMultiplication PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
-)
+# set_target_properties(outputSyclBlockMatrixMultiplication PROPERTIES
+#     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translator/tests
+# )
 
 target_link_libraries(FOuLadac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(stencildac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
@@ -142,7 +145,7 @@ target_link_libraries(mdpdac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib
 # target_link_libraries(mdp_StandardSycl PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(DFTdac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 target_link_libraries(mandeldac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
-
+target_link_libraries(oddEvendac PRIVATE ${OpenCL_LIBRARY} sycl DacppLib RewriterLib)
 
 
 

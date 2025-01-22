@@ -9,13 +9,13 @@ namespace dacpp {
 }
 
 using namespace std;
-using Complex = complex<double>;  // 复数类型别名
+using Complex = std::complex<double>;  // 复数类型别名
 const int N = 8;
 
 
-shell dacpp::list DFT(const dacpp::Tensor<Complex, 1>& input,
-                        dacpp::Tensor<Complex, 1>& output, 
-                    const dacpp::Tensor<int, 1>& vec) {
+shell dacpp::list DFT(const dacpp::Vector<std::complex<double>>& input,
+                        dacpp::Vector<std::complex<double>>& output, 
+                    const dacpp::Vector<int>& vec) {
     dacpp::index i;
     // dacpp::split s(3,1);
     // binding(i, s);
@@ -23,9 +23,9 @@ shell dacpp::list DFT(const dacpp::Tensor<Complex, 1>& input,
     return dataList;
 }
 
-calc void dft(dacpp::Tensor<Complex, 1>& input,
-                dacpp::Tensor<Complex, 1>& output, 
-                dacpp::Tensor<int, 1>& vec) {
+calc void dft(std::complex<double>* input,
+                std::complex<double>* output, 
+                int* vec) {
     Complex sum(0, 0);
     for (int n = 0; n < N; ++n) {
         double angle = -2.0 * M_PI * vec[0] * n / N;
@@ -36,7 +36,7 @@ calc void dft(dacpp::Tensor<Complex, 1>& input,
 }
 
 // 离散傅里叶变换（DFT）
-void dftfunc(const vector<Complex>& input, vector<Complex>& output) {
+void dftfunc(const vector<std::complex<double>>& input, vector<std::complex<double>>& output) {
     int N = input.size();
     output.resize(N);
 
@@ -46,9 +46,9 @@ void dftfunc(const vector<Complex>& input, vector<Complex>& output) {
     for (int i = 0; i < N; ++i) {
         vec[i] = i;  // 赋值为 1 到 N
     }
-    dacpp::Tensor<int, 1> vec_tensor(vec);
-    dacpp::Tensor<Complex, 1> input_tensor(input);
-    dacpp::Tensor<Complex, 1> output_tensor(output);
+    dacpp::Vector<int> vec_tensor(vec);
+    dacpp::Vector<std::complex<double>> input_tensor(input);
+    dacpp::Vector<std::complex<double>> output_tensor(output);
 
     // DFT 公式：X[k] = Σ (x[n] * e^(-2πi * k * n / N)), k=0 to N-1
     DFT(input_tensor, output_tensor, vec_tensor) <-> dft;
@@ -58,7 +58,7 @@ void dftfunc(const vector<Complex>& input, vector<Complex>& output) {
 int main() {
     // 定义一个输入信号（长度为8的复数序列）
 
-    vector<Complex> input(N);
+    vector<std::complex<double>> input(N);
     
     // 初始化输入数据（可以是任何时间域信号）
     for (int i = 0; i < N; ++i) {

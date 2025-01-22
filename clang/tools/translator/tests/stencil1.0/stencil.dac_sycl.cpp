@@ -40,9 +40,9 @@ void stencil(float* mat,float* out,sycl::accessor<int, 1, sycl::access::mode::re
 
 
 // 生成函数调用
-void stencilShell_stencil(const dacpp::Tensor<float, 2> & matIn, dacpp::Tensor<float, 2> & matOut) { 
+void stencilShell_stencil(const dacpp::Matrix<float> & matIn, dacpp::Matrix<float> & matOut) { 
     // 设备选择
-    auto selector = gpu_selector_v;
+    auto selector = default_selector_v;
     queue q(selector);
     //声明参数生成工具
     ParameterGeneration<int,2> para_gene_tool;
@@ -302,20 +302,11 @@ int main() {
     }
 
     //std::vector<int> shape = {32, 32};
-    dacpp::Tensor<float, 2> u_curr_tensor({32, 32}, u_curr);
+    dacpp::Matrix<float> u_curr_tensor({32, 32}, u_curr);
+    dacpp::Matrix<float> u_next_tensor({32, 32}, u_next);
 
     for(int i=0;i<TIME_STEPS;i++) {
-        std::vector<float> middle_points;
-        for (int i = 1; i <= 30; i++) {
-            std::vector<float> row;
-            for (int j = 1; j <= 30; j++) {  
-                middle_points.push_back(static_cast<float>(u_next[i*NY+j]));  
-            }
-            
-        }
-        //std::vector<int> shape2 = {30, 30};
-        dacpp::Tensor<float, 2> middle_tensor({30, 30}, middle_points);
-
+        dacpp::Matrix<float> middle_tensor = u_next_tensor[{1,31}][{1,31}];
         stencilShell_stencil(u_curr_tensor, middle_tensor);
 
         for (int i = 1; i <= 30; i++) {

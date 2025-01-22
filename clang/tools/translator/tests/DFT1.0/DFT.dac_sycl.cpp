@@ -9,46 +9,26 @@ namespace dacpp {
 }
 
 using namespace std;
-using Complex = complex<double>;  // 复数类型别名
+using Complex = std::complex<double>;  // 复数类型别名
 const int N = 8;
 
 
-void DFT(const dacpp::Tensor<Complex, 1> & input, dacpp::Tensor<Complex, 1> & output, const dacpp::Tensor<int, 1> & vec);
 
 
 
 
 // 离散傅里叶变换（DFT）
-void dftfunc(const vector<Complex>& input, vector<Complex>& output) {
-    int N = input.size();
-    output.resize(N);
-
-    std::vector<int> vec(N);
-
-    // 使用 for 循环初始化 vector，元素从 1 到 N
-    for (int i = 0; i < N; ++i) {
-        vec[i] = i + 1;  // 赋值为 1 到 N
-    }
-    dacpp::Tensor<int, 1> vec_tensor(vec);
-    dacpp::Tensor<Complex, 1> input_tensor(input);
-    dacpp::Tensor<Complex, 1> output_tensor(output);
-
-    // DFT 公式：X[k] = Σ (x[n] * e^(-2πi * k * n / N)), k=0 to N-1
-    DFT(input_tensor, output_tensor, vec_tensor);
-    output_tensor.print();
-}
-
 #include <sycl/sycl.hpp>
 #include "DataReconstructor.h"
 #include "ParameterGeneration.h"
 
 using namespace sycl;
 
-void dft(Complex* input, Complex* output, int* vec) 
+void dft(std::complex<double>* input,std::complex<double>* output,std::complex<double>* vec,sycl::accessor<int, 1, sycl::access::mode::read_write> info_input_acc, sycl::accessor<int, 1, sycl::access::mode::read_write> info_output_acc, sycl::accessor<int, 1, sycl::access::mode::read_write> info_vec_acc) 
 {
     Complex sum(0, 0);
     for (int n = 0; n < N; ++n) {
-        double angle = -2. * 3.1415926535897931 * vec[0] * n / N;
+        double angle = <recovery-expr>(-2. * 3.1415926535897931 * vec[0], n) / N;
         Complex W_n(std::cos(angle), std::sin(angle));
         sum += input[n] * W_n;
     }
@@ -57,9 +37,9 @@ void dft(Complex* input, Complex* output, int* vec)
 
 
 // 生成函数调用
-void DFT(const dacpp::Tensor<Complex, 1> & input, dacpp::Tensor<Complex, 1> & output, const dacpp::Tensor<int, 1> & vec) { 
+void DFT_dft(const dacpp::Vector<std::complex<double> > & input, dacpp::Vector<std::complex<double> > & output, const dacpp::Vector<int> & vec) { 
     // 设备选择
-    auto selector = gpu_selector_v;
+    auto selector = default_selector_v;
     queue q(selector);
     //声明参数生成工具
     ParameterGeneration<int,2> para_gene_tool;
@@ -179,28 +159,30 @@ void DFT(const dacpp::Tensor<Complex, 1> & input, dacpp::Tensor<Complex, 1> & ou
     // 设备内存分配
     
     // 设备内存分配
-    Complex *d_input=malloc_device<Complex>(input_Size,q);
+    std::complex<double> *d_input=malloc_device<std::complex<double>>(input_Size,q);
     // 设备内存分配
-    Complex *d_output=malloc_device<Complex>(output_Size,q);
+    std::complex<double> *d_output=malloc_device<std::complex<double>>(output_Size,q);
     // 归约设备内存分配
-    Complex *reduction_output = malloc_device<Complex>(Reduction_Size,q);
+    std::complex<double> *reduction_output = malloc_device<std::complex<double>>(Reduction_Size,q);
     // 设备内存分配
     int *d_vec=malloc_device<int>(vec_Size,q);
     // 数据关联计算
     
     
     // 数据重组
-    DataReconstructor<Complex> input_tool;
-    Complex* r_input=(Complex*)malloc(sizeof(Complex)*input_Size);
+    DataReconstructor<std::complex<double>> input_tool;
+    std::complex<double>* r_input=(std::complex<double>*)malloc(sizeof(std::complex<double>)*input_Size);
     
     // 数据算子组初始化
     Dac_Ops input_ops;
     
     input_tool.init(info_input,input_ops);
     input_tool.Reconstruct(r_input,input);
+	std::vector<int> info_partition_input=para_gene_tool.init_partition_data_shape(info_input,input_ops);
+    sycl::buffer<int> info_partition_input_buffer(info_partition_input.data(), sycl::range<1>(info_partition_input.size()));
     // 数据重组
-    DataReconstructor<Complex> output_tool;
-    Complex* r_output=(Complex*)malloc(sizeof(Complex)*output_Size);
+    DataReconstructor<std::complex<double>> output_tool;
+    std::complex<double>* r_output=(std::complex<double>*)malloc(sizeof(std::complex<double>)*output_Size);
     
     // 数据算子组初始化
     Dac_Ops output_ops;
@@ -210,6 +192,8 @@ void DFT(const dacpp::Tensor<Complex, 1> & input, dacpp::Tensor<Complex, 1> & ou
     output_ops.push_back(i);
     output_tool.init(info_output,output_ops);
     output_tool.Reconstruct(r_output,output);
+	std::vector<int> info_partition_output=para_gene_tool.init_partition_data_shape(info_output,output_ops);
+    sycl::buffer<int> info_partition_output_buffer(info_partition_output.data(), sycl::range<1>(info_partition_output.size()));
     // 数据重组
     DataReconstructor<int> vec_tool;
     int* r_vec=(int*)malloc(sizeof(int)*vec_Size);
@@ -222,9 +206,11 @@ void DFT(const dacpp::Tensor<Complex, 1> & input, dacpp::Tensor<Complex, 1> & ou
     vec_ops.push_back(i);
     vec_tool.init(info_vec,vec_ops);
     vec_tool.Reconstruct(r_vec,vec);
+	std::vector<int> info_partition_vec=para_gene_tool.init_partition_data_shape(info_vec,vec_ops);
+    sycl::buffer<int> info_partition_vec_buffer(info_partition_vec.data(), sycl::range<1>(info_partition_vec.size()));
     
     // 数据移动
-    q.memcpy(d_input,r_input,input_Size*sizeof(Complex)).wait();
+    q.memcpy(d_input,r_input,input_Size*sizeof(std::complex<double>)).wait();
     // 数据移动
     q.memcpy(d_vec,r_vec,vec_Size*sizeof(int)).wait();
 	
@@ -233,6 +219,11 @@ void DFT(const dacpp::Tensor<Complex, 1> & input, dacpp::Tensor<Complex, 1> & ou
     sycl::range<3> global(1, 1, 1);
     //队列提交命令组
     q.submit([&](handler &h) {
+        // 访问器初始化
+        
+        auto info_partition_input_accessor = info_partition_input_buffer.get_access<sycl::access::mode::read_write>(h);
+        auto info_partition_output_accessor = info_partition_output_buffer.get_access<sycl::access::mode::read_write>(h);
+        auto info_partition_vec_accessor = info_partition_vec_buffer.get_access<sycl::access::mode::read_write>(h);
         h.parallel_for(sycl::nd_range<3>(global * local, local),[=](sycl::nd_item<3> item) {
             const auto item_id = item.get_local_id(2);
             // 索引初始化
@@ -240,7 +231,7 @@ void DFT(const dacpp::Tensor<Complex, 1> & input, dacpp::Tensor<Complex, 1> & ou
             const auto i_=(item_id+(0))%i.split_size;
             // 嵌入计算
 			
-            dft(d_input,d_output+(i_*SplitLength[1][0]),d_vec+(i_*SplitLength[2][0]));
+            dft(d_input,d_output+(i_*SplitLength[1][0]),d_vec+(i_*SplitLength[2][0]),info_partition_input_accessor,info_partition_output_accessor,info_partition_vec_accessor);
         });
     }).wait();
     
@@ -261,13 +252,13 @@ void DFT(const dacpp::Tensor<Complex, 1> & input, dacpp::Tensor<Complex, 1> & ou
      	        });
          }).wait();
         }
-        q.memcpy(d_output,reduction_output, Reduction_Size*sizeof(Complex)).wait();
+        q.memcpy(d_output,reduction_output, Reduction_Size*sizeof(std::complex<double>)).wait();
     }
 
 
 	
     // 归并结果返回
-    q.memcpy(r_output, d_output, output_Size*sizeof(Complex)).wait();
+    q.memcpy(r_output, d_output, output_Size*sizeof(std::complex<double>)).wait();
     output_tool.UpdateData(r_output,output);
 
     // 内存释放
@@ -277,10 +268,29 @@ void DFT(const dacpp::Tensor<Complex, 1> & input, dacpp::Tensor<Complex, 1> & ou
     sycl::free(d_vec, q);
 }
 
+void dftfunc(const vector<std::complex<double>>& input, vector<std::complex<double>>& output) {
+    int N = input.size();
+    output.resize(N);
+
+    std::vector<int> vec(N);
+
+    // 使用 for 循环初始化 vector，元素从 1 到 N
+    for (int i = 0; i < N; ++i) {
+        vec[i] = i;  // 赋值为 1 到 N
+    }
+    dacpp::Vector<int> vec_tensor(vec);
+    dacpp::Vector<std::complex<double>> input_tensor(input);
+    dacpp::Vector<std::complex<double>> output_tensor(output);
+
+    // DFT 公式：X[k] = Σ (x[n] * e^(-2πi * k * n / N)), k=0 to N-1
+    DFT_dft(input_tensor, output_tensor, vec_tensor);
+    output_tensor.print();
+}
+
 int main() {
     // 定义一个输入信号（长度为8的复数序列）
 
-    vector<Complex> input(N);
+    vector<std::complex<double>> input(N);
     
     // 初始化输入数据（可以是任何时间域信号）
     for (int i = 0; i < N; ++i) {

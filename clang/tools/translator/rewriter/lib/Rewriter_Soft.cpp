@@ -87,9 +87,6 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
             }
         }
 
-
-
-
         // 计算结构
         code += "void " + calc->getName() + "(";
         for(int count = 0; count < calc->getNumParams(); count++) {
@@ -135,8 +132,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
                     IndexSplit* indexSplit = static_cast<IndexSplit*>(split);
                     opInit += CodeGen_IndexInit2(indexSplit->getId(),std::to_string(NumSplit),"info_"+shellParam->getName());//初始化降维算子
                     HadInit.insert(indexSplit->getId());
-                    // opInit += CodeGen_IndexInit2(indexSplit->getId()+"_"+std::to_string(NumShellParam)+"_"+std::to_string(NumSplit),std::to_string(NumSplit),shellParam->getName());
-                    // visited[NumShellParam*shell->getNumShellParams()+NumSplit] = true;
+
                 }
                 else if(split->type.compare("RegularSplit") == 0){
                     if(HadInit.count(split->getId()) == 1){//已经初始化过了
@@ -146,7 +142,6 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
                     opInit += CodeGen_RegularSliceInit2(regularSplit->getId(),std::to_string(regularSplit->getSplitSize()),
                     std::to_string(regularSplit->getSplitStride()),std::to_string(NumSplit),"info_"+shellParam->getName());//初始化规则分区算子
                     HadInit.insert(regularSplit->getId());
-                    // visited[NumShellParam*shell->getNumShellParams()+NumSplit] = true;
                 }
             }
         }
@@ -205,7 +200,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
                     add2Op_inops += CodeGen_AddOp2Ops(split->getId(),std::to_string(inflag),"In_Ops");//将算子添加到输入算子组中去
                     Dac_Op op = Dac_Op(split->getId(),0,inflag);
                     inflag++;
-                    //std::cout<<inflag<<std::endl;
+                    // std::cout<<inflag<<std::endl;
                     Inops.push_back(op);
                     setIn.insert(set);
                 }
@@ -335,14 +330,15 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
 	    std::string KernelExecute = CodeGen_KernelExecute("Item_Size",AccessorInit,BindingInit,CalcEmbed);//注意这里面填的size的大小需要是前面算出来的大小
         // std::cout << KernelExecute;
 
-        std::string Reduction;
-        std::string D2HMemMove;
-        std::string ReductionRule = "sycl::plus<>()";
+        std::string Reduction = "";
+        std::string D2HMemMove = "";
+        std::string ReductionRule;
         for(int NumShellParam = 0; NumShellParam < shell->getNumShellParams(); NumShellParam++){
+            ReductionRule = calc->getParam(NumShellParam)->rule;
             ShellParam* shellParam = shell->getShellParam(NumShellParam);
             if(shellParam->getRw() == 1){
-                Reduction = CodeGen_Reduction_Span("Reduction_Size","Reduction_Split_Size","Reduction_Split_Length",shellParam->getName(),shellParam->getBasicType(),ReductionRule);
-	            D2HMemMove = CodeGen_D2HMemMov(shellParam->getName(),shellParam->getBasicType(),shellParam->getName()+"_Size",false);
+                Reduction += CodeGen_Reduction_Span("Reduction_Size","Reduction_Split_Size","Reduction_Split_Length",shellParam->getName(),shellParam->getBasicType(),ReductionRule);
+	            D2HMemMove += CodeGen_D2HMemMov(shellParam->getName(),shellParam->getBasicType(),shellParam->getName()+"_Size",false);
             }
         }
         // std::cout << Reduction;
@@ -356,7 +352,7 @@ void dacppTranslator::Rewriter::rewriteDac_Soft() {
             for(int NumSplit = 0; NumSplit < shellParam->getNumSplit(); NumSplit++){
                 if(shellParam->getSplit(NumSplit)->getId() == "void") { continue;}
                 Split* split = shellParam->getSplit(NumSplit);
-                opPushBack += CodeGen_OpPushBack2Ops(shellParam->getName(),split->getId(),std::to_string(split->getDimIdx()),std::to_string(8));
+                opPushBack += CodeGen_OpPushBack2Ops(shellParam->getName(),split->getId(),std::to_string(split->getDimIdx()));
             }
             std::string dataOpsInit = CodeGen_DataOpsInit(shellParam->getName(),opPushBack);
             dataRecon += CodeGen_DataReconstruct(shellParam->getBasicType(),shellParam->getName(),shellParam->getName()+"_Size",dataOpsInit);

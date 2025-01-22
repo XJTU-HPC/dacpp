@@ -20,6 +20,7 @@ examples=(
     "liuliang1.0"
     "MDP1.0"
     "mandel1.0"
+    "oddeven0.1"
 )
 
 
