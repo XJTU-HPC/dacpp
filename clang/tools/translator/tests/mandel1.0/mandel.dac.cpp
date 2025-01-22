@@ -32,15 +32,15 @@ void InitializeComplexPoints() {
 }
 
 
-shell dacpp::list MANDEL(const dacpp::Tensor<complex<float>, 1>& complex_points,
-                        dacpp::Tensor<int, 1>& mandelbrot_flags) {
+shell dacpp::list MANDEL(const dacpp::Vector<complex<float>>& complex_points,
+                        dacpp::Vector<int>& mandelbrot_flags) {
     dacpp::index i;
     dacpp::list dataList{complex_points[i], mandelbrot_flags[i]};
     return dataList;
 }
 
-calc void mandel(dacpp::Tensor<complex<float>, 1>& complex_points,
-                dacpp::Tensor<int, 1>& mandelbrot_flags) {
+calc void mandel(complex<float>* complex_points,
+                int* mandelbrot_flags) {
     const complex<float>& c = complex_points[0];
     complex<float> z = 0;
     int iterations = 0;
@@ -66,8 +66,8 @@ calc void mandel(dacpp::Tensor<complex<float>, 1>& complex_points,
 void ComputeMandelbrot() {
     mandelbrot_flags.resize(total_points, 0);  // 初始化一维数组为 0
 
-    dacpp::Tensor<complex<float>, 1> complex_points_tensor(complex_points);
-    dacpp::Tensor<int, 1> mandelbrot_flags_tensor(mandelbrot_flags);
+    dacpp::Vector<complex<float>> complex_points_tensor(complex_points);
+    dacpp::Vector<int> mandelbrot_flags_tensor(mandelbrot_flags);
 
 
     MANDEL(complex_points_tensor, mandelbrot_flags_tensor) <-> mandel;

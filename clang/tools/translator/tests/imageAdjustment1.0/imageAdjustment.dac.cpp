@@ -17,7 +17,7 @@ struct Pixel {
 };
 
 
-shell dacpp::list imageAdjustment(const dacpp::Tensor<Pixel, 2>& image_tensor, dacpp::Tensor<Pixel, 2>& image_tensor2) {
+shell dacpp::list imageAdjustment(const dacpp::Matrix<Pixel>& image_tensor, dacpp::Matrix<Pixel>& image_tensor2) {
     dacpp::index idx1, idx2;
     //dacpp::split s(3,1);
     //binding(i, s);
@@ -26,14 +26,14 @@ shell dacpp::list imageAdjustment(const dacpp::Tensor<Pixel, 2>& image_tensor, d
 }
 
 // 色彩调整操作：增加红色分量
-calc void image_1(dacpp::Tensor<Pixel, 1>& image_tensor,
-                dacpp::Tensor<Pixel, 1>& image_tensor2) {
+calc void image_1(Pixel* image_tensor,
+                Pixel* image_tensor2) {
     image_tensor2[0].r = std::min(255, image_tensor[0].r + 50);  // 增加红色分量，并确保不超过255
 }
 
 // 亮度增强操作：增加每个像素的 RGB 分量
-calc void image_2(dacpp::Tensor<Pixel, 1>& image_tensor2,
-                dacpp::Tensor<Pixel, 1>& image_tensor3) {
+calc void image_2(Pixel* image_tensor2,
+                Pixel* image_tensor3) {
     int value = 30;
     image_tensor3[0].r = std::min(255, image_tensor2[0].r + value);  // 增加红色分量，限制在255以内
     image_tensor3[0].g = std::min(255, image_tensor2[0].g + value);  // 增加绿色分量
@@ -55,7 +55,13 @@ void print_image(const std::vector<std::vector<Pixel>>& image, int num_rows = 5,
 
 int main() {
     // 初始化一个简单的图像（10x10），所有像素值初始化为(100, 100, 100)
-    int width = 10, height = 10;
+
+    int width, height;
+    std::cout << "Enter width: ";
+    std::cin >> width;  // 错误：无法修改const变量
+
+    std::cout << "Enter height: ";
+    std::cin >> height;  // 错误：无法修改const变量
     std::vector<Pixel> image(height*width, {100, 100, 100});
     std::vector<Pixel> image2(height*width, {100, 100, 100});
     //std::vector<std::vector<Pixel>> image2(height, std::vector<Pixel>(width, {100, 100, 100}));
@@ -64,8 +70,8 @@ int main() {
     std::cout << "Original Image:" << std::endl;
     //print_image(image);
 
-    dacpp::Tensor<Pixel, 2> image_tensor({height, width}, image);
-    dacpp::Tensor<Pixel, 2> image_tensor2({height, width}, image2);
+    dacpp::Matrix<Pixel> image_tensor({height, width}, image);
+    dacpp::Matrix<Pixel> image_tensor2({height, width}, image2);
 
     // 执行色彩调整操作
     imageAdjustment(image_tensor, image_tensor2) <-> image_1;

@@ -1,5 +1,6 @@
 #include <string>
 #include <regex>
+#include <set>
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclFriend.h"
@@ -4762,7 +4763,9 @@ std::string dacppTranslator::Calc::getBody(int idx) {
     std::string code = body[idx];
     for (int i = 0; i < getNumParams(); i++) {
       std::string name = getParam(i)->getName();
-      if (getParam(i)->getType().find("Tensor") != -1) {
+      if (getParam(i)->getType().find("Tensor") != -1 ||
+      getParam(i)->getType().find("Vector") != -1 || 
+      getParam(i)->getType().find("Matrix") != -1) {
         continue;
       }
       //std::regex pattern(name + R"((?![\w]|\[))");
@@ -4773,7 +4776,9 @@ std::string dacppTranslator::Calc::getBody(int idx) {
     size_t last_pos = 0;
     for (int i = 0; i < getNumParams(); i++) {
       std::string name = getParam(i)->getName();
-      if (getParam(i)->getType().find("Tensor") == -1) {
+      if (getParam(i)->getType().find("Tensor") == -1 &&
+      getParam(i)->getType().find("Vector") == -1 && 
+      getParam(i)->getType().find("Matrix") == -1) {
         continue;
       }
       std::regex pattern(name + R"((\[[^\[\]]\]){2,})");
@@ -4899,6 +4904,24 @@ void dacppTranslator::Calc::parseCalc(const BinaryOperator* dacExpr) {
         
         // 设置参数名称
         param->setName(calcFunc->getParamDecl(paramsCount)->getNameAsString());
+
+        std::set<std::string> ruleSet;
+        ruleSet.insert("plus");
+        ruleSet.insert("multiplies");
+        ruleSet.insert("bit_and");
+        ruleSet.insert("bit_or");
+        ruleSet.insert("bit_xor");
+        ruleSet.insert("logical_and");
+        ruleSet.insert("logical_or");
+        ruleSet.insert("minimum");
+        ruleSet.insert("maximum");
+
+        param->rule = "sycl::plus<>()";
+        for (auto *attr : calcFunc->getParamDecl(paramsCount)->specific_attrs<clang::AnnotateAttr>()) {
+          if (ruleSet.find(attr->getAnnotation().str()) != ruleSet.end()) {
+            param->rule = "sycl::" + attr->getAnnotation().str() + "<>()";
+          }
+        }
         
         // 设置参数形状
         ShellParam* shellParam = shell->getShellParam(paramsCount);

@@ -38,7 +38,7 @@ namespace dacpp {
         void array2Tensor(std::vector <ImplType> data);
         void print() const;
         int getCurrentDim() const;
-        ImplType getElement(std::vector<int> indices);
+        ImplType getElement(std::vector<int> indices) const ;
         void reviseValue(ImplType val, std::vector<int> indices);
     protected:
         void NextDim();
@@ -190,7 +190,7 @@ namespace dacpp {
         std::cout << "}";
     }
     template<class ImplType>
-    ImplType TensorBase<ImplType> ::getElement(std::vector<int> indices){
+    ImplType TensorBase<ImplType> ::getElement(std::vector<int> indices) const {
         int index = this->getOffset();
         for(int i=0;i<this->getDim();i++)
             index = index + this->getStride(i)*indices[i];

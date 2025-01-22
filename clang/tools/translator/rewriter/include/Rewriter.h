@@ -86,12 +86,16 @@ public:
     void rewriteDac_Buffer();
 
     void rewriteMain() {
-    for (int exprCount = 0; exprCount < dacppFile->getNumExpression(); exprCount++) {
-        Expression* expr = dacppFile->getExpression(exprCount);
-        Shell* shell = expr->getShell();
-        Calc* calc = expr->getCalc();
-        Expr *dacExprLHS = dacppTranslator::Expression::shellLHS_p (expr->getDacExpr()) ? expr->getDacExpr()->getLHS() : expr->getDacExpr()->getRHS();
-        CallExpr *shellCall = getNode<CallExpr>(dacExprLHS);
+for (int exprCount = 0; exprCount < dacppFile->dacExprs.size(); exprCount++) {
+        const BinaryOperator* dacExpr = dacppFile->dacExprs[exprCount];
+        CallExpr* shellCall = dacppTranslator::getNode<CallExpr>(dacExpr->getLHS());
+        DeclRefExpr* declRefExpr;
+        if(isa<DeclRefExpr>(dacExpr->getRHS())) {
+            declRefExpr = dyn_cast<DeclRefExpr>(dacExpr->getRHS());
+        }
+        else {
+            declRefExpr = dacppTranslator::getNode<DeclRefExpr>(dacExpr->getRHS());
+        }
         std::string str;
         llvm::raw_string_ostream rso(str);
         clang::LangOptions langOpts;
@@ -99,8 +103,10 @@ public:
         clang::PrintingPolicy policy(langOpts);
         shellCall->printPretty(rso, nullptr, policy);
         std::string code = rso.str();
-        code.replace(code.find(shell->getName()), shell->getName().size(), shell->getName() + "_" + calc->getName());
-        rewriter->ReplaceText(expr->getDacExpr()->getSourceRange(), code);   
+        code.replace(code.find(shellCall->getDirectCallee()->getNameAsString()), 
+        shellCall->getDirectCallee()->getNameAsString().size(), shellCall->getDirectCallee()->getNameAsString()
+         + "_" + declRefExpr->getDecl()->getNameAsString());
+        rewriter->ReplaceText(dacExpr->getSourceRange(), code);
     }
 }
 };

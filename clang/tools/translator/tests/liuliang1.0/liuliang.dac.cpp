@@ -37,14 +37,14 @@ void initializeDensity(std::vector<double>& rho) {
 }
 
 // 计算交通流量
-calc void lwr(dacpp::Tensor<double, 1>& rho, dacpp::Tensor<double, 1>& new_rho) {
+calc void lwr(dacpp::Vector<double> & rho, double* new_rho) {
     new_rho[0] = rho[1] - (DELTA_T / DELTA_X) * (q(rho[1]) - q(rho[0]));
     new_rho[0] = std::max(0.0, new_rho[0]);
     //new_rho += 0.1 * (rho[0] + new_rho - 2 * rho[1]);
 }
 
-shell dacpp::list LWR_shell(const dacpp::Tensor<double, 1> & rho, 
-                            dacpp::Tensor<double, 1> & new_rho) {
+shell dacpp::list LWR_shell(const dacpp::Vector<double> & rho, 
+                            dacpp::Vector<double> & new_rho) {
     dacpp::index idx1;
     dacpp::split S1(2, 1);
     binding(idx1, S1);
@@ -56,44 +56,20 @@ int main() {
     // 创建 Tensor 类型对象
     std::vector<double> rho(WIDTH, 0.0);
     std::vector<double> new_rho(WIDTH, 0.0);
-    //std::vector<int> shape3 = {1, 100};
-    //Tensor<int> new_rho(middle_points, shape3);
-
     initializeDensity(rho);
-    // 使用 LWR 算法
-    std::vector<double> middle_points_out;
-    for (int i = 1; i <= 98; i++) {
-        middle_points_out.push_back(static_cast<double>(new_rho[i]));
-    }
-    //std::vector<int> shape = {98,1};
-    dacpp::Tensor<double, 1> middle_out_tensor(middle_points_out);
-
-    std::vector<double> middle_points_in;
-    for (int i = 0; i <= 98; i++) {
-        middle_points_in.push_back(static_cast<double>(rho[i]));
-    }
-    //std::vector<int> shape2 = {99,1};
-    dacpp::Tensor<double, 1> middle_in_tensor(middle_points_in);
-
+    dacpp::Vector<double> rho_tensor(rho);
+    dacpp::Vector<double> new_rho_tensor(new_rho);
+    dacpp::Vector<double> middle_out_tensor = new_rho_tensor[{1,99}];
+    dacpp::Vector<double> middle_in_tensor = rho_tensor[{0,99}];
     for (int t = 0; t < TIME_STEPS; ++t) {
         LWR_shell(middle_in_tensor, middle_out_tensor) <-> lwr;
-
-        // double* r_1 = new double[98];
-        // middle_out_tensor.tensor2Array(r_1);
-        // std::vector<double> r(r_1, r_1 + 98);
-
         for (int i = 1; i <= 98; i++) {
             middle_in_tensor[i] = middle_out_tensor[i-1];
         }
         
-        // 处理边界条件
         middle_in_tensor[0] = middle_out_tensor[0]; // 左边界无车流
-        //middle_in_tensor[WIDTH - 2] = middle_out_tensor[WIDTH - 3]; // 右边界无车流
 
     }
-    // for (int x = 0; x < WIDTH; ++x) {
-    //     std::cout <<  static_cast<int>(rho[x]) <<",";
-    // }
     middle_in_tensor.print();
 
     // 释放动态分配的内存
