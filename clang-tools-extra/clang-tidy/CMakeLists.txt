@@ -17,17 +17,19 @@ add_clang_library(clangTidy
   ClangTidyProfiling.cpp
   ExpandModularHeadersPPCallbacks.cpp
   GlobList.cpp
+  NoLintDirectiveHandler.cpp
 
   DEPENDS
   ClangSACheckers
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidy
   PRIVATE
-  clangAnalysis
   clangAST
   clangASTMatchers
+  clangAnalysis
   clangBasic
   clangFormat
   clangFrontend
@@ -113,13 +115,13 @@ add_subdirectory(utils)
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY .
-    DESTINATION include/clang-tidy
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/clang-tidy"
     COMPONENT clang-tidy-headers
     FILES_MATCHING
     PATTERN "*.h"
     )
   add_custom_target(clang-tidy-headers)
-  set_target_properties(clang-tidy-headers PROPERTIES FOLDER "Misc")
+  set_target_properties(clang-tidy-headers PROPERTIES FOLDER "Clang Tools Extra/Resources")
   if(NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-clang-tidy-headers
                              DEPENDS clang-tidy-headers

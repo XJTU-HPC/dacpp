@@ -39,7 +39,8 @@ namespace prec {
     Shift           = 12,   // <<, >>
     Additive        = 13,   // -, +
     Multiplicative  = 14,   // *, /, %
-    PointerToMember = 15    // .*, ->*
+    LessMinusGreater= 15,   // <->
+    PointerToMember = 16    // .*, ->*
   };
 }
 
@@ -49,4 +50,4 @@ prec::Level getBinOpPrecedence(tok::TokenKind Kind, bool GreaterThanIsOperator,
 
 }  // end namespace clang
 
-#endif  // LLVM_CLANG_OPERATOR_PRECEDENCE_H
+#endif // LLVM_CLANG_BASIC_OPERATORPRECEDENCE_H

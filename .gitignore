@@ -13,6 +13,8 @@
 *~
 # Merge files created by git.
 *.orig
+# Reject files created by patch.
+*.rej
 # Byte compiled python modules.
 *.pyc
 # vim swap files
@@ -68,3 +70,9 @@ pythonenv*
 /clang/utils/analyzer/projects/*/RefScanBuildResults
 # automodapi puts generated documentation files here.
 /lldb/docs/python_api/
+
+# install dir
+/test/*
+# clang/tools/translator/tests/src/CMakeLists.txt
+
+clang/tools/translator/tests/tmp/

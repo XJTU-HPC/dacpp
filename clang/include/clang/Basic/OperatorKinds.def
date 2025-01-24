@@ -38,8 +38,8 @@
 /// "operator*") can be both unary and binary.
 ///
 /// MemberOnly: True if this operator can only be declared as a
-/// non-static member function. False if the operator can be both a
-/// non-member function and a non-static member function.
+/// member function. False if the operator can be both a
+/// non-member function and a member function.
 ///
 /// OVERLOADED_OPERATOR_MULTI is used to enumerate the multi-token
 /// overloaded operator names, e.g., "operator delete []". The macro
@@ -102,6 +102,8 @@ OVERLOADED_OPERATOR_MULTI(Subscript      , "[]"                       , false, t
 // resolution machinery for it.
 OVERLOADED_OPERATOR_MULTI(Conditional    , "?"                        , false, true , false)
 OVERLOADED_OPERATOR(Coawait              , "co_await", kw_co_await    , true , false, false)
+
+OVERLOADED_OPERATOR(LessMinusGreater     , "<->"  , lessminusgreater  , false, true , false)
 
 #undef OVERLOADED_OPERATOR_MULTI
 #undef OVERLOADED_OPERATOR

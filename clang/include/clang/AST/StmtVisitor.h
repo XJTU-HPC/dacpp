@@ -13,13 +13,14 @@
 #ifndef LLVM_CLANG_AST_STMTVISITOR_H
 #define LLVM_CLANG_AST_STMTVISITOR_H
 
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
@@ -81,6 +82,7 @@ public:
       case BO_OrAssign:  DISPATCH(BinOrAssign,  CompoundAssignOperator);
       case BO_XorAssign: DISPATCH(BinXorAssign, CompoundAssignOperator);
       case BO_Comma:     DISPATCH(BinComma,     BinaryOperator);
+      case BO_LMG:       DISPATCH(BinLMG,       BinaryOperator);
       }
     } else if (PTR(UnaryOperator) UnOp = dyn_cast<UnaryOperator>(S)) {
       switch (UnOp->getOpcode()) {
@@ -137,6 +139,7 @@ public:
 
   BINOP_FALLBACK(Assign)
   BINOP_FALLBACK(Comma)
+  BINOP_FALLBACK(LMG)
 #undef BINOP_FALLBACK
 
   // If the implementation doesn't implement compound assignment operator

@@ -13,299 +13,218 @@
 # into scripts. This is critical to being able to reproduce CI issues outside
 # of the CI environment, which is important for debugging.
 #
+# It is also worth noting that this script is split into several sections, the
+# goal being to reduce the load on testers when a commit is known to fail.
+#
+
+env:
+    # LLVM POST-BRANCH bump version
+    # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
+    # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
+    LLVM_HEAD_VERSION: "18"   # Used compiler, update POST-BRANCH.
+    GCC_STABLE_VERSION: "13"
+
+definitions:
+  _common: &common
+    timeout_in_minutes: 120
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+      - "**/crash_diagnostics/*"
 
 steps:
-  - label: "C++03"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx03"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
+- group: ':mac: Apple'
+  steps:
+  - label: MacOS x86_64
+    command: libcxx/utils/ci/run-buildbot generic-cxx23
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: macos
+      arch: x86_64
+    <<: *common
 
-  - label: "C++11"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx11"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
+  - label: MacOS arm64
+    command: libcxx/utils/ci/run-buildbot generic-cxx23
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: macos
+      arch: arm64
+    <<: *common
 
-  - label: "C++14"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx14"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
+  - label: MacOS with Modules
+    command: libcxx/utils/ci/run-buildbot generic-modules
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: macos
+    <<: *common
 
-  - label: "C++17"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx17"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
+  - label: MacOS with C++03
+    command: libcxx/utils/ci/run-buildbot generic-cxx03
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: macos
+    <<: *common
 
-  - label: "C++20"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx20"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
+    # Build with the configuration we use to generate libc++.dylib on Apple platforms
+  - label: Apple system configuration
+    command: libcxx/utils/ci/run-buildbot apple-configuration
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: macos
+      arch: arm64 # This can technically run on any architecture, but we have more resources on arm64 so we pin this job to arm64
+    <<: *common
 
-  - label: "C++2b"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
+  - label: Apple back-deployment macosx10.13
+    command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.13
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: macos
+      arch: x86_64 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
+    <<: *common
 
-  - label: "-fno-exceptions"
-    command: "libcxx/utils/ci/run-buildbot generic-noexceptions"
-    artifact_paths:
-      - "**/test-results.xml"
+  - label: Apple back-deployment macosx10.15
+    command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.15
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: macos
+      arch: x86_64 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
+    <<: *common
 
-  - label: "GCC/C++20"
-    command: "libcxx/utils/ci/run-buildbot generic-gcc"
-    artifact_paths:
-      - "**/test-results.xml"
+  - label: Apple back-deployment with hardening enabled
+    command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-hardened-11.0
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: macos
+      arch: x86_64 # TODO: Remove this once we are able to run back-deployment on arm64 again, since this isn't x86_64 specific
+    <<: *common
 
-  - label: "ASAN"
-    command: "libcxx/utils/ci/run-buildbot generic-asan"
-    artifact_paths:
-      - "**/test-results.xml"
+- group: ARM
+  steps:
+  - label: AArch64
+    command: libcxx/utils/ci/run-buildbot aarch64
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
+    <<: *common
 
-  - label: "TSAN"
-    command: "libcxx/utils/ci/run-buildbot generic-tsan"
-    artifact_paths:
-      - "**/test-results.xml"
+  - label: AArch64 -fno-exceptions
+    command: libcxx/utils/ci/run-buildbot aarch64-no-exceptions
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
+    <<: *common
 
-  - label: "UBSAN"
-    command: "libcxx/utils/ci/run-buildbot generic-ubsan"
-    artifact_paths:
-      - "**/test-results.xml"
+  - label: Armv8
+    command: libcxx/utils/ci/run-buildbot armv8
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders-linaro-arm
+      arch: armv8l
+    <<: *common
 
-  - label: "With LLVM's libunwind"
-    command: "libcxx/utils/ci/run-buildbot generic-with_llvm_unwinder"
-    artifact_paths:
-      - "**/test-results.xml"
+  - label: Armv8 -fno-exceptions
+    command: libcxx/utils/ci/run-buildbot armv8-no-exceptions
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders-linaro-arm
+      arch: armv8l
+    <<: *common
 
-  - label: "Single-threaded"
-    command: "libcxx/utils/ci/run-buildbot generic-singlethreaded"
-    artifact_paths:
-      - "**/test-results.xml"
+  - label: Armv7
+    command: libcxx/utils/ci/run-buildbot armv7
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders-linaro-arm
+      arch: armv8l
+    <<: *common
 
-  - label: "No debug mode"
-    command: "libcxx/utils/ci/run-buildbot generic-nodebug"
-    artifact_paths:
-      - "**/test-results.xml"
+  - label: Armv7 -fno-exceptions
+    command: libcxx/utils/ci/run-buildbot armv7-no-exceptions
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders-linaro-arm
+      arch: armv8l
+    <<: *common
 
-  - label: "No Filesystem"
-    command: "libcxx/utils/ci/run-buildbot generic-no-filesystem"
-    artifact_paths:
-      - "**/test-results.xml"
+  - label: Armv7-M picolibc
+    command: libcxx/utils/ci/run-buildbot armv7m-picolibc
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
+    <<: *common
 
-  - label: "No random device"
-    command: "libcxx/utils/ci/run-buildbot generic-no-random_device"
-    artifact_paths:
-      - "**/test-results.xml"
+  - label: Armv7-M picolibc -fno-exceptions
+    command: libcxx/utils/ci/run-buildbot armv7m-picolibc-no-exceptions
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
+    <<: *common
 
-  - label: "No locale"
-    command: "libcxx/utils/ci/run-buildbot generic-no-localization"
-    artifact_paths:
-      - "**/test-results.xml"
+- group: AIX
+  steps:
+  - label: AIX (32-bit)
+    command: libcxx/utils/ci/run-buildbot aix
+    env:
+      CC: clang
+      CXX: clang++
+      OBJECT_MODE: '32'
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: aix
+    <<: *common
 
-  - label: "MacOS C++20"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx20"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
+  - label: AIX (64-bit)
+    command: libcxx/utils/ci/run-buildbot aix
+    env:
+      CC: clang
+      CXX: clang++
+      OBJECT_MODE: '64'
     agents:
-      queue: "libcxx-macos-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: aix
+    <<: *common
 
-  - label: "Benchmarks"
-    command: "libcxx/utils/ci/run-buildbot benchmarks"
-    artifact_paths:
-      - "**/test-results.xml"
+- group: ':freebsd: FreeBSD'
+  steps:
+  - label: FreeBSD 13 amd64
+    command: libcxx/utils/ci/run-buildbot generic-cxx26
+    env:
+      CC: clang17
+      CXX: clang++17
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: freebsd
+    <<: *common
 
-  - label: "Documentation"
-    command: "libcxx/utils/ci/run-buildbot documentation"
-    artifact_paths:
-      - "**/test-results.xml"
+- group: ':android: Android'
+  steps:
+  - label: Android 5.0, x86 NDK
+    command: libcxx/utils/ci/run-buildbot android-ndk-21-def-x86
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: android
+    <<: *common
 
-  - label: "Legacy standalone build"
-    command: "libcxx/utils/ci/run-buildbot legacy-standalone"
-    artifact_paths:
-      - "**/test-results.xml"
+  - label: Android 13, x86_64 NDK
+    command: libcxx/utils/ci/run-buildbot android-ndk-33-goog-x86_64
     agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      queue: libcxx-builders
+      os: android
+    <<: *common
 
-  - label: "Unified standalone build"
-    command: "libcxx/utils/ci/run-buildbot unified-standalone"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
 
-  # Build with the configuration we use to generate libc++.dylib on Apple platforms
-  - label: "Apple system"
-    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-macos-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-
-  - label: "Apple system -fno-exceptions"
-    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-noexceptions"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-macos-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-
-  # Test back-deployment to older Apple platforms
-  - label: "Apple back-deployment macosx10.9"
-    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-backdeployment-10.9"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-macos-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-
-  - label: "Apple back-deployment macosx10.15"
-    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-backdeployment-10.15"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-macos-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+    # TODO: Re-enable this once we've figured out how to run back-deployment testing on arm64 on recent OSes
+    # - label: "Apple back-deployment macosx11.0 arm64"
+    #   command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-11.0"
+    #   artifact_paths:
+    #     - "**/test-results.xml"
+    #     - "**/*.abilist"
+    #   agents:
+    #     queue: "libcxx-builders"
+    #     os: "macos"
+    #     arch: "arm64"
+    #   retry:
+    #     automatic:
+    #       - exit_status: -1  # Agent was lost
+    #         limit: 2
+    #   timeout_in_minutes: 120
